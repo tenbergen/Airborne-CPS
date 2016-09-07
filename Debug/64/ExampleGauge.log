@@ -1,0 +1,4 @@
+﻿  ExampleGauge.cpp
+     Creating library .\Debug\64\ExampleGauge.lib and object .\Debug\64\ExampleGauge.exp
+ExampleGauge.obj : error LNK2019: unresolved external symbol gluBuild2DMipmaps referenced in function "int __cdecl LoadGLTexture(char *,int)" (?LoadGLTexture@@YAHPEADH@Z)
+.\Debug\plugins\ExampleGauge\64\win.xpl : fatal error LNK1120: 1 unresolved externals

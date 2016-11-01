@@ -452,18 +452,13 @@ void ExampleGaugeHotKey(void * refCon)
 /// Loads all our textures
 void LoadTextures(void)
 {
-	if (!LoadGLTexture(PANEL_FILENAME, PANEL_TEXTURE))
-		XPLMDebugString("Panel texture failed to load\n");
+
 	if (!LoadGLTexture(GAUGE_FILENAME, GAUGE_TEXTURE))
 		XPLMDebugString("Gauge texture failed to load\n");
 	if (!LoadGLTexture(NEEDLE_FILENAME, NEEDLE_TEXTURE))
 		XPLMDebugString("Needle texture failed to load\n");
 	if (!LoadGLTexture(NEEDLE_MASK_FILENAME, NEEDLE_TEXTURE_MASK))
 		XPLMDebugString("Needle texture mask failed to load\n");
-	
-	//added!
-	if (!LoadGLTexture(SYMBOLS_FILENAME, SYMBOLS_TEXTURE))
-		XPLMDebugString("Symbols texture failed to load\n");
 
 }
 

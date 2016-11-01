@@ -1,4 +1,6 @@
 ﻿  ExampleGauge.cpp
      Creating library .\Debug\64\ExampleGauge.lib and object .\Debug\64\ExampleGauge.exp
-ExampleGauge.obj : error LNK2019: unresolved external symbol gluBuild2DMipmaps referenced in function "int __cdecl LoadGLTexture(char *,int)" (?LoadGLTexture@@YAHPEADH@Z)
-.\Debug\plugins\ExampleGauge\64\win.xpl : fatal error LNK1120: 1 unresolved externals
+ExampleGauge.obj : error LNK2019: unresolved external symbol "public: __cdecl Transponder::Transponder(void)" (??0Transponder@@QEAA@XZ) referenced in function "void __cdecl `dynamic initializer for 'transponder''(void)" (??__Etransponder@@YAXXZ)
+ExampleGauge.obj : error LNK2019: unresolved external symbol "public: void __cdecl Transponder::start(void)" (?start@Transponder@@QEAAXXZ) referenced in function XPluginStart
+SDK\Libraries\Win\glaux.lib : warning LNK4272: library machine type 'X86' conflicts with target machine type 'x64'
+..\..\..\..\Desktop\Desktop\X-Plane 10\Resources\plugins\AirborneCPS.xpl : fatal error LNK1120: 2 unresolved externals

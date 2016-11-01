@@ -70,36 +70,36 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>.\Release\plugins\$(TargetName)\32\</OutDir>
+    <OutDir>..\..\..\..\Desktop\Desktop\X-Plane 10\Resources\plugins\</OutDir>
     <IntDir>.\Release\32\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
     <GenerateManifest>false</GenerateManifest>
-    <TargetName>win</TargetName>
+    <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>.\Release\plugins\$(TargetName)\64\</OutDir>
+    <OutDir>..\..\..\..\Desktop\Desktop\X-Plane 10\Resources\plugins\</OutDir>
     <IntDir>.\Release\64\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
     <GenerateManifest>false</GenerateManifest>
-    <TargetName>win</TargetName>
+    <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>C:\Users\Steve\Desktop\X-Plane 10\Resources\plugins\</OutDir>
+    <OutDir>..\..\..\..\Desktop\Desktop\X-Plane 10\Resources\plugins\</OutDir>
     <IntDir>.\Debug\32\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
     <GenerateManifest>false</GenerateManifest>
-    <TargetName>win</TargetName>
+    <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>.\Debug\plugins\$(TargetName)\64\</OutDir>
+    <OutDir>..\..\..\..\Desktop\Desktop\X-Plane 10\Resources\plugins\</OutDir>
     <IntDir>.\Debug\64\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
     <GenerateManifest>false</GenerateManifest>
-    <TargetName>win</TargetName>
+    <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -183,7 +183,7 @@
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Release\64\ExampleGauge.lib</ImportLibrary>
       <AdditionalLibraryDirectories>SDK\Libraries\Win;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM_64.lib;XPWidgets_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM_64.lib;XPWidgets_64.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -271,11 +271,15 @@
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Debug\64\ExampleGauge.lib</ImportLibrary>
       <AdditionalLibraryDirectories>SDK\Libraries\Win;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM_64.lib;XPWidgets_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM_64.lib;XPWidgets_64.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ExampleGauge.cpp" />
+    <ClCompile Include="Transponder.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Transponder.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

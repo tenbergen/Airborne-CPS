@@ -45,7 +45,7 @@ DWORD Transponder::receive()
 	// listen for a message
 	for (;;)
 	{
-		char[MSG_SIZE] tempMsg;
+		char tempMsg[MSG_SIZE];
 		recvfrom(inSocket, tempMsg, MSG_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
 		if (strcmp(tempMsg, myId) != 0) {
 			strcpy(msg, tempMsg);

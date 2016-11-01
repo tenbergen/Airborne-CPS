@@ -896,10 +896,7 @@ void MyDrawWindowCallback(
 
 	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
-	char* myid = "is there anybody out there?";
-	char* yourid = transponder.msg;
-	if (strcmp(myid, yourid) != 0)
-		XPLMDrawString(color, left + 5, top - 80, transponder.msg, NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 80, transponder.msg, NULL, xplmFont_Basic);
 }
 
 /*

@@ -50,6 +50,7 @@ NOTES:
 #include "XPLMGraphics.h"
 #include "XPLMUtilities.h"
 #include "XPLMNavigation.h"
+#include "Transponder.h"
 
 /// Handle cross platform differences
 #if IBM
@@ -185,6 +186,7 @@ static int ExampleGaugePanelMouseClickCallback(
                                    XPLMMouseStatus      inMouse,
                                    void *               inRefcon);
 
+Transponder& transponder = *new Transponder;
 
 // BEGIN STUFF I ADDED (Wesam)
 static XPLMWindowID	gWindow = NULL;
@@ -285,6 +287,8 @@ PLUGIN_API int XPluginStart(
 
 	/// Load the textures and bind them etc.
 	LoadTextures();
+	// start broadcasting location, and listening for aircraft
+	transponder.start();
 
 	return 1;
 }
@@ -896,6 +900,10 @@ void MyDrawWindowCallback(
 
 	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
+	char* myid = "is there anybody out there?";
+	char* yourid = transponder.msg;
+	if (strcmp(myid, yourid) != 0)
+		XPLMDrawString(color, left + 5, top - 80, transponder.msg, NULL, xplmFont_Basic);
 }
 
 /*

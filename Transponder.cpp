@@ -8,6 +8,7 @@ Transponder::Transponder()
 		exit(0);
 	}
 
+	strcpy(myId, "something");
 	sinlen = sizeof(struct sockaddr_in);
 	memset(&incoming, 0, sinlen);
 
@@ -44,7 +45,12 @@ DWORD Transponder::receive()
 	// listen for a message
 	for (;;)
 	{
-		recvfrom(inSocket, msg, MSG_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+		char[MSG_SIZE] tempMsg;
+		recvfrom(inSocket, tempMsg, MSG_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+		if (strcmp(tempMsg, myId) != 0) {
+			strcpy(msg, tempMsg);
+		}
+		
 	}
 	return 0;
 }

@@ -10,6 +10,7 @@ class Transponder
 {
 	public:
 		char msg[MSG_SIZE];
+		char myId[MSG_SIZE];
 
 		Transponder();
 		~Transponder();

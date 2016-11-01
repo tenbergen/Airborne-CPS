@@ -120,20 +120,16 @@ static void		SwapEndian(int *Data);
 static void		SwapRedBlue(IMAGEDATA *ImageData);
 
 /// Texture stuff
-// #define MAX_TEXTURES 4
-#define MAX_TEXTURES 5
+#define MAX_TEXTURES 4
 
-#define PANEL_FILENAME			"Panel.bmp"
 #define GAUGE_FILENAME			"GaugeTex256.bmp"
 #define NEEDLE_FILENAME			"Needle.bmp"
 #define NEEDLE_MASK_FILENAME	"NeedleMask.bmp"
-#define SYMBOLS_FILENAME		"Symbols.bmp"
 
-#define PANEL_TEXTURE 0
 #define GAUGE_TEXTURE 1
 #define NEEDLE_TEXTURE 2
 #define NEEDLE_TEXTURE_MASK 3
-#define SYMBOLS_TEXTURE 4
+
 
 static XPLMTextureID gTexture[MAX_TEXTURES];
 

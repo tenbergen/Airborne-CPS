@@ -884,14 +884,14 @@ void MyDrawWindowCallback(
 
 	/* Finally we draw the text into the window, also using XPLMGraphics
 	* routines.  The NULL indicates no word wrapping. */
-	XPLMDrawString(color, left + 5, top - 20, (char*)(gClicked ? trueAirspeedChar : verticalVelocityChar), NULL, xplmFont_Basic);
+	//XPLMDrawString(color, left + 5, top - 20, (char*)(gClicked ? trueAirspeedChar : verticalVelocityChar), NULL, xplmFont_Basic);
 	//(char*)(gClicked ? "Altitude (m): %d\nIndicated Airspeed: %f\nIndicated Airspeed 2: %f\nTrue Airspeed: %f", altitudeInt0Char, indAirspeedChar, indAirspeed2Char, trueAirspeedChar : verticalVelocityChar), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 40, (char*)(verticalSpeedDataChar), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 60, (char*)(calcVSChar), NULL, xplmFont_Basic);
 
 	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 80, transponder.msg, NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 120, transponder.msg, NULL, xplmFont_Basic);
 }
 
 /*

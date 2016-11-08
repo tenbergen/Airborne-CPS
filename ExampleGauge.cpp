@@ -2,21 +2,21 @@
 
 /*
 NOTES:
-	1. 
+	1.
 	On windows you will need to add these to the linker/input/AdditionalDependencies settings
-       glu32.lib 
+	   glu32.lib
 	   glaux.lib
 
-	2. 
-	If you want to have the xpl go directly to the plugin directory you need to 
-	set path variables. Currently I set it to build in the top directory of the 
+	2.
+	If you want to have the xpl go directly to the plugin directory you need to
+	set path variables. Currently I set it to build in the top directory of the
 	project.
-	
-	3. 
+
+	3.
 	Networking might be easier to do with UDP through the menu options as it is
 	available. There are options for things like reading inputs from the network
 	and also saving to the local disk. These are found under the settings menu ->
-	data input and output, and network options. This is called the Data Set in 
+	data input and output, and network options. This is called the Data Set in
 	x-plane. info here:
 	http://www.x-plane.com/manuals/desktop/#datainputandoutputfromx-plane
 	http://www.x-plane.com/?article=data-set-output-table
@@ -29,12 +29,17 @@ NOTES:
 	//
 	// Also added the header file for using the data refs. I might need to add other
 	// header files for the navigation "XPLMNavigation". "XPLMDataAccess" is to
-	// read plane info and set other options. Navigation has lookups for gps and 
+	// read plane info and set other options. Navigation has lookups for gps and
 	// fms, while the data access is the api for reading and writing plane/sensor
 	// info. DataRefs:
 	// http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
 
 */
+
+#define _WINSOCKAPI_
+#include <winsock2.h>
+#include <iphlpapi.h>
+#pragma comment(lib, "IPHLPAPI.lib")
 
 #if IBM
 #include <windows.h>
@@ -51,6 +56,9 @@ NOTES:
 #include "XPLMUtilities.h"
 #include "XPLMNavigation.h"
 #include "Transponder.h"
+
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 
 /// Handle cross platform differences
 #if IBM
@@ -81,26 +89,26 @@ NOTES:
 
 typedef struct tagBMPFILEHEADER
 {
-    short  bfType;
-    int	   bfSize;
-    short  bfReserved1;
-    short  bfReserved2;
-    int    bfOffBits;
+	short  bfType;
+	int	   bfSize;
+	short  bfReserved1;
+	short  bfReserved2;
+	int    bfOffBits;
 } BMPFILEHEADER;
 
 typedef struct tagBMPINFOHEADER
 {
-   int     biSize;
-   int     biWidth;
-   int     biHeight;
-   short   biPlanes;
-   short   biBitCount;
-   int     biCompression;
-   int     biSizeImage;
-   int     biXPelsPerMeter;
-   int     biYPelsPerMeter;
-   int     biClrUsed;
-   int     biClrImportant;
+	int     biSize;
+	int     biWidth;
+	int     biHeight;
+	short   biPlanes;
+	short   biBitCount;
+	int     biCompression;
+	int     biSizeImage;
+	int     biXPelsPerMeter;
+	int     biYPelsPerMeter;
+	int     biClrUsed;
+	int     biClrImportant;
 } BMPINFOHEADER;
 
 typedef struct	tagIMAGEDATA
@@ -142,6 +150,9 @@ static XPLMHotKeyID gExampleGaugeHotKey = NULL;
 
 static char gPluginDataFile[255];
 static float verticalSpeed1;
+static char GMAStringBuf[256];
+static char macRef[128];
+
 
 #if APL && __MACH__
 static int ConvertPath(const char * inPath, char * outPath, int outPathMaxLen);
@@ -150,37 +161,39 @@ static int ConvertPath(const char * inPath, char * outPath, int outPathMaxLen);
 /// Used for dragging plugin panel window.
 static	int	CoordInRect(float x, float y, float l, float t, float r, float b);
 static int	CoordInRect(float x, float y, float l, float t, float r, float b)
-{	return ((x >= l) && (x < r) && (y < t) && (y >= b)); }
+{
+	return ((x >= l) && (x < r) && (y < t) && (y >= b));
+}
 
 /// Prototypes for callbacks etc.
 static void LoadTextures(void);
 static int LoadGLTexture(char *pFileName, int TextureId);
 static int DrawGLScene(float x, float y);
-static int	ExampleGaugeDrawCallback(
-                                   XPLMDrawingPhase     inPhase,
-                                   int                  inIsBefore,
-                                   void *               inRefcon);
+static int	gaugeDraw_Callback(
+	XPLMDrawingPhase     inPhase,
+	int                  inIsBefore,
+	void *               inRefcon);
 
 static void ExampleGaugeHotKey(void * refCon);
 
-static void ExampleGaugePanelWindowCallback(
-                                   XPLMWindowID         inWindowID,
-                                   void *               inRefcon);
+static void panelWindow_Callback(
+	XPLMWindowID         inWindowID,
+	void *               inRefcon);
 
-static void ExampleGaugePanelKeyCallback(
-                                   XPLMWindowID         inWindowID,
-                                   char                 inKey,
-                                   XPLMKeyFlags         inFlags,
-                                   char                 inVirtualKey,
-                                   void *               inRefcon,
-                                   int                  losingFocus);
+static void panelKey_Callback(
+	XPLMWindowID         inWindowID,
+	char                 inKey,
+	XPLMKeyFlags         inFlags,
+	char                 inVirtualKey,
+	void *               inRefcon,
+	int                  losingFocus);
 
-static int ExampleGaugePanelMouseClickCallback(
-                                   XPLMWindowID         inWindowID,
-                                   int                  x,
-                                   int                  y,
-                                   XPLMMouseStatus      inMouse,
-                                   void *               inRefcon);
+static int panelMouseClick_Callback(
+	XPLMWindowID         inWindowID,
+	int                  x,
+	int                  y,
+	XPLMMouseStatus      inMouse,
+	void *               inRefcon);
 
 Transponder& transponder = *new Transponder;
 
@@ -200,7 +213,9 @@ float trueAirspeed = 0;
 float verticalSpeedData = 0;
 float latREF, lonREF = 0;
 
-static void MyDrawWindowCallback(
+
+
+static void DrawWindowCallback(
 	XPLMWindowID         inWindowID,
 	void *               inRefcon);
 
@@ -222,20 +237,20 @@ static int MyHandleMouseClickCallback(
 static void getSensorInfoPlugin(void);
 
 // END STUFF I ADDED
-
+static void getMacAddress(void);
 
 PLUGIN_API int XPluginStart(
-						char *		outName,
-						char *		outSig,
-						char *		outDesc)
+	char *		outName,
+	char *		outSig,
+	char *		outDesc)
 {
 	/// Handle cross platform differences
 #if IBM
 	char *pFileName = "Resources\\Plugins\\AirborneCPS\\";
 #elif LIN
-    char *pFileName = "Resources/plugins/AirborneCPS/";
+	char *pFileName = "Resources/plugins/AirborneCPS/";
 #else
-    char *pFileName = "Resources:Plugins:AirborneCPS:";
+	char *pFileName = "Resources:Plugins:AirborneCPS:";
 #endif
 	/// Setup texture file locations
 	XPLMGetSystemPath(gPluginDataFile);
@@ -245,33 +260,28 @@ PLUGIN_API int XPluginStart(
 	strcpy(outSig, "AirborneCPS");
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
 
-	//
-	//START NEW MERGED CODE
+	getMacAddress(); /* Get the Mac Address for a unique ID */
 
 	//Generate the DataRef variables.
 	getSensorInfoPlugin();
+
 	/* Now we create a window.  We pass in a rectangle in left, top,
 	* right, bottom screen coordinates.  We pass in three callbacks. */
 	gWindow = XPLMCreateWindow(
 		50, 600, 300, 200,			/* Area of the window. */
 		1,							/* Start visible. */
-		MyDrawWindowCallback,		/* Callbacks */
+		DrawWindowCallback,		   /* Callbacks */
 		MyHandleKeyCallback,
 		MyHandleMouseClickCallback,
 		NULL);						/* Refcon - not used. */
 
-	//END NEW MERGED CODE
-	//
 
 	/// Register so that our gauge is drawing during the Xplane gauge phase
-	XPLMRegisterDrawCallback(
-					ExampleGaugeDrawCallback,
-					xplm_Phase_Gauges,
-					0,
-					NULL);
+	XPLMRegisterDrawCallback(gaugeDraw_Callback, xplm_Phase_Gauges, 0, NULL);
 
 	/// Create our window, setup datarefs and register our hotkey.
-	gExampleGaugePanelDisplayWindow = XPLMCreateWindow(768, 256, 1024, 0, 1, ExampleGaugePanelWindowCallback, ExampleGaugePanelKeyCallback, ExampleGaugePanelMouseClickCallback, NULL);
+	gExampleGaugePanelDisplayWindow = XPLMCreateWindow(768, 256, 1024, 0, 1, panelWindow_Callback, 
+		panelKey_Callback, panelMouseClick_Callback, NULL);
 
 	verticalSpeed = XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot");
 
@@ -279,7 +289,7 @@ PLUGIN_API int XPluginStart(
 	GREEN = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
 	BLUE = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
-	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag,   "F8",   ExampleGaugeHotKey, NULL);
+	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", ExampleGaugeHotKey, NULL);
 
 	/// Load the textures and bind them etc.
 	LoadTextures();
@@ -293,15 +303,15 @@ PLUGIN_API void	XPluginStop(void)
 {
 	/// Clean up
 	XPLMUnregisterDrawCallback(
-					ExampleGaugeDrawCallback,
-					xplm_Phase_Gauges,
-					0,
-					NULL);
+		gaugeDraw_Callback,
+		xplm_Phase_Gauges,
+		0,
+		NULL);
 	//
 	//BEGIN NEW MERGED CODE
-	
+
 	XPLMDestroyWindow(gWindow);
-	
+
 	//END NEW MERGED CODE
 	//
 
@@ -319,9 +329,9 @@ PLUGIN_API int XPluginEnable(void)
 }
 
 PLUGIN_API void XPluginReceiveMessage(
-					XPLMPluginID	inFromWho,
-					int				inMessage,
-					void *			inParam)
+	XPLMPluginID	inFromWho,
+	int				inMessage,
+	void *			inParam)
 {
 }
 
@@ -330,21 +340,21 @@ PLUGIN_API void XPluginReceiveMessage(
 /*
  * Convert to gauge face representation
  *
- * This converts the raw vertical speed dataref to a value that can be used as 
- * the rotational degrees in the gRotatef() function for roatating the needle on the 
+ * This converts the raw vertical speed dataref to a value that can be used as
+ * the rotational degrees in the gRotatef() function for roatating the needle on the
  * gauge.
  */
-float convertToRotation(float inputFloat, float divisor) 
+float convertToRotation(float inputFloat, float divisor)
 {
-	return ((inputFloat / divisor) * 150)-90;
+	return ((inputFloat / divisor) * 150) - 90;
 }
 
 /*
- * ExampleGaugeDrawCallback
+ * gaugeDraw_Callback
  *
- * This will draw our gauge during the Xplane gauge drawing phase.
+ * Draw gauge during the Xplane gauge drawing phase.
  */
-int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) 
+int	gaugeDraw_Callback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon)
 {
 	float FloatVal;
 	// Do the actual drawing, but only if the window is active
@@ -358,48 +368,48 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 
 
 /*
- * ExampleGaugePanelWindowCallback
+ * panelWindow_Callback
  *
  * This callback does not do any drawing as such.
  * We use the mouse callback below to handle dragging of the window
  * X-Plane will automatically do the redraw.
  *
  */
-void ExampleGaugePanelWindowCallback(
-                                   XPLMWindowID         inWindowID,
-                                   void *               inRefcon)
+void panelWindow_Callback(
+	XPLMWindowID         inWindowID,
+	void *               inRefcon)
 {
 }
 
 /*
- * ExampleGaugePanelKeyCallback
+ * panelKey_Callback
  *
  * Our key handling callback does nothing in this plugin.  This is ok;
  * we simply don't use keyboard input.
  *
  */
-void ExampleGaugePanelKeyCallback(
-                                   XPLMWindowID         inWindowID,
-                                   char                 inKey,
-                                   XPLMKeyFlags         inFlags,
-                                   char                 inVirtualKey,
-                                   void *               inRefcon,
-                                   int                  losingFocus)
+void panelKey_Callback(
+	XPLMWindowID         inWindowID,
+	char                 inKey,
+	XPLMKeyFlags         inFlags,
+	char                 inVirtualKey,
+	void *               inRefcon,
+	int                  losingFocus)
 {
 }
 
 /*
- * ExampleGaugePanelMouseClickCallback
+ * panelMouseClick_Callback
  *
- * Our mouse click callback updates the position that the windows is dragged to.
+ * Updates the position that the windows is dragged to.
  *
  */
-int ExampleGaugePanelMouseClickCallback(
-                                   XPLMWindowID         inWindowID,
-                                   int                  x,
-                                   int                  y,
-                                   XPLMMouseStatus      inMouse,
-                                   void *               inRefcon)
+int panelMouseClick_Callback(
+	XPLMWindowID         inWindowID,
+	int                  x,
+	int                  y,
+	XPLMMouseStatus      inMouse,
+	void *               inRefcon)
 {
 	static	int	dX = 0, dY = 0;
 	static	int	Weight = 0, Height = 0;
@@ -413,10 +423,10 @@ int ExampleGaugePanelMouseClickCallback(
 	/// Get the windows current position
 	XPLMGetWindowGeometry(inWindowID, &Left, &Top, &Right, &Bottom);
 
-	switch(inMouse) {
+	switch (inMouse) {
 	case xplm_MouseDown:
 		/// Test for the mouse in the top part of the window
-		if (CoordInRect(x, y, Left, Top, Right, Top-15))
+		if (CoordInRect(x, y, Left, Top, Right, Top - 15))
 		{
 			dX = x - Left;
 			dY = y - Top;
@@ -465,24 +475,24 @@ void LoadTextures(void)
 /// Loads one texture
 int LoadGLTexture(char *pFileName, int TextureId)
 {
-	int Status=FALSE;
+	int Status = FALSE;
 	char TextureFileName[255];
-	#if APL && __MACH__
+#if APL && __MACH__
 	char TextureFileName2[255];
 	int Result = 0;
-	#endif
+#endif
 
 	/// Need to get the actual texture path and append the filename to it.
 	strcpy(TextureFileName, gPluginDataFile);
 	strcat(TextureFileName, pFileName);
 
-	#if APL && __MACH__
+#if APL && __MACH__
 	Result = ConvertPath(TextureFileName, TextureFileName2, sizeof(TextureFileName));
 	if (Result == 0)
 		strcpy(TextureFileName, TextureFileName2);
 	else
 		XPLMDebugString("AirborneCPS - Unable to convert path\n");
-	#endif
+#endif
 
 	void *pImageData = 0;
 	int sWidth, sHeight;
@@ -490,22 +500,22 @@ int LoadGLTexture(char *pFileName, int TextureId)
 	/// Get the bitmap from the file
 	if (BitmapLoader(TextureFileName, &sImageData))
 	{
-		Status=TRUE;
+		Status = TRUE;
 
 		SwapRedBlue(&sImageData);
 		pImageData = sImageData.pData;
 
 		/// Do the opengl stuff using XPLM functions for a friendly Xplane existence.
-		sWidth=sImageData.Width;
-		sHeight=sImageData.Height;
+		sWidth = sImageData.Width;
+		sHeight = sImageData.Height;
 		XPLMGenerateTextureNumbers(&gTexture[TextureId], 1);
 		XPLMBindTexture2d(gTexture[TextureId], 0);
-	   
+
 		GLenum type = sImageData.Channels == 4 ? GL_RGBA : GL_RGB;
 		gluBuild2DMipmaps(GL_TEXTURE_2D, sImageData.Channels, sWidth, sHeight, type, GL_UNSIGNED_BYTE, pImageData);
 
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 	if (pImageData != NULL)
 		free(pImageData);
@@ -516,26 +526,26 @@ int LoadGLTexture(char *pFileName, int TextureId)
 /// Draws the textures that make up the gauge
 int DrawGLScene(float x1, float y1)
 {
-	float Red = XPLMGetDataf (RED);
-	float Green = XPLMGetDataf (GREEN);
-	float Blue = XPLMGetDataf (BLUE);
+	float Red = XPLMGetDataf(RED);
+	float Green = XPLMGetDataf(GREEN);
+	float Blue = XPLMGetDataf(BLUE);
 	int	PanelWindowLeft, PanelWindowRight, PanelWindowBottom, PanelWindowTop;
 
-    float PanelWidth, PanelHeight;
-    float GaugeWidth, GaugeHeight, GaugeWidthRatio, GaugeHeightRatio;
+	float PanelWidth, PanelHeight;
+	float GaugeWidth, GaugeHeight, GaugeWidthRatio, GaugeHeightRatio;
 	float PanelLeft, PanelRight, PanelBottom, PanelTop;
 	float GaugeLeft, GaugeRight, GaugeBottom, GaugeTop;
 	float NeedleLeft, NeedleRight, NeedleBottom, NeedleTop;
 	float NeedleTranslationX, NeedleTranslationY;
 
 	/// Setup sizes for panel and gauge
-    PanelWidth = 256;
-    PanelHeight = 256;
+	PanelWidth = 256;
+	PanelHeight = 256;
 	GaugeWidth = 256;
 	GaugeHeight = 256;
 
 	GaugeWidthRatio = GaugeWidth / 256.0;
-    GaugeHeightRatio = GaugeHeight / 256.0;
+	GaugeHeightRatio = GaugeHeight / 256.0;
 
 	/// Need to find out where our window is
 	XPLMGetWindowGeometry(gExampleGaugePanelDisplayWindow, &PanelWindowLeft, &PanelWindowTop, &PanelWindowRight, &PanelWindowBottom);
@@ -543,14 +553,14 @@ int DrawGLScene(float x1, float y1)
 	/// Setup our panel and gauge relative to our window
 	PanelLeft = PanelWindowLeft; PanelRight = PanelWindowRight; PanelBottom = PanelWindowBottom; PanelTop = PanelWindowTop;
 	GaugeLeft = PanelWindowLeft; GaugeRight = PanelWindowRight; GaugeBottom = PanelWindowBottom; GaugeTop = PanelWindowTop;
-	
+
 	/// Setup our needle relative to the gauge
 	NeedleLeft = GaugeLeft + 125.0 * GaugeWidthRatio;
-    NeedleRight = NeedleLeft + 8.0 * GaugeWidthRatio;
-    NeedleBottom = GaugeBottom + 120.0 * GaugeHeightRatio;
-    NeedleTop = NeedleBottom + 80.0 * GaugeWidthRatio;;
-    NeedleTranslationX = NeedleLeft + ((NeedleRight - NeedleLeft) / 2);
-    NeedleTranslationY = NeedleBottom+(5*GaugeHeightRatio);
+	NeedleRight = NeedleLeft + 8.0 * GaugeWidthRatio;
+	NeedleBottom = GaugeBottom + 120.0 * GaugeHeightRatio;
+	NeedleTop = NeedleBottom + 80.0 * GaugeWidthRatio;;
+	NeedleTranslationX = NeedleLeft + ((NeedleRight - NeedleLeft) / 2);
+	NeedleTranslationY = NeedleBottom + (5 * GaugeHeightRatio);
 
 	/// Turn on Alpha Blending and turn off Depth Testing
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 1/*AlphaBlending*/, 0/*DepthTesting*/, 0/*DepthWriting*/);
@@ -559,7 +569,7 @@ int DrawGLScene(float x1, float y1)
 	glColor3f(Red, Green, Blue);
 
 	// Draw Panel
-    glPushMatrix();
+	glPushMatrix();
 
 	XPLMBindTexture2d(gTexture[GAUGE_TEXTURE], 0);
 
@@ -584,42 +594,42 @@ int DrawGLScene(float x1, float y1)
 	// Turn on Alpha Blending and turn off Depth Testing
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 1/*AlphaBlending*/, 0/*DepthTesting*/, 0/*DepthWriting*/);
 
-    glTranslatef(NeedleTranslationX, NeedleTranslationY, 0.0f);
+	glTranslatef(NeedleTranslationX, NeedleTranslationY, 0.0f);
 
-	if(verticalSpeed1 > 60) glRotatef(60, 0.0f , 0.0f, -1.0f);
+	if (verticalSpeed1 > 60) glRotatef(60, 0.0f, 0.0f, -1.0f);
 	else if (verticalSpeed1 < -240) glRotatef(-240, 0.0f, 0.0f, -1.0f);
 	else glRotatef(verticalSpeed1, 0.0f, 0.0f, -1.0f);
 
-    glTranslatef(-NeedleTranslationX, -NeedleTranslationY, 0.0f);
+	glTranslatef(-NeedleTranslationX, -NeedleTranslationY, 0.0f);
 
-    glBlendFunc(GL_DST_COLOR, GL_ZERO);
+	glBlendFunc(GL_DST_COLOR, GL_ZERO);
 
 	// Draw Needle Mask
 	XPLMBindTexture2d(gTexture[NEEDLE_TEXTURE_MASK], 0);
-    glBegin(GL_QUADS);
-			glTexCoord2f(1, 0.0f); glVertex2f(NeedleRight, NeedleBottom);	// Bottom Right Of The Texture and Quad
-			glTexCoord2f(0, 0.0f); glVertex2f(NeedleLeft, NeedleBottom);	// Bottom Left Of The Texture and Quad
-			glTexCoord2f(0, 1.0f); glVertex2f(NeedleLeft, NeedleTop);	// Top Left Of The Texture and Quad
-			glTexCoord2f(1, 1.0f); glVertex2f(NeedleRight, NeedleTop);	// Top Right Of The Texture and Quad
+	glBegin(GL_QUADS);
+	glTexCoord2f(1, 0.0f); glVertex2f(NeedleRight, NeedleBottom);	// Bottom Right Of The Texture and Quad
+	glTexCoord2f(0, 0.0f); glVertex2f(NeedleLeft, NeedleBottom);	// Bottom Left Of The Texture and Quad
+	glTexCoord2f(0, 1.0f); glVertex2f(NeedleLeft, NeedleTop);	// Top Left Of The Texture and Quad
+	glTexCoord2f(1, 1.0f); glVertex2f(NeedleRight, NeedleTop);	// Top Right Of The Texture and Quad
 	glEnd();
 
-    glBlendFunc(GL_ONE, GL_ONE);
+	glBlendFunc(GL_ONE, GL_ONE);
 
 	// Draw Needle
 	XPLMBindTexture2d(gTexture[NEEDLE_TEXTURE], 0);
 	glBegin(GL_QUADS);
-			glTexCoord2f(1, 0.0f); glVertex2f(NeedleRight, NeedleBottom);	// Bottom Right Of The Texture and Quad
-			glTexCoord2f(0, 0.0f); glVertex2f(NeedleLeft, NeedleBottom);	// Bottom Left Of The Texture and Quad
-			glTexCoord2f(0, 1.0f); glVertex2f(NeedleLeft, NeedleTop);	// Top Left Of The Texture and Quad
-			glTexCoord2f(1, 1.0f); glVertex2f(NeedleRight, NeedleTop);	// Top Right Of The Texture and Quad
+	glTexCoord2f(1, 0.0f); glVertex2f(NeedleRight, NeedleBottom);	// Bottom Right Of The Texture and Quad
+	glTexCoord2f(0, 0.0f); glVertex2f(NeedleLeft, NeedleBottom);	// Bottom Left Of The Texture and Quad
+	glTexCoord2f(0, 1.0f); glVertex2f(NeedleLeft, NeedleTop);	// Top Left Of The Texture and Quad
+	glTexCoord2f(1, 1.0f); glVertex2f(NeedleRight, NeedleTop);	// Top Right Of The Texture and Quad
 	glEnd();
 
 	// Turn off Alpha Blending and turn on Depth Testing
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 0/*AlphaBlending*/, 1/*DepthTesting*/, 0/*DepthWriting*/);
-    glPopMatrix();
+	glPopMatrix();
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glFlush();
+	glFlush();
 
 	return TRUE;
 }
@@ -628,10 +638,10 @@ int DrawGLScene(float x1, float y1)
 #include <Carbon/Carbon.h>
 int ConvertPath(const char * inPath, char * outPath, int outPathMaxLen)
 {
-	CFStringRef inStr = CFStringCreateWithCString(kCFAllocatorDefault, inPath ,kCFStringEncodingMacRoman);
+	CFStringRef inStr = CFStringCreateWithCString(kCFAllocatorDefault, inPath, kCFStringEncodingMacRoman);
 	if (inStr == NULL)
 		return -1;
-	CFURLRef url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, inStr, kCFURLHFSPathStyle,0);
+	CFURLRef url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, inStr, kCFURLHFSPathStyle, 0);
 	CFStringRef outStr = CFURLCopyFileSystemPath(url, kCFURLPOSIXPathStyle);
 	if (!CFStringGetCString(outStr, outPath, outPathMaxLen, kCFURLPOSIXPathStyle))
 		return -1;
@@ -646,38 +656,38 @@ int ConvertPath(const char * inPath, char * outPath, int outPathMaxLen)
 /// Cross Platform Bitmap functions
 /// Functions to handle endian differeneces between windows, linux and mac.
 #if APL
-    short Endian(short Data)
-    {
-        unsigned char *pBuffer = (unsigned char *)&Data;
-        short Result = (short)(pBuffer[0] & 0xff)	+ ( (short)(pBuffer[1] & 0xff) << 8) ;
-  	    return(Result);
-    }
+short Endian(short Data)
+{
+	unsigned char *pBuffer = (unsigned char *)&Data;
+	short Result = (short)(pBuffer[0] & 0xff) + ((short)(pBuffer[1] & 0xff) << 8);
+	return(Result);
+}
 
-    int Endian(int Data)
-    {
-   	    unsigned char *pBuffer = (unsigned char *)&Data;
+int Endian(int Data)
+{
+	unsigned char *pBuffer = (unsigned char *)&Data;
 
-		int Result = 		(int)(pBuffer[0] & 0xff)
-						+ ( (int)(pBuffer[1] & 0xff) << 8)
-						+ ( (int)(pBuffer[2] & 0xff) << 16)
-						+ ( (int)(pBuffer[3] & 0xff) << 24);
+	int Result = (int)(pBuffer[0] & 0xff)
+		+ ((int)(pBuffer[1] & 0xff) << 8)
+		+ ((int)(pBuffer[2] & 0xff) << 16)
+		+ ((int)(pBuffer[3] & 0xff) << 24);
 
-		return(Result);
-	}
+	return(Result);
+}
 
-	void SwapEndian(short *Data)
-	{
-		*Data = Endian(*Data);
-	}
+void SwapEndian(short *Data)
+{
+	*Data = Endian(*Data);
+}
 
-	void SwapEndian(int *Data)
-	{
-		*Data = Endian(*Data);
-	}
+void SwapEndian(int *Data)
+{
+	*Data = Endian(*Data);
+}
 #else
 	/// Only the mac needs these so dummy functions for windows and linux.
-	void SwapEndian(short *Data){}
-	void SwapEndian(int *Data){}
+void SwapEndian(short *Data) {}
+void SwapEndian(int *Data) {}
 #endif
 
 /// Swap the red and blue pixels.
@@ -685,7 +695,7 @@ void SwapRedBlue(IMAGEDATA *ImageData)
 {
 	unsigned char  * srcPixel;
 	int 	count;
-	int		x,y;
+	int		x, y;
 	unsigned char sTemp;
 
 	/// Does not support 4 channels.
@@ -760,8 +770,6 @@ int BitmapLoader(const char * FilePath, IMAGEDATA * ImageData)
 					{
 						Padding = (ImageInfo.biWidth * channels + channels) & ~channels;
 						Padding -= ImageInfo.biWidth * channels;
-						/*Padding = (ImageInfo.biWidth * 3 + 3) & ~3;
-						Padding -= ImageInfo.biWidth * 3;*/
 
 						char padInfoBuf[128];
 						snprintf(padInfoBuf, 128, "ImageInfo.biWidth: %d, channels: %d, padding: %d\n", ImageInfo.biWidth, channels, Padding);
@@ -825,7 +833,7 @@ int BitmapLoader(const char * FilePath, IMAGEDATA * ImageData)
 * changes; we are redrawn by the sim continuously.
 *
 */
-void MyDrawWindowCallback(
+void DrawWindowCallback(
 	XPLMWindowID         inWindowID,
 	void *               inRefcon)
 {
@@ -836,62 +844,36 @@ void MyDrawWindowCallback(
 											* These are found in the XPLMDataAccess api. */
 	getSensorInfoPlugin();
 
-	/* Getting the altitude from the dataref in X-Plane. This is just testing
-	* local initialization vs the global way.
-	* http://forums.x-plane.org/index.php?/forums/topic/82150-how-to-get-wind-datarefs/ */
-	XPLMDataRef datarefWindAltitude0 = NULL;
-	int altitudeInt0 = 0;
-	datarefWindAltitude0 = XPLMFindDataRef("sim/weather/wind_altitude_msl_m[0]");
-	altitudeInt0 = XPLMGetDatai(datarefWindAltitude0);
-
 	/* First we get the location of the window passed in to us. */
 	XPLMGetWindowGeometry(inWindowID, &left, &top, &right, &bottom);
 
-	/* We now use an XPLMGraphics routine to draw a translucent dark
-	* rectangle that is our window's shape. */
+	/* Draw a translucent dark rectangle for debugging data */
 	XPLMDrawTranslucentDarkBox(left, top, right, bottom);
 
-	/* These lines convert the types to char arrays to be used as strings. */
-	char verticalVelocityChar[128];
-	snprintf(verticalVelocityChar, 128, "%f", verticalVelocity);
-
-	char indAirspeedChar[128];
-	snprintf(indAirspeedChar, 128, "%f", indAirspeed);
-
-	char indAirspeed2Char[128];
-	snprintf(indAirspeed2Char, 128, "%f", indAirspeed2);
-
-	char trueAirspeedChar[128];
-	snprintf(trueAirspeedChar, 128, "%f", trueAirspeed);
-
-	char altitudeInt0Char[128];
-	snprintf(altitudeInt0Char, 128, "%d", altitudeInt0);
-
+	/* Convert the types to char arrays to be used as strings. */
 	char verticalSpeedDataChar[128];
 	snprintf(verticalSpeedDataChar, 128, "XPLMGetDataf(vvi_fpm_pilot): %f", verticalSpeedData);
 
-	char calcVSChar[128];
-	snprintf(calcVSChar, 128, "verticalSpeedCalc: %f", (verticalSpeed1+90));
+	char calcVSChar[128]; 
+	snprintf(calcVSChar, 128, "verticalSpeedCalc: %f", (verticalSpeed1 + 90));
 
-	char lat[128];
+	char lat[128]; 
 	snprintf(lat, 128, "lat: %f", latREF);
 
-	char lon[128];
+	char lon[128]; 
 	snprintf(lon, 128, "lon: %f", lonREF);
 
+	char macAdd[128]; 
+	snprintf(macAdd, 128, "MAC_ADD: %s", macRef);
 
-
-
-	/* Finally we draw the text into the window, also using XPLMGraphics
-	* routines.  The NULL indicates no word wrapping. */
-	//XPLMDrawString(color, left + 5, top - 20, (char*)(gClicked ? trueAirspeedChar : verticalVelocityChar), NULL, xplmFont_Basic);
-	//(char*)(gClicked ? "Altitude (m): %d\nIndicated Airspeed: %f\nIndicated Airspeed 2: %f\nTrue Airspeed: %f", altitudeInt0Char, indAirspeedChar, indAirspeed2Char, trueAirspeedChar : verticalVelocityChar), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 40, (char*)(verticalSpeedDataChar), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 60, (char*)(calcVSChar), NULL, xplmFont_Basic);
-
-	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
+	/* Draw the text into the window. The NULL indicates no word wrapping. */
+	XPLMDrawString(color, left + 5, top - 40, verticalSpeedDataChar, NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 60, calcVSChar, NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 80, lat, NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 100, lon, NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 120, transponder.msg, NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 140, macAdd, NULL, xplmFont_Basic);
+
 }
 
 /*
@@ -955,8 +937,6 @@ void getSensorInfoPlugin(void)
 	XPLMDataRef groundspeedDataref = NULL;
 	groundspeedDataref = XPLMFindDataRef("sim/flightmodel/position/groundspeed");
 	groundSpeed = XPLMGetDataf(groundspeedDataref);
-
-
 	// TCAS DataRef information: bearing (degrees), float[20].
 	// Relative bearing of each other plane in degrees for TCAS
 	XPLMDataRef tcasBearingDataref = NULL;
@@ -998,17 +978,46 @@ void getSensorInfoPlugin(void)
 	verticalSpeedData = XPLMGetDataf(verticalSpeedDataref);
 
 	/*
-	Tesing Location Detection 
+	Tesing Location Detection
 
 	1nmi = 1852m
 	30nmi = 55560m
 
 	*/
-
 	latREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
 	lonREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
-	//TESTING
 }
 
-//END NEW MERGED CODE
-//
+
+
+/*
+ * Grab a physical address and print it to the debug box in X-Plane 
+ */
+void getMacAddress(void) 
+{
+	int i = 0;
+	DWORD dwRetVal = 0;
+	PIP_ADAPTER_ADDRESSES pCurrAddresses = NULL;
+	ULONG family = AF_UNSPEC;
+	ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
+	PIP_ADAPTER_ADDRESSES pAddresses = NULL;
+	ULONG outBufLen = 15000;
+	pAddresses = (IP_ADAPTER_ADDRESSES *)MALLOC(outBufLen);
+	char macRefCat[128];
+	macRef[0] = '\0';
+	dwRetVal = GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen);
+	pCurrAddresses = pAddresses;
+
+	if (pCurrAddresses->PhysicalAddressLength != 0) {
+		for (i = 0; i < (int)pCurrAddresses->PhysicalAddressLength; i++) {
+			if (i == (pCurrAddresses->PhysicalAddressLength - 1)) {
+				snprintf(macRefCat, 128, "%.2X\n", (int)pCurrAddresses->PhysicalAddress[i]);
+				strcat(macRef, macRefCat);
+			} else {
+				snprintf(macRefCat, 128, "%.2X-", (int)pCurrAddresses->PhysicalAddress[i]);
+				strcat(macRef, macRefCat);
+			}
+		}
+	} else { strcpy(macRef, "Failed.");}
+	FREE(pAddresses);
+}

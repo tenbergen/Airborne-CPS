@@ -1,3 +1,4 @@
+
 #include <sys/types.h>
 #include <winsock.h>
 
@@ -20,8 +21,10 @@ class Transponder
 
 	protected:
 		WSADATA w;
-		SOCKET outSocket, inSocket;
-		int status, buflen;
+		SOCKET outSocket;
+		SOCKET inSocket;
+		int status;
+		int buflen;
 		unsigned sinlen;
 		struct sockaddr_in incoming;
 		struct sockaddr_in outgoing;

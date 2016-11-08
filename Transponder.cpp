@@ -1,3 +1,4 @@
+
 #include "Transponder.h"
 
 #pragma comment(lib,"WS2_32")
@@ -8,7 +9,7 @@ Transponder::Transponder()
 		exit(0);
 	}
 
-	strcpy(myId, "something");
+	strcpy(myId, "12345");
 	sinlen = sizeof(struct sockaddr_in);
 	memset(&incoming, 0, sinlen);
 
@@ -59,7 +60,7 @@ DWORD Transponder::send()
 {
 	char query[256];
 
-	strcpy(query, "is there anybody out there?");
+	strcpy(query, "12345");
 
 	for (;;)
 	{

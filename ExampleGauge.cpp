@@ -210,7 +210,7 @@ float indAirspeed = 0;
 float indAirspeed2 = 0;
 float trueAirspeed = 0;
 float verticalSpeedData = 0;
-float latREF, lonREF = 0;
+double latREF, lonREF = 0;
 
 
 
@@ -233,7 +233,7 @@ static int MyHandleMouseClickCallback(
 	XPLMMouseStatus      inMouse,
 	void *               inRefcon);
 
-static void getSensorInfoPlugin(void);
+static void getDatarefsToSendOverLAN(void);
 
 static void getPhysicalAddressForUniqueID(void);
 
@@ -261,7 +261,7 @@ PLUGIN_API int XPluginStart(
 	getPhysicalAddressForUniqueID();
 
 	//Generate the DataRef variables.
-	getSensorInfoPlugin();
+	getDatarefsToSendOverLAN();
 
 	/* Create a window. Pass in a rectangle in left, top,
 	* right, bottom screen coordinates.  We pass in three callbacks. */
@@ -827,7 +827,7 @@ void DrawWindowCallback(
 
 											/* Initialize the variables using the datarefs from the x-plane system.
 											* These are found in the XPLMDataAccess api. */
-	getSensorInfoPlugin();
+	getDatarefsToSendOverLAN();
 
 	/* First we get the location of the window passed in to us. */
 	XPLMGetWindowGeometry(inWindowID, &left, &top, &right, &bottom);
@@ -850,7 +850,6 @@ void DrawWindowCallback(
 
 	char idRef[128]; 
 	snprintf(idRef, 128, "Unique ID: %s", uniqueID);
-
 
 	/* Draw the text into the window. The NULL indicates no word wrapping. */
 	XPLMDrawString(color, left + 5, top - 40, verticalSpeedDataChar, NULL, xplmFont_Basic);
@@ -910,70 +909,38 @@ int MyHandleMouseClickCallback(
 }
 
 
-/*
-* getSensorInfoPlugin
-*
-* This function is primarily used to get the information from the datarefs api.
-*
-*/
-void getSensorInfoPlugin(void)
+void getDatarefsToSendOverLAN(void)
 {
-	// this should lookup the airspeed of the plane and set it as the value of
-	// airSpeed.
-	XPLMDataRef groundspeedDataref = NULL;
-	groundspeedDataref = XPLMFindDataRef("sim/flightmodel/position/groundspeed");
-	groundSpeed = XPLMGetDataf(groundspeedDataref);
-	// TCAS DataRef information: bearing (degrees), float[20].
-	// Relative bearing of each other plane in degrees for TCAS
-	XPLMDataRef tcasBearingDataref = NULL;
-	tcasBearingDataref = XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_bearing_degs");
-	tcasBearing = XPLMGetDataf(tcasBearingDataref);
-	// TCAS DataRef information: distance (meters), float[20]
-	// Distance to each other plane in meters for TCAS
-	XPLMDataRef tcasDistanceDataref = NULL;
-	tcasDistanceDataref = XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_distance_mtrs");
-	tcasDistance = XPLMGetDataf(tcasDistanceDataref);
-	// TCAS DataRef information: altitude (meters), float[20].
-	// Relative altitude (positive means above us) for TCAS
-	XPLMDataRef tcasAltitudeDataref = NULL;
-	tcasAltitudeDataref = XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_altitude_mtrs");
-	tcasAltitude = XPLMGetDataf(tcasAltitudeDataref);
+	/*The ground speed of the aircraft: float, meters/sec*/	
+	groundSpeed = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/groundspeed"));
+	
+	/*Relative bearing of each other plane in degrees for TCAS: float[20], degrees*/	
+	tcasBearing = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_bearing_degs"));
+	
+	/*Distance to each other plane in meters for TCAS: float[20], meters*/	
+	tcasDistance = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_distance_mtrs"));
 
-	//vertical velocity as indicated within the sims instruments.
-	XPLMDataRef verticalVelocityDataref = NULL;
-	verticalVelocityDataref = XPLMFindDataRef("sim/flightmodel/position/vh_ind");
-	verticalVelocity = XPLMGetDataf(verticalVelocityDataref);
+	/*Relative altitude (positive means above us) for TCAS: float[20], meters*/
+	tcasAltitude = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_altitude_mtrs"));
 
 	//Air speed indicated - this takes into account air density and wind direction.
-	XPLMDataRef indAirspeedDataref = NULL;
-	indAirspeedDataref = XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed");
-	indAirspeed = XPLMGetDataf(indAirspeedDataref);
+	indAirspeed = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed"));
 
 	//Air speed indicated - this takes into account air density and wind direction.
-	XPLMDataRef indAirspeed2Dataref = NULL;
-	indAirspeed2Dataref = XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed2");
-	indAirspeed2 = XPLMGetDataf(indAirspeed2Dataref);
+	indAirspeed2 = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed2"));
 
 	//Air speed true - this does not take into account air density at altitude!
-	XPLMDataRef trueAirspeedDataref = NULL;
-	trueAirspeedDataref = XPLMFindDataRef("sim/flightmodel/position/true_airspeed");
-	trueAirspeed = XPLMGetDataf(trueAirspeedDataref);
+	trueAirspeed = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/true_airspeed"));
 
-	XPLMDataRef verticalSpeedDataref = NULL;
-	verticalSpeedDataref = XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot");
-	verticalSpeedData = XPLMGetDataf(verticalSpeedDataref);
+	/*Indicated vertical speed in feet per minute, pilot system: float, feet/minute*/
+	verticalSpeedData = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot"));
 
-	/*
-	Tesing Location Detection
-
-	1nmi = 1852m
-	30nmi = 55560m
-
-	*/
+	/*The latitude of the aircraft: double, degrees*/
 	latREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
+
+	/*The longitude of the aircraft: double, degrees*/
 	lonREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 }
-
 
 
 

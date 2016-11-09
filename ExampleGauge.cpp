@@ -56,6 +56,9 @@ NOTES:
 #include "XPLMUtilities.h"
 #include "XPLMNavigation.h"
 #include "Transponder.h"
+#include <ppl.h>
+#include <concurrent_unordered_map.h>
+#include <iostream>
 
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
@@ -86,6 +89,8 @@ NOTES:
 /// Cross Platform Bitmap functions and bitmap data structures
 /// These need to be aligned
 #pragma pack(push, ident, 2)
+
+using namespace concurrency;
 
 typedef struct tagBMPFILEHEADER
 {
@@ -120,6 +125,7 @@ typedef struct	tagIMAGEDATA
 	short		Channels;
 } IMAGEDATA;
 
+
 #pragma pack(pop, ident)
 
 static int		BitmapLoader(const char *FilePath, IMAGEDATA *ImageData);
@@ -152,6 +158,9 @@ static char gPluginDataFile[255];
 static float verticalSpeed1;
 static char GMAStringBuf[256];
 static char uniqueID[128];
+
+
+static concurrent_unordered_map<char, int> setOfOtherAircraftObjects; 
 
 
 #if APL && __MACH__
@@ -907,6 +916,7 @@ int MyHandleMouseClickCallback(
 	* box. */
 	return 1;
 }
+
 
 
 void getDatarefsToSendOverLAN(void)

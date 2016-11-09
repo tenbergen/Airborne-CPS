@@ -151,7 +151,7 @@ static XPLMHotKeyID gExampleGaugeHotKey = NULL;
 static char gPluginDataFile[255];
 static float verticalSpeed1;
 static char GMAStringBuf[256];
-static char macRef[128];
+static char uniqueID[128];
 
 
 #if APL && __MACH__
@@ -197,7 +197,6 @@ static int panelMouseClick_Callback(
 
 Transponder& transponder = *new Transponder;
 
-// BEGIN STUFF I ADDED (Wesam)
 static XPLMWindowID	gWindow = NULL;
 static int gClicked = 0;
 
@@ -236,8 +235,7 @@ static int MyHandleMouseClickCallback(
 
 static void getSensorInfoPlugin(void);
 
-// END STUFF I ADDED
-static void getMacAddress(void);
+static void getPhysicalAddressForUniqueID(void);
 
 PLUGIN_API int XPluginStart(
 	char *		outName,
@@ -260,12 +258,12 @@ PLUGIN_API int XPluginStart(
 	strcpy(outSig, "AirborneCPS");
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
 
-	getMacAddress(); /* Get the Mac Address for a unique ID */
+	getPhysicalAddressForUniqueID();
 
 	//Generate the DataRef variables.
 	getSensorInfoPlugin();
 
-	/* Now we create a window.  We pass in a rectangle in left, top,
+	/* Create a window. Pass in a rectangle in left, top,
 	* right, bottom screen coordinates.  We pass in three callbacks. */
 	gWindow = XPLMCreateWindow(
 		50, 600, 300, 200,			/* Area of the window. */
@@ -299,22 +297,10 @@ PLUGIN_API int XPluginStart(
 	return 1;
 }
 
-PLUGIN_API void	XPluginStop(void)
+PLUGIN_API void	XPluginStop(void) 
 {
-	/// Clean up
-	XPLMUnregisterDrawCallback(
-		gaugeDraw_Callback,
-		xplm_Phase_Gauges,
-		0,
-		NULL);
-	//
-	//BEGIN NEW MERGED CODE
-
+	XPLMUnregisterDrawCallback(gaugeDraw_Callback, xplm_Phase_Gauges, 0, NULL);
 	XPLMDestroyWindow(gWindow);
-
-	//END NEW MERGED CODE
-	//
-
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
 }
@@ -821,8 +807,7 @@ int BitmapLoader(const char * FilePath, IMAGEDATA * ImageData)
 		fclose(BitmapFile);
 	return RetCode;
 }
-//
-//BEGIN NEW MERGED CODE
+
 
 /*
 * MyDrawingWindowCallback
@@ -863,8 +848,9 @@ void DrawWindowCallback(
 	char lon[128]; 
 	snprintf(lon, 128, "lon: %f", lonREF);
 
-	char macAdd[128]; 
-	snprintf(macAdd, 128, "MAC_ADD: %s", macRef);
+	char idRef[128]; 
+	snprintf(idRef, 128, "Unique ID: %s", uniqueID);
+
 
 	/* Draw the text into the window. The NULL indicates no word wrapping. */
 	XPLMDrawString(color, left + 5, top - 40, verticalSpeedDataChar, NULL, xplmFont_Basic);
@@ -872,7 +858,7 @@ void DrawWindowCallback(
 	XPLMDrawString(color, left + 5, top - 80, lat, NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, lon, NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 120, transponder.msg, NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 140, macAdd, NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 140, idRef, NULL, xplmFont_Basic);
 
 }
 
@@ -990,34 +976,29 @@ void getSensorInfoPlugin(void)
 
 
 
-/*
- * Grab a physical address and print it to the debug box in X-Plane 
- */
-void getMacAddress(void) 
+
+void getPhysicalAddressForUniqueID(void) 
 {
 	int i = 0;
+	char uniqueIDtmp[128];
 	DWORD dwRetVal = 0;
-	PIP_ADAPTER_ADDRESSES pCurrAddresses = NULL;
-	ULONG family = AF_UNSPEC;
-	ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
-	PIP_ADAPTER_ADDRESSES pAddresses = NULL;
 	ULONG outBufLen = 15000;
-	pAddresses = (IP_ADAPTER_ADDRESSES *)MALLOC(outBufLen);
-	char macRefCat[128];
-	macRef[0] = '\0';
-	dwRetVal = GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen);
-	pCurrAddresses = pAddresses;
+	PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES *)MALLOC(outBufLen);
+	uniqueID[0] = '\0';
+	dwRetVal = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, pAddresses, &outBufLen);
 
-	if (pCurrAddresses->PhysicalAddressLength != 0) {
-		for (i = 0; i < (int)pCurrAddresses->PhysicalAddressLength; i++) {
-			if (i == (pCurrAddresses->PhysicalAddressLength - 1)) {
-				snprintf(macRefCat, 128, "%.2X\n", (int)pCurrAddresses->PhysicalAddress[i]);
-				strcat(macRef, macRefCat);
+	if (pAddresses->PhysicalAddressLength != 0) {
+		for (i = 0; i < (int)pAddresses->PhysicalAddressLength; i++) {
+			if (i == (pAddresses->PhysicalAddressLength - 1)) {
+				snprintf(uniqueIDtmp, 128, "%.2X\n", (int)pAddresses->PhysicalAddress[i]);
+				strcat(uniqueID, uniqueIDtmp);
 			} else {
-				snprintf(macRefCat, 128, "%.2X-", (int)pCurrAddresses->PhysicalAddress[i]);
-				strcat(macRef, macRefCat);
+				snprintf(uniqueIDtmp, 128, "%.2X-", (int)pAddresses->PhysicalAddress[i]);
+				strcat(uniqueID, uniqueIDtmp);
 			}
 		}
-	} else { strcpy(macRef, "Failed.");}
+	}
+	
+	else { strcpy(uniqueID, "Failed.");}
 	FREE(pAddresses);
 }

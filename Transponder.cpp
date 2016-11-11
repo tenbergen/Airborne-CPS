@@ -1,4 +1,3 @@
-
 #include "Transponder.h"
 
 #pragma comment(lib,"WS2_32")
@@ -9,7 +8,8 @@ Transponder::Transponder()
 		exit(0);
 	}
 
-	strcpy(myId, "12345");
+	strcpy(myId, "I'm out there.");
+	//msg[0] = '\0';
 	sinlen = sizeof(struct sockaddr_in);
 	memset(&incoming, 0, sinlen);
 
@@ -48,23 +48,36 @@ DWORD Transponder::receive()
 	{
 		char tempMsg[MSG_SIZE];
 		recvfrom(inSocket, tempMsg, MSG_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+		XPLMDebugString("Transponder::receive()\ntempMsg: ");
+		XPLMDebugString(tempMsg);
+		XPLMDebugString("\nmyId: ");
+		XPLMDebugString(myId);
+		XPLMDebugString("\n");
 		if (strcmp(tempMsg, myId) != 0) {
+	/*		int i = 0;
+			while (i < MSG_SIZE && tempMsg[i] != '\0') {
+				i++;
+			}*/
+
+			char temp[MSG_SIZE + 8];
+			snprintf(temp, MSG_SIZE + 8, "strlen(tempMsg): %zu\n", strlen(tempMsg));
+			XPLMDebugString(temp);
 			strcpy(msg, tempMsg);
 		}
-		
 	}
 	return 0;
 }
 
 DWORD Transponder::send()
 {
-	char query[256];
-
-	strcpy(query, "12345");
-
 	for (;;)
 	{
-		sendto(outSocket, query, strlen(msg), 0, (struct sockaddr *) &outgoing, sinlen);
+		XPLMDebugString("Transponder::send()\nmyId: ");
+		XPLMDebugString(myId);
+		char temp[64];
+		snprintf(temp, 64, "\nstrlen(myId): %zu \n", strlen(myId));
+		XPLMDebugString(temp);
+		sendto(outSocket, myId, strlen(myId) + 1, 0, (struct sockaddr *) &outgoing, sinlen);
 		Sleep(1000);
 	}
 }

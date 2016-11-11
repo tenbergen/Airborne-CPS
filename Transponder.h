@@ -1,6 +1,7 @@
 
 #include <sys/types.h>
 #include <winsock.h>
+#include "location.pb.h"
 
 #pragma once
 
@@ -11,8 +12,6 @@ class Transponder
 {
 	public:
 		char msg[MSG_SIZE];
-		char myId[MSG_SIZE];
-
 		Transponder();
 		~Transponder();
 		DWORD receive();
@@ -21,12 +20,15 @@ class Transponder
 
 	protected:
 		WSADATA w;
-		SOCKET outSocket;
-		SOCKET inSocket;
-		int status;
+		SOCKET outSocket, inSocket;
 		int buflen;
 		unsigned sinlen;
-		struct sockaddr_in incoming;
-		struct sockaddr_in outgoing;
+		struct sockaddr_in incoming, outgoing;
+		tcas::Location intruder, myLocation;
+		struct {
+			double lat;
+			double lon;
+			double alt;
+		} lla;
 };
 

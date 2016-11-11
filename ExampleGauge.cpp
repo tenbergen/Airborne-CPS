@@ -36,11 +36,6 @@ NOTES:
 
 */
 
-#if IBM
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
 #define TRUE 1
 #define FALSE 0
 
@@ -52,9 +47,6 @@ NOTES:
 #include <ConcurrencySal.h>
 #include <ppl.h>
 #include <concurrent_unordered_map.h>
-
-#pragma comment(lib, "IPHLPAPI.lib")
-#include <iphlpapi.h>
 
 #include "XPLMDefs.h"
 #include "XPLMDisplay.h"
@@ -78,16 +70,9 @@ static float verticalSpeed1;
 GaugeRenderer* gauge_renderer;
 RecommendationRange rec_range;
 
-#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
-#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
-
-static char uniqueID[128];
-
 static concurrency::concurrent_unordered_map<std::string, Aircraft> intruding_aircraft;
 
 static void getDatarefsToSendOverLAN(void);
-
-static void getPhysicalAddressForUniqueID(void);
 
 /// Used for dragging plugin panel window.
 static	int	CoordInRect(float x, float y, float l, float t, float r, float b);
@@ -181,8 +166,6 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 	strcpy(outName, "AirborneCPS");
 	strcpy(outSig, "AirborneCPS");
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
-
-	getPhysicalAddressForUniqueID();
 
 	getDatarefsToSendOverLAN();
 
@@ -448,7 +431,7 @@ void MyDrawWindowCallback(
 
 	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 120, transponder->msg, NULL, xplmFont_Basic);
+	//XPLMDrawString(color, left + 5, top - 120, transponder->msg, NULL, xplmFont_Basic);
 }
 
 /*
@@ -529,42 +512,4 @@ void getDatarefsToSendOverLAN(void)
 
 	/*The longitude of the aircraft: double, degrees*/
 	lonREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
-}
-
-void getPhysicalAddressForUniqueID()
-{
-	std::string hardware_address{};
-	IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
-	char * mac_addr = (char*)malloc(13);
-
-	DWORD dwRetVal;
-	ULONG outBufLen = sizeof(IP_ADAPTER_INFO);
-	
-	if (GetAdaptersInfo(pAdapterInfo, &outBufLen) != ERROR_SUCCESS) {
-		free(pAdapterInfo);
-		pAdapterInfo = (IP_ADAPTER_INFO *)malloc(outBufLen);
-	}
-
-	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &outBufLen)) == NO_ERROR) {
-		PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
-		while (pAdapter && hardware_address.empty()) {
-			sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X",
-				pAdapterInfo->Address[0], pAdapterInfo->Address[1],
-				pAdapterInfo->Address[2], pAdapterInfo->Address[3],
-				pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
-
-			hardware_address = mac_addr;
-			strcat(uniqueID, mac_addr);
-
-			XPLMDebugString("Hardware Address: ");
-			XPLMDebugString(hardware_address.c_str());
-			XPLMDebugString("\n");
-			pAdapter = pAdapter->Next;
-		}
-	}
-	else {
-		XPLMDebugString("Failed to retrieve network adapter information.\n");
-	}
-
-	free(pAdapterInfo);
 }

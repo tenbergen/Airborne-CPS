@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include "location.pb.h"
 
 #include "XPLMUtilities.h"
 
@@ -17,9 +18,7 @@
 class Transponder
 {
 	public:
-		char myId[MSG_SIZE];
 		char msg[MSG_SIZE];
-
 		Transponder();
 		~Transponder();
 		DWORD receive();
@@ -29,9 +28,14 @@ class Transponder
 	protected:
 		WSADATA w;
 		SOCKET outSocket, inSocket;
-		int status, buflen;
+		int buflen;
 		unsigned sinlen;
-		struct sockaddr_in incoming;
-		struct sockaddr_in outgoing;
+		struct sockaddr_in incoming, outgoing;
+		tcas::Location intruder, myLocation;
+		struct {
+			double lat;
+			double lon;
+			double alt;
+		} lla;
 };
 

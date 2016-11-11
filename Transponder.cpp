@@ -8,8 +8,7 @@ Transponder::Transponder()
 		exit(0);
 	}
 
-	strcpy(myId, "I'm out there.");
-	//msg[0] = '\0';
+	myLocation.set_id(12345); // TODO use mac address
 	sinlen = sizeof(struct sockaddr_in);
 	memset(&incoming, 0, sinlen);
 
@@ -43,41 +42,35 @@ Transponder::~Transponder()
 
 DWORD Transponder::receive()
 {
-	// listen for a message
+	char incomingMessage[MSG_SIZE];
+	int intruderID;
 	for (;;)
 	{
-		char tempMsg[MSG_SIZE];
-		recvfrom(inSocket, tempMsg, MSG_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
-		XPLMDebugString("Transponder::receive()\ntempMsg: ");
-		XPLMDebugString(tempMsg);
-		XPLMDebugString("\nmyId: ");
-		XPLMDebugString(myId);
-		XPLMDebugString("\n");
-		if (strcmp(tempMsg, myId) != 0) {
-	/*		int i = 0;
-			while (i < MSG_SIZE && tempMsg[i] != '\0') {
-				i++;
-			}*/
-
-			char temp[MSG_SIZE + 8];
-			snprintf(temp, MSG_SIZE + 8, "strlen(tempMsg): %zu\n", strlen(tempMsg));
-			XPLMDebugString(temp);
-			strcpy(msg, tempMsg);
+		recvfrom(inSocket, incomingMessage, MSG_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+		intruder.ParseFromString(incomingMessage);
+		intruderID = intruder.id();
+		if (intruderID != myLocation.id()) {
+			lla.lat = intruder.lat();
+			lla.lon = intruder.lon();
+			lla.alt = intruder.alt();
 		}
+		// TODO map the aircraft
 	}
 	return 0;
 }
 
 DWORD Transponder::send()
 {
+	std::string serializedLLA;
 	for (;;)
 	{
-		XPLMDebugString("Transponder::send()\nmyId: ");
-		XPLMDebugString(myId);
-		char temp[64];
-		snprintf(temp, 64, "\nstrlen(myId): %zu \n", strlen(myId));
-		XPLMDebugString(temp);
-		sendto(outSocket, myId, strlen(myId) + 1, 0, (struct sockaddr *) &outgoing, sinlen);
+		// TODO get datarefs
+		myLocation.set_lat(1.1);
+		myLocation.set_lon(2.1);
+		myLocation.set_alt(3.2);
+		myLocation.SerializeToString(&serializedLLA);
+		const char* tempLLA = serializedLLA.c_str();
+		sendto(outSocket, tempLLA, strlen(msg), 0, (struct sockaddr *) &outgoing, sinlen);
 		Sleep(1000);
 	}
 }

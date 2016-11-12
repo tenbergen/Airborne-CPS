@@ -54,7 +54,7 @@ NOTES:
 #include "XPLMGraphics.h"
 #include "XPLMNavigation.h"
 
-//#include "Transponder.h"
+#include "Transponder.h"
 #include "GaugeRenderer.h"
 
 static XPLMDataRef	verticalSpeed = NULL;
@@ -106,7 +106,7 @@ static void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XP
 
 static int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
-//Transponder* transponder = new Transponder;
+Transponder* transponder = new Transponder;
 
 // BEGIN STUFF I ADDED (Wesam)
 static XPLMWindowID	gWindow = NULL;
@@ -195,7 +195,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 	gauge_renderer = new GaugeRenderer(gPluginDataFile);
 	gauge_renderer->LoadTextures();
 	// start broadcasting location, and listening for aircraft
-	//transponder->start();
+	transponder->start();
 
 	return 1;
 }

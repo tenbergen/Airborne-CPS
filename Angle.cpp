@@ -20,10 +20,14 @@ double Angle::ToRadians() const {
 	return value_degrees_ * (M_PI / 180.0);
 }
 
-double Angle::operator + (Angle const & a) const {
-	return value_degrees_ + a.value_degrees_;
+Angle Angle::operator + (Angle const & a) const {
+	return Angle(value_degrees_ + a.value_degrees_, Angle::DEGREES);
 }
 
-double Angle::operator - (Angle const & a) const {
-	return value_degrees_ - a.value_degrees_;
+Angle Angle::operator - (Angle const & a) const {
+	return Angle(value_degrees_ - a.value_degrees_, Angle::DEGREES);
+}
+
+Angle Angle::operator = (Angle const & a) const {
+	return Angle(value_degrees_, Angle::DEGREES);
 }

@@ -18,8 +18,9 @@ public:
 	double ToDegrees() const;
 	double ToRadians() const;
 
-	double operator + (Angle const & a) const;
-	double operator - (Angle const & a) const;
+	Angle operator + (Angle const & a) const;
+	Angle operator - (Angle const & a) const;
+	Angle operator = (Angle const & a) const;
 private:
 	double const value_degrees_;
 };

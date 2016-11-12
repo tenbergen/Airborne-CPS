@@ -1,6 +1,8 @@
 #include "GaugeRenderer.h"
 
-const float GaugeRenderer::kGaugeInnerCircleRadiusPxls = 75.0f;
+const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 75.0;
+Distance const GaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::NMI };
+Distance const GaugeRenderer::kAirplaneOffset_ { (47.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.ToFeet() * 2.0, Distance::FEET};
 
 const float GaugeRenderer::kGaugePosLeft = 768.0f;
 const float GaugeRenderer::kGaugePosRight = 1024.0f;
@@ -12,7 +14,7 @@ const float GaugeRenderer::kGaugeCenterY = (kGaugePosTop + kGaugePosBot) / 2.0f;
 
 const float GaugeRenderer::kNeedlePosLeft = kGaugePosLeft + 125.0f;
 const float GaugeRenderer::kNeedlePosRight = kNeedlePosLeft + 8.0f;
-const float GaugeRenderer::kNeedlePosBot = kGaugePosBot + 120.0f;
+const float GaugeRenderer::kNeedlePosBot = kGaugePosBot + 123.0f;
 const float GaugeRenderer::kNeedlePosTop = kNeedlePosBot + 80.0f;
 
 const float GaugeRenderer::kMinVertSpeed_ = -4000.0f;
@@ -22,7 +24,7 @@ const float GaugeRenderer::kMinDegrees = -360.0f;
 const float GaugeRenderer::kMaxDegrees = 360.0f;
 
 const float GaugeRenderer::kMaxVSpeedDegrees = 150.0f;
-const float GaugeRenderer::kGlDiskAngleOffset = 90.0f;
+const float GaugeRenderer::kGlAngleOffset_ = 90.0f;
 
 const float GaugeRenderer::kNeedleTranslationX = kNeedlePosLeft + ((kNeedlePosRight - kNeedlePosLeft) / 2.0f);
 const float GaugeRenderer::kNeedleTranslationY = kNeedlePosBot + 5.0f;
@@ -127,7 +129,7 @@ int GaugeRenderer::LoadTexture(char* tex_path, int tex_id) {
 	return Status;
 }
 
-void GaugeRenderer::Render(float* rgb, float vert_speed_deg, RecommendationRange* recommended, RecommendationRange* not_recommended) {
+void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft * const intruder, RecommendationRange*  recommended, RecommendationRange* not_recommended) {
 	/// Turn on Alpha Blending and turn off Depth Testing
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 0/*AlphaBlending*/, 0/*DepthTesting*/, 0/*DepthWriting*/);
 
@@ -147,12 +149,11 @@ void GaugeRenderer::Render(float* rgb, float vert_speed_deg, RecommendationRange
 	glTexCoord2f(0.5f, 0.5f); glVertex2f(kGaugePosRight, kGaugePosTop);
 	glEnd();
 
-	drawRecommendedVerticalSpeedRange(0.0f, kMaxVertSpeed_, true);
-	drawRecommendedVerticalSpeedRange(kMinVertSpeed_, 0.0f, false);
-	/*drawRecommendationRangeStartSweep(0.0f, 30.0f, true);
-	drawRecommendationRangeStartSweep(120.0f, 270.0f, false);
-	drawRecommendationRangeStartSweep(270.0f, 360.0f, true);*/
-	//drawRecommendationRange(gaugeCenterX, gaugeCenterY, 0.0f, 60.0f, true);
+	if (recommended)
+		DrawRecommendationRange(*recommended);
+
+	if (not_recommended)
+		DrawRecommendationRange(*not_recommended);
 
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 1/*AlphaBlending*/, 0/*DepthTesting*/, 0/*DepthWriting*/);
 
@@ -171,12 +172,71 @@ void GaugeRenderer::Render(float* rgb, float vert_speed_deg, RecommendationRange
 	glTexCoord2f(1.0f, 0.5f); glVertex2f(kGaugePosRight, kGaugePosTop);
 	glEnd();
 
+	// Draw intruding aircraft
+	if (intruder) {
+		XPLMDebugString("GaugeRenderer::Render - intruder aircraft present\n");
+		LLA user_pos = *user_aircraft->position_.load();
+		LLA intruder_pos = *intruder->position_.load();
+
+		double gauge_inner_rad_ft = kGaugeInnerCircleRadius_.ToFeet();
+		 
+		Vec2 user_vel_nor = user_aircraft->horizontal_velocity_.load()->nor();
+		// Determine the offset the user's position should be translated by in order to determine the LLA of the center of the gauge
+		
+		Distance delta_lat = Distance(user_vel_nor.x_ * kAirplaneOffset_.ToFeet(), Distance::FEET);
+		Distance delta_lon = Distance(user_vel_nor.y_ * kAirplaneOffset_.ToFeet(), Distance::FEET);
+
+		// Find the LLA corresponding to the center of the gauge
+		LLA gauge_center_pos = user_pos.Translate(&delta_lat, &delta_lon, NULL);
+
+		Distance range = gauge_center_pos.Range(&intruder_pos);
+		double range_ft = range.ToFeet();
+
+		char strbuf[512];
+		snprintf(strbuf, 512, "GaugeRenderer::Render - vel_nor: (%f, %f), k_ac_offset_ft: %f, delta_lat: %f, delta_lon: %f, range: %f, gauge_inner_rad_ft: %f, user_lat: %f, user_lon: %f, g_c_pos_lat: %f, g_c_pos_lon: %f\n", user_vel_nor.x_, user_vel_nor.y_, kAirplaneOffset_.ToFeet(), delta_lat.ToFeet(), delta_lon.ToFeet(), range_ft, gauge_inner_rad_ft, user_pos.latitude_.ToDegrees(), user_pos.longitude_.ToDegrees(), gauge_center_pos.latitude_.ToDegrees(), gauge_center_pos.longitude_.ToDegrees());
+		XPLMDebugString(strbuf);
+
+		if (range_ft < gauge_inner_rad_ft) {
+			// Continue down bearing path? Bearing is north-referenced (forward) 
+			Angle bearing = gauge_center_pos.Bearing(&intruder_pos);
+
+			/*Angle lat_diff = intruder_pos.latitude_ - gauge_center_pos.latitude_;
+			Angle lon_diff = intruder_pos.longitude_ - gauge_center_pos.longitude_;
+
+			Distance dist_per_deg_lat = gauge_center_pos.DistPerDegreeLat();
+			Distance dist_per_deg_lon = gauge_center_pos.DistPerDegreeLon();
+
+			float cx = kGaugeCenterX + ((lat_diff.ToDegrees() * dist_per_deg_lat.ToFeet()) / gauge_inner_rad_ft) * kGaugeInnerCircleRadiusPxls_;
+			float cy = kGaugeCenterY + ((lon_diff.ToDegrees() * dist_per_deg_lon.ToFeet()) / gauge_inner_rad_ft) * kGaugeInnerCircleRadiusPxls_;*/
+
+			strbuf[0] = '\0';
+			snprintf(strbuf, 256, "GaugeRenderer::Render - cx: %f, cy: %f, lat_diff: %f, lon_diff %f, d_p_d_lat: %f, d_p_d_lon: %f\n", cx, cy, lat_diff.ToDegrees(), lon_diff.ToDegrees(), dist_per_deg_lat.ToFeet(), dist_per_deg_lon.ToFeet());
+			XPLMDebugString(strbuf);
+
+			float cr = cx + 6;
+			float cl = cx - 6;
+			float ct = cy + 6;
+			float cb = cy - 6;
+
+			glBegin(GL_QUADS);
+			glTexCoord2f(0.15625f, 0.96875f); glVertex2f(cr, cb);
+			glTexCoord2f(0.125f, 0.96875f); glVertex2f(cl, cb);
+			glTexCoord2f(0.125f, 1.0f); glVertex2f(cl, ct);
+			glTexCoord2f(0.15625f, 1.0f); glVertex2f(cr, ct);
+			glEnd();
+		}
+	}
+
 	// Rotate the needle according to the current vertical velocity
 	glTranslatef(kNeedleTranslationX, kNeedleTranslationY, 0.0f);
 
-	if (vert_speed_deg > 60.0f) glRotatef(60, 0.0f, 0.0f, -1.0f);
-	else if (vert_speed_deg < -240) glRotatef(-240, 0.0f, 0.0f, -1.0f);
-	else glRotatef(vert_speed_deg, 0.0f, 0.0f, -1.0f);
+	double vert_speed_deg = (user_aircraft->vertical_velocity / kMaxVSpeedDegrees) - kGlAngleOffset_;
+	vert_speed_deg = math_util::clampd(vert_speed_deg, -240.0, 60.0);
+	glRotated(vert_speed_deg, 0.0, 0.0, -1.0);
+
+	/*if (vert_speed_deg > 60.0f) glRotated(60, 0.0f, 0.0f, -1.0f);
+	else if (vert_speed_deg < -240) glRotated(-240, 0.0f, 0.0f, -1.0f);
+	else glRotatef(vert_speed_deg, 0.0f, 0.0f, -1.0f);*/
 
 	glTranslatef(-kNeedleTranslationX, -kNeedleTranslationY, 0.0f);
 
@@ -211,29 +271,29 @@ void GaugeRenderer::Render(float* rgb, float vert_speed_deg, RecommendationRange
 	glFlush();
 }
 
-void GaugeRenderer::drawRecommendationRange(RecommendationRange rec_range) {
-	drawRecommendedVerticalSpeedRange(rec_range.min_vertical_speed, rec_range.max_vertical_speed, rec_range.recommended);
+void GaugeRenderer::DrawRecommendationRange(RecommendationRange rec_range) {
+	DrawRecommendedVerticalSpeedRange(rec_range.min_vertical_speed, rec_range.max_vertical_speed, rec_range.recommended);
 }
 
-void GaugeRenderer::drawRecommendedVerticalSpeedRange(float min_vert_speed, float max_vert_speed, bool recommended) {
+void GaugeRenderer::DrawRecommendedVerticalSpeedRange(float min_vert_speed, float max_vert_speed, bool recommended) {
 	if (min_vert_speed > max_vert_speed) {
 		float min = min_vert_speed;
 		min_vert_speed = max_vert_speed;
 		max_vert_speed = min;
 	}
 
-	min_vert_speed = clamp(min_vert_speed, kMinVertSpeed_, kMaxVertSpeed_);
-	max_vert_speed = clamp(max_vert_speed, kMinVertSpeed_, kMaxVertSpeed_);
+	min_vert_speed = math_util::clampf(min_vert_speed, kMinVertSpeed_, kMaxVertSpeed_);
+	max_vert_speed = math_util::clampf(max_vert_speed, kMinVertSpeed_, kMaxVertSpeed_);
 
-	float start_angle = (min_vert_speed / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlDiskAngleOffset;
-	float stop_angle = (max_vert_speed / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlDiskAngleOffset;
+	float start_angle = (min_vert_speed / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlAngleOffset_;
+	float stop_angle = (max_vert_speed / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlAngleOffset_;
 
-	drawRecommendationRange(start_angle, stop_angle, recommended);
+	DrawRecommendationRangeStartStop(start_angle, stop_angle, recommended);
 }
 
-void GaugeRenderer::drawRecommendationRange(float start_angle, float stop_angle, bool recommended) {
-	start_angle = clamp(start_angle, kMinDegrees, kMaxDegrees);
-	stop_angle = clamp(stop_angle, kMinDegrees, kMaxDegrees);
+void GaugeRenderer::DrawRecommendationRangeStartStop(float start_angle, float stop_angle, bool recommended) {
+	start_angle = math_util::clampf(start_angle, kMinDegrees, kMaxDegrees);
+	stop_angle = math_util::clampf(stop_angle, kMinDegrees, kMaxDegrees);
 
 	if (start_angle < 0.0f)
 		start_angle += kMaxDegrees;
@@ -241,12 +301,12 @@ void GaugeRenderer::drawRecommendationRange(float start_angle, float stop_angle,
 	if (stop_angle < 0.0f)
 		stop_angle += kMaxDegrees;
 
-	drawRecommendationRangeStartSweep(start_angle, stop_angle - start_angle, recommended);
+	DrawRecommendationRangeStartSweep(start_angle, stop_angle - start_angle, recommended);
 }
 
-void GaugeRenderer::drawRecommendationRangeStartSweep(float start_angle, float sweep_angle, bool recommended) {
-	start_angle = clamp(start_angle, kMinDegrees, kMaxDegrees);
-	sweep_angle = clamp(sweep_angle, kMinDegrees, kMaxDegrees);
+void GaugeRenderer::DrawRecommendationRangeStartSweep(float start_angle, float sweep_angle, bool recommended) {
+	start_angle = math_util::clampf(start_angle, kMinDegrees, kMaxDegrees);
+	sweep_angle = math_util::clampf(sweep_angle, kMinDegrees, kMaxDegrees);
 
 	if (start_angle < 0.0f)
 		start_angle += kMaxDegrees;
@@ -274,12 +334,4 @@ void GaugeRenderer::drawRecommendationRangeStartSweep(float start_angle, float s
 	glEnable(GL_LIGHTING);
 
 	glPopMatrix();
-}
-
-float GaugeRenderer::clamp(float val, float min, float max) {
-	if (val < min)
-		return min;
-	if (val > max)
-		return max;
-	return val;
 }

@@ -62,9 +62,8 @@ NOTES:
 #include "XPLMGraphics.h"
 #include "XPLMNavigation.h"
 
-#include "Transponder.h"
+//#include "Transponder.h"
 #include "GaugeRenderer.h"
-#include "Aircraft.h"
 
 static XPLMDataRef	verticalSpeed = NULL;
 static XPLMDataRef	RED = NULL, GREEN = NULL, BLUE = NULL;
@@ -75,15 +74,26 @@ static XPLMHotKeyID gExampleGaugeHotKey = NULL;
 
 static char gPluginDataFile[255];
 static float verticalSpeed1;
+
+Aircraft* user_aircraft;
+Aircraft* intruding_aircraft;
+
+Vec2* user_ac_vel;
+Vec2* intr_ac_vel;
+
+LLA* user_ac_pos;
+LLA* intr_ac_pos;
+
 GaugeRenderer* gauge_renderer;
-RecommendationRange rec_range;
+RecommendationRange pos_rec_range;
+RecommendationRange neg_rec_range;
 
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 
 static char uniqueID[128];
 
-static concurrency::concurrent_unordered_map<std::string, Aircraft> intruding_aircraft;
+static concurrency::concurrent_unordered_map<std::string, Aircraft> intruding_aircrafts;
 
 static void getDatarefsToSendOverLAN(void);
 
@@ -95,34 +105,18 @@ static int	CoordInRect(float x, float y, float l, float t, float r, float b)
 {	return ((x >= l) && (x < r) && (y < t) && (y >= b)); }
 
 /// Prototypes for callbacks etc.
-static int DrawGLScene();
-static int	ExampleGaugeDrawCallback(
-                                   XPLMDrawingPhase     inPhase,
-                                   int                  inIsBefore,
-                                   void *               inRefcon);
+static void DrawGLScene();
+static int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
 
 static void ExampleGaugeHotKey(void * refCon);
 
-static void ExampleGaugePanelWindowCallback(
-                                   XPLMWindowID         inWindowID,
-                                   void *               inRefcon);
+static void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
 
-static void ExampleGaugePanelKeyCallback(
-                                   XPLMWindowID         inWindowID,
-                                   char                 inKey,
-                                   XPLMKeyFlags         inFlags,
-                                   char                 inVirtualKey,
-                                   void *               inRefcon,
-                                   int                  losingFocus);
+static void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
 
-static int ExampleGaugePanelMouseClickCallback(
-                                   XPLMWindowID         inWindowID,
-                                   int                  x,
-                                   int                  y,
-                                   XPLMMouseStatus      inMouse,
-                                   void *               inRefcon);
+static int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
-Transponder* transponder = new Transponder;
+//Transponder* transponder = new Transponder;
 
 // BEGIN STUFF I ADDED (Wesam)
 static XPLMWindowID	gWindow = NULL;
@@ -140,29 +134,11 @@ float trueAirspeed = 0;
 float verticalSpeedData = 0;
 float latREF, lonREF = 0;
 
-static void MyDrawWindowCallback(
-	XPLMWindowID         inWindowID,
-	void *               inRefcon);
+static void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
 
-static void MyHandleKeyCallback(
-	XPLMWindowID         inWindowID,
-	char                 inKey,
-	XPLMKeyFlags         inFlags,
-	char                 inVirtualKey,
-	void *               inRefcon,
-	int                  losingFocus);
+static void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
 
-static int MyHandleMouseClickCallback(
-	XPLMWindowID         inWindowID,
-	int                  x,
-	int                  y,
-	XPLMMouseStatus      inMouse,
-	void *               inRefcon);
-
-static void getSensorInfoPlugin(void);
-
-// END STUFF I ADDED
-
+static int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
 PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 {
@@ -186,21 +162,8 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 
 	getDatarefsToSendOverLAN();
 
-	//
-	//START NEW MERGED CODE
-
-	/* Now we create a window.  We pass in a rectangle in left, top,
-	* right, bottom screen coordinates.  We pass in three callbacks. */
-	gWindow = XPLMCreateWindow(
-		50, 600, 300, 200,			/* Area of the window. */
-		1,							/* Start visible. */
-		MyDrawWindowCallback,		/* Callbacks */
-		MyHandleKeyCallback,
-		MyHandleMouseClickCallback,
-		NULL);						/* Refcon - not used. */
-
-	//END NEW MERGED CODE
-	//
+	/* Now we create a window.  We pass in a rectangle in left, top, right, bottom screen coordinates.  We pass in three callbacks. */
+	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, MyDrawWindowCallback, MyHandleKeyCallback, MyHandleMouseClickCallback, NULL);
 
 	/// Register so that our gauge is drawing during the Xplane gauge phase
 	XPLMRegisterDrawCallback(ExampleGaugeDrawCallback, xplm_Phase_Gauges, 0, NULL);
@@ -216,11 +179,35 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag,   "F8",   ExampleGaugeHotKey, NULL);
 
+	pos_rec_range.min_vertical_speed = 0.0;
+	pos_rec_range.max_vertical_speed = GaugeRenderer::kMaxVertSpeed_;
+	pos_rec_range.recommended = true;
+
+	neg_rec_range.min_vertical_speed = GaugeRenderer::kMinVertSpeed_;
+	neg_rec_range.max_vertical_speed = 0.0;
+	neg_rec_range.recommended = false;
+
+	user_ac_pos = new LLA(43.0, -76.0, 10000.0, Angle::DEGREES, Distance::FEET);
+	user_ac_vel = new Vec2(30.0, 30.0);
+
+	user_aircraft = new Aircraft("temp_id");
+	user_aircraft->horizontal_velocity_.store(user_ac_vel);
+	user_aircraft->position_.store(user_ac_pos);
+	user_aircraft->vertical_velocity.store(0.0);
+
+	intr_ac_pos = new LLA(43.2, -75.8, 10000.0, Angle::DEGREES, Distance::FEET);
+	intr_ac_vel = new Vec2(-30.0, 30.0);
+
+	intruding_aircraft = new Aircraft("intruder_id");
+	intruding_aircraft->horizontal_velocity_.store(intr_ac_vel);
+	intruding_aircraft->position_.store(intr_ac_pos);
+	intruding_aircraft->vertical_velocity.store(0.0);
+
 	/// Load the textures and bind them etc.
 	gauge_renderer = new GaugeRenderer(gPluginDataFile);
 	gauge_renderer->LoadTextures();
 	// start broadcasting location, and listening for aircraft
-	transponder->start();
+	//transponder->start();
 
 	return 1;
 }
@@ -232,6 +219,16 @@ PLUGIN_API void	XPluginStop(void)
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
+
+	delete user_aircraft;
+	delete user_ac_pos;
+	delete user_ac_vel;
+
+	delete intruding_aircraft;
+	delete intr_ac_pos;
+	delete intr_ac_vel;
+
+	delete gauge_renderer;
 }
 
 PLUGIN_API void XPluginDisable(void)
@@ -268,8 +265,7 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 {
 	// Do the actual drawing, but only if the window is active
 	if (ExampleGaugeDisplayPanelWindow) {
-		float FloatVal = XPLMGetDataf(verticalSpeed);
-		verticalSpeed1 = convertToRotation(FloatVal, 4000);
+		user_aircraft->vertical_velocity.store(XPLMGetDataf(verticalSpeed));
 		DrawGLScene();
 	}
 	return 1;
@@ -305,24 +301,14 @@ void ExampleGaugePanelKeyCallback(
 {
 }
 
-/*
- * ExampleGaugePanelMouseClickCallback
- *
- * Our mouse click callback updates the position that the windows is dragged to.
- *
- */
-int ExampleGaugePanelMouseClickCallback(
-                                   XPLMWindowID         inWindowID,
-                                   int                  x,
-                                   int                  y,
-                                   XPLMMouseStatus      inMouse,
-                                   void *               inRefcon)
+/* Our mouse click callback updates the position that the windows is dragged to. */
+int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon)
 {
-	static	int	dX = 0, dY = 0;
-	static	int	Weight = 0, Height = 0;
+	int	dX = 0, dY = 0;
+	int	Weight = 0, Height = 0;
 	int	Left, Top, Right, Bottom;
 
-	static	int	gDragging = 0;
+	int	gDragging = 0;
 
 	if (!ExampleGaugeDisplayPanelWindow)
 		return 0;
@@ -367,13 +353,10 @@ void ExampleGaugeHotKey(void * refCon)
 }
 
 /// Draws the textures that make up the gauge
-int DrawGLScene()
+void DrawGLScene()
 {
 	float rgb[3] = { XPLMGetDataf(RED), XPLMGetDataf(GREEN), XPLMGetDataf(BLUE) };
-
-	gauge_renderer->Render(rgb, verticalSpeed1, NULL, NULL);
-	
-	return TRUE;
+	gauge_renderer->Render(rgb, user_aircraft, intruding_aircraft, NULL, NULL);
 }
 
 /*
@@ -448,7 +431,7 @@ void MyDrawWindowCallback(
 
 	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 120, transponder->msg, NULL, xplmFont_Basic);
+	//XPLMDrawString(color, left + 5, top - 120, transponder->msg, NULL, xplmFont_Basic);
 }
 
 /*

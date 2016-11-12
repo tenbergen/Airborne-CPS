@@ -8,7 +8,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <stdio.h>
-#include "location.pb.h"
+//#include "location.pb.h"
 
 #include "XPLMUtilities.h"
 
@@ -31,11 +31,10 @@ class Transponder
 		int buflen;
 		unsigned sinlen;
 		struct sockaddr_in incoming, outgoing;
-		tcas::Location intruder, myLocation;
+		//tcas::Location intruder, myLocation;
 		struct {
 			double lat;
 			double lon;
 			double alt;
 		} lla;
 };
-

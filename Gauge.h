@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include "RecommendationRange.h"
 
 class Gauge
@@ -12,6 +14,6 @@ public:
 	const int kWindowPosBot = 0;
 	const int kWindowPosTop = kWindowPosBot + kWindowSize;
 
-	//std::atomic<RecommendationRange> recommended_;
-	//std::atomic<RecommendationRange> not_recommended_;
+	RecommendationRange recommended_;
+	RecommendationRange not_recommended_;
 };

@@ -8,7 +8,7 @@ Transponder::Transponder()
 		exit(0);
 	}
 
-	myLocation.set_id(12345); // TODO use mac address
+	//myLocation.set_id(12345); // TODO use mac address
 	sinlen = sizeof(struct sockaddr_in);
 	memset(&incoming, 0, sinlen);
 
@@ -42,37 +42,38 @@ Transponder::~Transponder()
 
 DWORD Transponder::receive()
 {
-	char incomingMessage[MSG_SIZE];
-	int intruderID;
-	for (;;)
-	{
-		recvfrom(inSocket, incomingMessage, MSG_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
-		intruder.ParseFromString(incomingMessage);
-		intruderID = intruder.id();
-		if (intruderID != myLocation.id()) {
-			lla.lat = intruder.lat();
-			lla.lon = intruder.lon();
-			lla.alt = intruder.alt();
-		}
-		// TODO map the aircraft
-	}
+	//char incomingMessage[MSG_SIZE];
+	////int intruderID;
+	//for (;;)
+	//{
+	//	recvfrom(inSocket, incomingMessage, MSG_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+	//	//intruder.ParseFromString(incomingMessage);
+	//	//intruderID = intruder.id();
+	//	/*if (intruderID != myLocation.id()) {
+	//		lla.lat = intruder.lat();
+	//		lla.lon = intruder.lon();
+	//		lla.alt = intruder.alt();
+	//	}*/
+	//	// TODO map the aircraft
+	//}
 	return 0;
 }
 
 DWORD Transponder::send()
 {
-	std::string serializedLLA;
-	for (;;)
-	{
-		// TODO get datarefs
-		myLocation.set_lat(1.1);
-		myLocation.set_lon(2.1);
-		myLocation.set_alt(3.2);
-		myLocation.SerializeToString(&serializedLLA);
-		const char* tempLLA = serializedLLA.c_str();
-		sendto(outSocket, tempLLA, strlen(msg), 0, (struct sockaddr *) &outgoing, sinlen);
-		Sleep(1000);
-	}
+	//std::string serializedLLA;
+	//for (;;)
+	//{
+	//	// TODO get datarefs
+	//	myLocation.set_lat(1.1);
+	//	myLocation.set_lon(2.1);
+	//	myLocation.set_alt(3.2);
+	//	myLocation.SerializeToString(&serializedLLA);
+	//	const char* tempLLA = serializedLLA.c_str();
+	//	sendto(outSocket, tempLLA, strlen(msg), 0, (struct sockaddr *) &outgoing, sinlen);
+	//	Sleep(1000);
+	//}
+	return 0;
 }
 
 static DWORD WINAPI startBroadcasting(void* param)

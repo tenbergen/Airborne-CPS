@@ -180,7 +180,7 @@ void BmpLoader::SwapRedBlue(IMAGEDATA *ImageData)
 	unsigned char  * srcPixel;
 	int		x, y;
 	unsigned char sTemp;
-	unsigned char channels = ImageData->Channels;
+	short channels = ImageData->Channels;
 
 	/// Do the swap
 	srcPixel = ImageData->pData;

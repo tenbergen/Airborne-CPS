@@ -198,16 +198,16 @@ void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft 
 
 		if (range_ft < gauge_inner_rad_ft) {
 			// Continue down bearing path? Bearing is north-referenced (forward) 
-			Angle bearing = gauge_center_pos.Bearing(&intruder_pos);
+			//Angle bearing = gauge_center_pos.Bearing(&intruder_pos);
 
-			/*Angle lat_diff = intruder_pos.latitude_ - gauge_center_pos.latitude_;
+			Angle lat_diff = intruder_pos.latitude_ - gauge_center_pos.latitude_;
 			Angle lon_diff = intruder_pos.longitude_ - gauge_center_pos.longitude_;
 
 			Distance dist_per_deg_lat = gauge_center_pos.DistPerDegreeLat();
 			Distance dist_per_deg_lon = gauge_center_pos.DistPerDegreeLon();
 
 			float cx = kGaugeCenterX + ((lat_diff.ToDegrees() * dist_per_deg_lat.ToFeet()) / gauge_inner_rad_ft) * kGaugeInnerCircleRadiusPxls_;
-			float cy = kGaugeCenterY + ((lon_diff.ToDegrees() * dist_per_deg_lon.ToFeet()) / gauge_inner_rad_ft) * kGaugeInnerCircleRadiusPxls_;*/
+			float cy = kGaugeCenterY + ((lon_diff.ToDegrees() * dist_per_deg_lon.ToFeet()) / gauge_inner_rad_ft) * kGaugeInnerCircleRadiusPxls_;
 
 			strbuf[0] = '\0';
 			snprintf(strbuf, 256, "GaugeRenderer::Render - cx: %f, cy: %f, lat_diff: %f, lon_diff %f, d_p_d_lat: %f, d_p_d_lon: %f\n", cx, cy, lat_diff.ToDegrees(), lon_diff.ToDegrees(), dist_per_deg_lat.ToFeet(), dist_per_deg_lon.ToFeet());

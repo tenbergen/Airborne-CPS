@@ -4,8 +4,15 @@
 #define WINVER 0x0501
 #endif
 
-#include <winsock2.h>
-#include <string.h>
+#if IBM
+//#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
+#pragma comment(lib, "IPHLPAPI.lib")
+#include <iphlpapi.h>
+
+#include <string>
 #include <sys/types.h>
 #include <stdio.h>
 //#include "location.pb.h"
@@ -14,6 +21,9 @@
 
 #define PORT 21237
 #define MSG_SIZE 256
+
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 
 class Transponder
 {
@@ -24,6 +34,7 @@ class Transponder
 		DWORD receive();
 		DWORD send();
 		void start();
+		static void getPhysicalAddressForUniqueID(void);
 
 	protected:
 		WSADATA w;

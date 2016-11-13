@@ -17,7 +17,7 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 
-namespace tcas {
+namespace xplane {
 
 namespace {
 
@@ -79,6 +79,7 @@ void protobuf_ShutdownFile_location_2eproto() {
 void protobuf_InitDefaults_location_2eproto_impl() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
+  ::google::protobuf::internal::GetEmptyString();
   Location_default_instance_.DefaultConstruct();
   Location_default_instance_.get_mutable()->InitAsDefaultInstance();
 }
@@ -93,9 +94,9 @@ void protobuf_AddDesc_location_2eproto_impl() {
 
   protobuf_InitDefaults_location_2eproto();
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\016location.proto\022\004tcas\"=\n\010Location\022\n\n\002id"
-    "\030\001 \001(\005\022\013\n\003lat\030\002 \001(\001\022\013\n\003lon\030\003 \001(\001\022\013\n\003alt\030"
-    "\004 \001(\001b\006proto3", 93);
+    "\n\016location.proto\022\006xplane\"=\n\010Location\022\n\n\002"
+    "id\030\001 \001(\t\022\013\n\003lat\030\002 \001(\001\022\013\n\003lon\030\003 \001(\001\022\013\n\003al"
+    "t\030\004 \001(\001b\006proto3", 95);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "location.proto", &protobuf_RegisterTypes);
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_location_2eproto);
@@ -136,7 +137,7 @@ Location::Location()
   : ::google::protobuf::Message(), _internal_metadata_(NULL) {
   if (this != internal_default_instance()) protobuf_InitDefaults_location_2eproto();
   SharedCtor();
-  // @@protoc_insertion_point(constructor:tcas.Location)
+  // @@protoc_insertion_point(constructor:xplane.Location)
 }
 
 void Location::InitAsDefaultInstance() {
@@ -147,21 +148,23 @@ Location::Location(const Location& from)
     _internal_metadata_(NULL) {
   SharedCtor();
   UnsafeMergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:tcas.Location)
+  // @@protoc_insertion_point(copy_constructor:xplane.Location)
 }
 
 void Location::SharedCtor() {
-  ::memset(&lat_, 0, reinterpret_cast<char*>(&id_) -
-    reinterpret_cast<char*>(&lat_) + sizeof(id_));
+  id_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  ::memset(&lat_, 0, reinterpret_cast<char*>(&alt_) -
+    reinterpret_cast<char*>(&lat_) + sizeof(alt_));
   _cached_size_ = 0;
 }
 
 Location::~Location() {
-  // @@protoc_insertion_point(destructor:tcas.Location)
+  // @@protoc_insertion_point(destructor:xplane.Location)
   SharedDtor();
 }
 
 void Location::SharedDtor() {
+  id_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
 
 void Location::SetCachedSize(int size) const {
@@ -190,7 +193,7 @@ Location* Location::New(::google::protobuf::Arena* arena) const {
 }
 
 void Location::Clear() {
-// @@protoc_insertion_point(message_clear_start:tcas.Location)
+// @@protoc_insertion_point(message_clear_start:xplane.Location)
 #if defined(__clang__)
 #define ZR_HELPER_(f) \
   _Pragma("clang diagnostic push") \
@@ -207,7 +210,8 @@ void Location::Clear() {
            ZR_HELPER_(last) - ZR_HELPER_(first) + sizeof(last));\
 } while (0)
 
-  ZR_(lat_, id_);
+  ZR_(lat_, alt_);
+  id_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 
 #undef ZR_HELPER_
 #undef ZR_
@@ -218,19 +222,21 @@ bool Location::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!GOOGLE_PREDICT_TRUE(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:tcas.Location)
+  // @@protoc_insertion_point(parse_start:xplane.Location)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // optional int32 id = 1;
+      // optional string id = 1;
       case 1: {
-        if (tag == 8) {
-
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
-                 input, &id_)));
+        if (tag == 10) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_id()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->id().data(), this->id().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "xplane.Location.id"));
         } else {
           goto handle_unusual;
         }
@@ -296,20 +302,25 @@ bool Location::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:tcas.Location)
+  // @@protoc_insertion_point(parse_success:xplane.Location)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:tcas.Location)
+  // @@protoc_insertion_point(parse_failure:xplane.Location)
   return false;
 #undef DO_
 }
 
 void Location::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:tcas.Location)
-  // optional int32 id = 1;
-  if (this->id() != 0) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->id(), output);
+  // @@protoc_insertion_point(serialize_start:xplane.Location)
+  // optional string id = 1;
+  if (this->id().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->id().data(), this->id().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "xplane.Location.id");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      1, this->id(), output);
   }
 
   // optional double lat = 2;
@@ -327,16 +338,22 @@ void Location::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteDouble(4, this->alt(), output);
   }
 
-  // @@protoc_insertion_point(serialize_end:tcas.Location)
+  // @@protoc_insertion_point(serialize_end:xplane.Location)
 }
 
 ::google::protobuf::uint8* Location::InternalSerializeWithCachedSizesToArray(
     bool deterministic, ::google::protobuf::uint8* target) const {
   (void)deterministic; // Unused
-  // @@protoc_insertion_point(serialize_to_array_start:tcas.Location)
-  // optional int32 id = 1;
-  if (this->id() != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(1, this->id(), target);
+  // @@protoc_insertion_point(serialize_to_array_start:xplane.Location)
+  // optional string id = 1;
+  if (this->id().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->id().data(), this->id().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "xplane.Location.id");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->id(), target);
   }
 
   // optional double lat = 2;
@@ -354,18 +371,18 @@ void Location::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(4, this->alt(), target);
   }
 
-  // @@protoc_insertion_point(serialize_to_array_end:tcas.Location)
+  // @@protoc_insertion_point(serialize_to_array_end:xplane.Location)
   return target;
 }
 
 size_t Location::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:tcas.Location)
+// @@protoc_insertion_point(message_byte_size_start:xplane.Location)
   size_t total_size = 0;
 
-  // optional int32 id = 1;
-  if (this->id() != 0) {
+  // optional string id = 1;
+  if (this->id().size() > 0) {
     total_size += 1 +
-      ::google::protobuf::internal::WireFormatLite::Int32Size(
+      ::google::protobuf::internal::WireFormatLite::StringSize(
         this->id());
   }
 
@@ -392,22 +409,22 @@ size_t Location::ByteSizeLong() const {
 }
 
 void Location::MergeFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_merge_from_start:tcas.Location)
+// @@protoc_insertion_point(generalized_merge_from_start:xplane.Location)
   if (GOOGLE_PREDICT_FALSE(&from == this)) MergeFromFail(__LINE__);
   const Location* source =
       ::google::protobuf::internal::DynamicCastToGenerated<const Location>(
           &from);
   if (source == NULL) {
-  // @@protoc_insertion_point(generalized_merge_from_cast_fail:tcas.Location)
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:xplane.Location)
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
   } else {
-  // @@protoc_insertion_point(generalized_merge_from_cast_success:tcas.Location)
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:xplane.Location)
     UnsafeMergeFrom(*source);
   }
 }
 
 void Location::MergeFrom(const Location& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:tcas.Location)
+// @@protoc_insertion_point(class_specific_merge_from_start:xplane.Location)
   if (GOOGLE_PREDICT_TRUE(&from != this)) {
     UnsafeMergeFrom(from);
   } else {
@@ -417,8 +434,9 @@ void Location::MergeFrom(const Location& from) {
 
 void Location::UnsafeMergeFrom(const Location& from) {
   GOOGLE_DCHECK(&from != this);
-  if (from.id() != 0) {
-    set_id(from.id());
+  if (from.id().size() > 0) {
+
+    id_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.id_);
   }
   if (from.lat() != 0) {
     set_lat(from.lat());
@@ -432,14 +450,14 @@ void Location::UnsafeMergeFrom(const Location& from) {
 }
 
 void Location::CopyFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_copy_from_start:tcas.Location)
+// @@protoc_insertion_point(generalized_copy_from_start:xplane.Location)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
 void Location::CopyFrom(const Location& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:tcas.Location)
+// @@protoc_insertion_point(class_specific_copy_from_start:xplane.Location)
   if (&from == this) return;
   Clear();
   UnsafeMergeFrom(from);
@@ -455,7 +473,7 @@ void Location::Swap(Location* other) {
   InternalSwap(other);
 }
 void Location::InternalSwap(Location* other) {
-  std::swap(id_, other->id_);
+  id_.Swap(&other->id_);
   std::swap(lat_, other->lat_);
   std::swap(lon_, other->lon_);
   std::swap(alt_, other->alt_);
@@ -474,18 +492,48 @@ void Location::InternalSwap(Location* other) {
 #if PROTOBUF_INLINE_NOT_IN_HEADERS
 // Location
 
-// optional int32 id = 1;
+// optional string id = 1;
 void Location::clear_id() {
-  id_ = 0;
+  id_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-::google::protobuf::int32 Location::id() const {
-  // @@protoc_insertion_point(field_get:tcas.Location.id)
-  return id_;
+const ::std::string& Location::id() const {
+  // @@protoc_insertion_point(field_get:xplane.Location.id)
+  return id_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
-void Location::set_id(::google::protobuf::int32 value) {
+void Location::set_id(const ::std::string& value) {
   
-  id_ = value;
-  // @@protoc_insertion_point(field_set:tcas.Location.id)
+  id_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:xplane.Location.id)
+}
+void Location::set_id(const char* value) {
+  
+  id_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:xplane.Location.id)
+}
+void Location::set_id(const char* value, size_t size) {
+  
+  id_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:xplane.Location.id)
+}
+::std::string* Location::mutable_id() {
+  
+  // @@protoc_insertion_point(field_mutable:xplane.Location.id)
+  return id_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* Location::release_id() {
+  // @@protoc_insertion_point(field_release:xplane.Location.id)
+  
+  return id_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void Location::set_allocated_id(::std::string* id) {
+  if (id != NULL) {
+    
+  } else {
+    
+  }
+  id_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), id);
+  // @@protoc_insertion_point(field_set_allocated:xplane.Location.id)
 }
 
 // optional double lat = 2;
@@ -493,13 +541,13 @@ void Location::clear_lat() {
   lat_ = 0;
 }
 double Location::lat() const {
-  // @@protoc_insertion_point(field_get:tcas.Location.lat)
+  // @@protoc_insertion_point(field_get:xplane.Location.lat)
   return lat_;
 }
 void Location::set_lat(double value) {
   
   lat_ = value;
-  // @@protoc_insertion_point(field_set:tcas.Location.lat)
+  // @@protoc_insertion_point(field_set:xplane.Location.lat)
 }
 
 // optional double lon = 3;
@@ -507,13 +555,13 @@ void Location::clear_lon() {
   lon_ = 0;
 }
 double Location::lon() const {
-  // @@protoc_insertion_point(field_get:tcas.Location.lon)
+  // @@protoc_insertion_point(field_get:xplane.Location.lon)
   return lon_;
 }
 void Location::set_lon(double value) {
   
   lon_ = value;
-  // @@protoc_insertion_point(field_set:tcas.Location.lon)
+  // @@protoc_insertion_point(field_set:xplane.Location.lon)
 }
 
 // optional double alt = 4;
@@ -521,13 +569,13 @@ void Location::clear_alt() {
   alt_ = 0;
 }
 double Location::alt() const {
-  // @@protoc_insertion_point(field_get:tcas.Location.alt)
+  // @@protoc_insertion_point(field_get:xplane.Location.alt)
   return alt_;
 }
 void Location::set_alt(double value) {
   
   alt_ = value;
-  // @@protoc_insertion_point(field_set:tcas.Location.alt)
+  // @@protoc_insertion_point(field_set:xplane.Location.alt)
 }
 
 inline const Location* Location::internal_default_instance() {
@@ -537,6 +585,6 @@ inline const Location* Location::internal_default_instance() {
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace tcas
+}  // namespace xplane
 
 // @@protoc_insertion_point(global_scope)

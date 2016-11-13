@@ -96,7 +96,7 @@ static void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XP
 
 static int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
-Transponder transponder;
+Transponder transponder = { &user_aircraft };
 
 // BEGIN STUFF I ADDED (Wesam)
 static XPLMWindowID	gWindow = NULL;

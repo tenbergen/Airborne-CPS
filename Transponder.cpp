@@ -2,13 +2,15 @@
 
 #pragma comment(lib,"WS2_32")
 
-Transponder::Transponder()
+Transponder::Transponder(Aircraft* ac)
 {
 	if (WSAStartup(0x0101, &w) != 0) {
 		exit(0);
 	}
 
-	myLocation.set_id(12345); // TODO use mac address
+	aircraft = ac;
+
+	myLocation.set_id(getHardwareAddress());
 	sinlen = sizeof(struct sockaddr_in);
 	memset(&incoming, 0, sinlen);
 
@@ -42,24 +44,28 @@ Transponder::~Transponder()
 
 DWORD Transponder::receive()
 {
-	int intruderID;
+	char const * intruderID;
+	char const * myID;
+	
 	lla intruderLLA;
 	for (;;)
 	{
 		int size = myLocation.ByteSize();
-
 		char * buffer = (char *) malloc(size);
-
+		myID = myLocation.id().c_str();
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
 		intruder.ParseFromArray(buffer, size);
-		intruderID = intruder.id();
-		if (intruderID == myLocation.id()) {
+		intruderID = intruder.id().c_str();
+		if (strcmp(myID, intruderID) == 0) {
 			intruderLLA.lat = intruder.lat();
 			intruderLLA.lon = intruder.lon();
 			intruderLLA.alt = intruder.alt();
 			char qwe[128];
-			sprintf(qwe, "(lla) %f::%f::%f\n", intruderLLA.lat, intruderLLA.lon, intruderLLA.alt);
+			XPLMDebugString(intruderID);
+			sprintf(qwe, " -> (lla) %f::%f::%f\n", intruderLLA.lat, intruderLLA.lon, intruderLLA.alt);
 			XPLMDebugString(qwe);
+		} else {
+			// error
 		}
 		free(buffer);
 		// TODO map the aircraft
@@ -71,14 +77,16 @@ DWORD Transponder::send()
 {
 	for (;;)
 	{
-		// TODO get datarefs
-		myLocation.set_lat(1.1);
-		myLocation.set_lon(2.1);
-		myLocation.set_alt(3.2);
+		aircraft->lock_.lock();
+		LLA position = aircraft->position_;
+		aircraft->lock_.unlock();
+		myLocation.set_lat(position.latitude_.to_degrees());
+		myLocation.set_lon(position.longitude_.to_degrees());
+		myLocation.set_alt(position.altitude_.to_meters());
 		int size = myLocation.ByteSize();
 		void * buffer = malloc(size);
 		myLocation.SerializeToArray(buffer, size);
-		sendto(outSocket, (const char *) buffer, strlen(msg), 0, (struct sockaddr *) &outgoing, sinlen);
+		sendto(outSocket, (const char *) buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
 		free(buffer);
 		Sleep(1000);
 	}
@@ -104,12 +112,11 @@ void Transponder::start()
 	CreateThread(NULL, 0, startBroadcasting, (void*) this, 0, &ThreadID);
 }
 
-void Transponder::getPhysicalAddressForUniqueID()
+std::string Transponder::getHardwareAddress()
 {
-	static char uniqueID[128];
 	std::string hardware_address{};
 	IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
-	char * mac_addr = (char*)malloc(13);
+	char mac_addr[18];
 
 	DWORD dwRetVal;
 	ULONG outBufLen = sizeof(IP_ADAPTER_INFO);
@@ -128,11 +135,6 @@ void Transponder::getPhysicalAddressForUniqueID()
 				pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
 
 			hardware_address = mac_addr;
-			strcat(uniqueID, mac_addr);
-
-			XPLMDebugString("Hardware Address: ");
-			XPLMDebugString(hardware_address.c_str());
-			XPLMDebugString("\n");
 			pAdapter = pAdapter->Next;
 		}
 	}
@@ -141,4 +143,5 @@ void Transponder::getPhysicalAddressForUniqueID()
 	}
 
 	free(pAdapterInfo);
+	return hardware_address;
 }

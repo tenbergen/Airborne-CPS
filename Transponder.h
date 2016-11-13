@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include "location.pb.h"
+#include "Aircraft.h"
 
 #include "XPLMUtilities.h"
 
@@ -28,13 +29,13 @@
 class Transponder
 {
 public:
-	char msg[MSG_SIZE];
-	Transponder();
+	Aircraft* aircraft;
+	Transponder(Aircraft*);
 	~Transponder();
 	DWORD receive();
 	DWORD send();
 	void start();
-	static void getPhysicalAddressForUniqueID(void);
+	static std::string getHardwareAddress(void);
 
 protected:
 	WSADATA w;
@@ -42,7 +43,7 @@ protected:
 	int buflen;
 	unsigned sinlen;
 	struct sockaddr_in incoming, outgoing;
-	tcas::Location intruder, myLocation;
+	xplane::Location intruder, myLocation;
 	struct lla {
 		double lat;
 		double lon;

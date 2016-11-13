@@ -2,6 +2,8 @@
 
 Aircraft::Aircraft(std::string const id) : id_(id) {}
 
+Aircraft::Aircraft(std::string const id, LLA position, Vec2 horizontal_vel, double vert_vel) : id_(id), position_(position), horizontal_velocity_(horizontal_vel), vertical_velocity_(vert_vel) {}
+
 Angle Aircraft::VelocityToBearing(Vec2 const * const velocity){
 	Vec2 vel_nor = velocity->nor();
 	return HeadingToBearing(&vel_nor);

@@ -92,9 +92,9 @@ bool GaugeRenderer::LoadTexture(char* tex_path, int tex_id) const {
 void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft * const intruder, RecommendationRange*  recommended, RecommendationRange* not_recommended) {
 	user_aircraft->lock_.lock();
 
-	LLA const user_pos = *user_aircraft->position_;
-	Vec2 const user_vel = *user_aircraft->horizontal_velocity_;
-	double const user_aircraft_vert_vel = user_aircraft->vertical_velocity;
+	LLA const user_pos = user_aircraft->position_;
+	Vec2 const user_vel = user_aircraft->horizontal_velocity_;
+	double const user_aircraft_vert_vel = user_aircraft->vertical_velocity_;
 
 	user_aircraft->lock_.unlock();
 
@@ -133,7 +133,7 @@ void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft 
 	// Draw intruding aircraft
 	if (intruder) {		
 		intruder->lock_.lock();
-		LLA const intruder_pos = *intruder->position_;
+		LLA const intruder_pos = intruder->position_;
 		intruder->lock_.unlock();
 
 		LLA gauge_center_pos = CalculateGaugeCenterPosition(&user_pos, &user_vel);

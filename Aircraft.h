@@ -25,5 +25,5 @@ public:
 	Vec2 horizontal_velocity_;
 
 	// The rate of change of the altitude
-	double vertical_velocity;
+	double vertical_velocity_;
 };

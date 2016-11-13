@@ -75,7 +75,7 @@ GaugeRenderer* gauge_renderer;
 RecommendationRange pos_rec_range = {0.0, GaugeRenderer::kMaxVertSpeed_, true};
 RecommendationRange neg_rec_range = {GaugeRenderer::kMinVertSpeed_, 0.0, false};
 
-concurrency::concurrent_unordered_map<std::string const, Aircraft*> const intruding_aircraft_map;
+//concurrency::concurrent_unordered_map<std::string const, Aircraft*> const intruding_aircraft_map {std::hash};
 
 static void getDatarefsToSendOverLAN(void);
 
@@ -203,7 +203,7 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 {
 	// Do the actual drawing, but only if the window is active
 	if (ExampleGaugeDisplayPanelWindow) {
-		user_aircraft.vertical_velocity = XPLMGetDataf(verticalSpeed);
+		user_aircraft.vertical_velocity_ = XPLMGetDataf(verticalSpeed);
 		DrawGLScene();
 	}
 	return 1;

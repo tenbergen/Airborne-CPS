@@ -39,11 +39,6 @@ NOTES:
 #define TRUE 1
 #define FALSE 0
 
-#include <iostream>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
 #include <ConcurrencySal.h>
 #include <ppl.h>
 #include <concurrent_unordered_map.h>
@@ -51,10 +46,9 @@ NOTES:
 #include "XPLMDefs.h"
 #include "XPLMDisplay.h"
 #include "XPLMDataAccess.h"
-#include "XPLMGraphics.h"
 #include "XPLMNavigation.h"
 
-//#include "Transponder.h"
+#include "Transponder.h"
 #include "GaugeRenderer.h"
 
 static XPLMDataRef	verticalSpeed = NULL;
@@ -90,8 +84,8 @@ static concurrency::concurrent_unordered_map<std::string, Aircraft> intruding_ai
 static void getDatarefsToSendOverLAN(void);
 
 /// Used for dragging plugin panel window.
-static	int	CoordInRect(float x, float y, float l, float t, float r, float b);
-static int	CoordInRect(float x, float y, float l, float t, float r, float b)
+static	int	CoordInRect(int x, int y, int l, int t, int r, int b);
+static int	CoordInRect(int x, int y, int l, int t, int r, int b)
 {	return ((x >= l) && (x < r) && (y < t) && (y >= b)); }
 
 /// Prototypes for callbacks etc.
@@ -106,7 +100,7 @@ static void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XP
 
 static int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
-//Transponder* transponder = new Transponder;
+Transponder transponder;
 
 // BEGIN STUFF I ADDED (Wesam)
 static XPLMWindowID	gWindow = NULL;
@@ -183,7 +177,8 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 	user_aircraft->position_.store(user_ac_pos);
 	user_aircraft->vertical_velocity.store(0.0);
 
-	intr_ac_pos = new LLA(43.2, -75.8, 10000.0, Angle::DEGREES, Distance::FEET);
+	//intr_ac_pos = new LLA(43.2, -75.8, 10000.0, Angle::DEGREES, Distance::FEET);
+	intr_ac_pos = new LLA(43.6, -75.685, 10000.0, Angle::DEGREES, Distance::FEET);
 	intr_ac_vel = new Vec2(-30.0, 30.0);
 
 	intruding_aircraft = new Aircraft("intruder_id");
@@ -191,11 +186,12 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 	intruding_aircraft->position_.store(intr_ac_pos);
 	intruding_aircraft->vertical_velocity.store(0.0);
 
-	/// Load the textures and bind them etc.
+	// Load the textures and bind them etc.
 	gauge_renderer = new GaugeRenderer(gPluginDataFile);
 	gauge_renderer->LoadTextures();
+
 	// start broadcasting location, and listening for aircraft
-	//transponder->start();
+	transponder.start();
 
 	return 1;
 }
@@ -232,23 +228,17 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, voi
 {
 }
 
-/*
- * Convert to gauge face representation
+/* Convert to gauge face representation
  *
  * This converts the raw vertical speed dataref to a value that can be used as 
  * the rotational degrees in the gRotatef() function for roatating the needle on the 
- * gauge.
- */
+ * gauge. */
 float convertToRotation(float inputFloat, float divisor) 
 {
 	return ((inputFloat / divisor) * 150)-90;
 }
 
-/*
- * ExampleGaugeDrawCallback
- *
- * This will draw our gauge during the Xplane gauge drawing phase.
- */
+/* This will draw our gauge during the Xplane gauge drawing phase. */
 int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) 
 {
 	// Do the actual drawing, but only if the window is active
@@ -260,32 +250,16 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 }
 
 
-/*
- * ExampleGaugePanelWindowCallback
- *
- * This callback does not do any drawing as such.
+/* This callback does not do any drawing as such.
  * We use the mouse callback below to handle dragging of the window
- * X-Plane will automatically do the redraw.
- *
- */
+ * X-Plane will automatically do the redraw. */
 void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon)
 {
 }
 
-/*
- * ExampleGaugePanelKeyCallback
- *
- * Our key handling callback does nothing in this plugin.  This is ok;
- * we simply don't use keyboard input.
- *
- */
-void ExampleGaugePanelKeyCallback(
-                                   XPLMWindowID         inWindowID,
-                                   char                 inKey,
-                                   XPLMKeyFlags         inFlags,
-                                   char                 inVirtualKey,
-                                   void *               inRefcon,
-                                   int                  losingFocus)
+/* Our key handling callback does nothing in this plugin.  This is ok;
+ * we simply don't use keyboard input.*/
+void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID,char inKey, XPLMKeyFlags inFlags,char inVirtualKey, void * inRefcon, int losingFocus)
 {
 }
 
@@ -347,24 +321,14 @@ void DrawGLScene()
 	gauge_renderer->Render(rgb, user_aircraft, intruding_aircraft, NULL, NULL);
 }
 
-/*
-* MyDrawingWindowCallback
-*
-* This callback does the work of drawing our window once per sim cycle each time
+/* This callback does the work of drawing our window once per sim cycle each time
 * it is needed.  It dynamically changes the text depending on the saved mouse
 * status.  Note that we don't have to tell X-Plane to redraw us when our text
-* changes; we are redrawn by the sim continuously.
-*
-*/
-void MyDrawWindowCallback(
-	XPLMWindowID         inWindowID,
-	void *               inRefcon)
+* changes; we are redrawn by the sim continuously. */
+void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
 {
 	int		left, top, right, bottom;
 	float	color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
-
-											/* Initialize the variables using the datarefs from the x-plane system.
-											* These are found in the XPLMDataAccess api. */
 	getDatarefsToSendOverLAN();
 
 	/* Getting the altitude from the dataref in X-Plane. This is just testing
@@ -410,10 +374,7 @@ void MyDrawWindowCallback(
 	char lon[128];
 	snprintf(lon, 128, "lon: %f", lonREF);
 
-	/* Finally we draw the text into the window, also using XPLMGraphics
-	* routines.  The NULL indicates no word wrapping. */
-	//XPLMDrawString(color, left + 5, top - 20, (char*)(gClicked ? trueAirspeedChar : verticalVelocityChar), NULL, xplmFont_Basic);
-	//(char*)(gClicked ? "Altitude (m): %d\nIndicated Airspeed: %f\nIndicated Airspeed 2: %f\nTrue Airspeed: %f", altitudeInt0Char, indAirspeedChar, indAirspeed2Char, trueAirspeedChar : verticalVelocityChar), NULL, xplmFont_Basic);
+	/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
 	XPLMDrawString(color, left + 5, top - 40, (char*)(verticalSpeedDataChar), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 60, (char*)(calcVSChar), NULL, xplmFont_Basic);
 
@@ -422,37 +383,15 @@ void MyDrawWindowCallback(
 	//XPLMDrawString(color, left + 5, top - 120, transponder->msg, NULL, xplmFont_Basic);
 }
 
-/*
-* MyHandleKeyCallback
-*
-* Our key handling callback does nothing in this plugin.  This is ok;
-* we simply don't use keyboard input.
-*
-*/
-void MyHandleKeyCallback(
-	XPLMWindowID         inWindowID,
-	char                 inKey,
-	XPLMKeyFlags         inFlags,
-	char                 inVirtualKey,
-	void *               inRefcon,
-	int                  losingFocus)
+/* Our key handling callback does nothing in this plugin.  This is ok; we simply don't use keyboard input. */
+void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus)
 {
 }
 
-/*
-* MyHandleMouseClickCallback
-*
-* Our mouse click callback toggles the status of our mouse variable
+/*Our mouse click callback toggles the status of our mouse variable
 * as the mouse is clicked.  We then update our text on the next sim
-* cycle.
-*
-*/
-int MyHandleMouseClickCallback(
-	XPLMWindowID         inWindowID,
-	int                  x,
-	int                  y,
-	XPLMMouseStatus      inMouse,
-	void *               inRefcon)
+* cycle. */
+int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon)
 {
 	/* If we get a down or up, toggle our status click.  We will
 	* never get a down without an up if we accept the down. */

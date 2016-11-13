@@ -6,70 +6,84 @@
 #include "Aircraft.h"
 #include "BMPLoader.h"
 #include "Renderer.inc"
-#include "Distance.h"
+
 #include "MathUtil.h"
+#include "TextureConstants.hpp"
+#include "StringUtil.h"
 
 class GaugeRenderer
 {
 public:
-	GaugeRenderer(char* appPath);
+	GaugeRenderer(char const * const app_path);
 	~GaugeRenderer();
 
 	void LoadTextures();
-	int LoadTexture(char *pFileName, int TextureId);
 	void Render(float* rgb, Aircraft * const user_aircraft, Aircraft * const intruder, RecommendationRange*  recommended, RecommendationRange* not_recommended);
 
 	// The minimum and maximum vertical speed values in units of feet per minute
-	static const float kMinVertSpeed_, kMaxVertSpeed_;
+	static double const kMinVertSpeed_, kMaxVertSpeed_;
 
 	// The clockwise degree rotation corresponding to the maximum vertical speed, with 180 degrees on a unit circle defined as 0 degrees
-	static const float kMaxVSpeedDegrees;
+	static double const kMaxVSpeedDegrees;
 
 private:
-	static const unsigned char kNumTextures = 3;
-
-	static constexpr char* kGaugeTexFname_ = "GaugeTex256.bmp";
-	static constexpr char* kNeedleTexFname_ = "Needle.bmp";
-	static constexpr char* kNeedleMaskFname_ = "NeedleMask.bmp";
-
-	static const unsigned char kGaugeTexId = 0;
-	static const unsigned char kNeedleTexId = 1;
-	static const unsigned char kNeedleTexMaskId = 2;
-
 	// The radius of the inner circle of the gauge that contains the airplane icons in pixels
-	static const double kGaugeInnerCircleRadiusPxls_;
+	static double const kGaugeInnerCircleRadiusPxls_;
 	static Distance const kGaugeInnerCircleRadius_;
 
-	// The offset in NMI of the airplane relative to the exact center of the gauge
-	static Distance const kAirplaneOffset_;
+	/* Parameters for drawing the recommendation rings using GluPartialDisk */
+	static double const kDiskInnerRadius_;
+	static double const kDiskOuterRadius_;
+	static int const kDiskSlices_;
+	static int const kDiskLoops_;
 
-	static const float kGaugePosLeft, kGaugePosRight, kGaugePosBot, kGaugePosTop;
-	static const float kGaugeCenterX, kGaugeCenterY;
+	/* The offset of the aircraft symbol in the inner gauge face relative to the exact center of the gauge.
+	This is based on the proportion of pixels the need aircraft symbol has to be shifted in the y-direction (28)
+	as a percentage of the diameter of the inner gauge ring in pixels (150 px) related to the distance spanned 
+	by the diameter (radius = 30 NMI => diameter = 60 NMI) i.e. Offset = (28 / 150) * 60.
+	*/
+	static Distance const kAircraftToGaugeCenterOffset_;
+
+	/* The pixel positions of the window the gauge is drawn in since our window is not moved.*/
+	static float const kGaugePosLeft, kGaugePosRight, kGaugePosBot, kGaugePosTop;
+	static float const kGaugeCenterX, kGaugeCenterY;
 	
-	static const float kNeedlePosLeft, kNeedlePosRight, kNeedlePosBot, kNeedlePosTop;
-	static const float kNeedleTranslationX, kNeedleTranslationY;
+	/* The absolute pixel positions of the needle (determined relative to the gauge positions). */
+	static float const kNeedlePosLeft, kNeedlePosRight, kNeedlePosBot, kNeedlePosTop;
+	/* The translation that is applied to the needle in order to allow for rotation about the gauge center.*/
+	static float const kNeedleTranslationX, kNeedleTranslationY;
 
-	// The offset that must be applied to account for GLUPartialDisk treating the +z axis (90 degrees on a unit circle) as 0 degrees 
-	static const float kGlAngleOffset_;
-
-	static const float kMinDegrees, kMaxDegrees;
+	/* The offset that must be applied to account for OpenGL functions treating the +z axis 
+	(90 degrees on a unit circle) as 0 degrees. */
+	static float const kGlAngleOffset_;
 
 	// The "application path", which for the plugin is the directory that the plugin is contained in
-	const char* app_path_;
+	char const * const app_path_;
 
+	// An OpenGL quadric (quadratic) object required for use with the GLUT library's partial disk function.
 	GLUquadricObj* quadric_;
 
-	BmpLoader::tagIMAGEDATA bmpTextures_[kNumTextures];
-	XPLMTextureID glTextures_[kNumTextures];
+	XPLMTextureID glTextures_[texture_constants::kNumTextures];
 
-	/* Draws the supplied recommendation range */
-	void DrawRecommendationRange(RecommendationRange rec_range);
-	/* Draws the supplied vertical speed range as either recommended (green) or not recommended (red) */
-	void DrawRecommendedVerticalSpeedRange(float min_vert_speed, float max_vert_speed, bool recommended);
-	/* Draws the supplied degree range as either recommended (green) or not recommended (red)*/
-	void DrawRecommendationRangeStartStop(float start_angle, float stop_angle, bool recommended);
-	/* Draws a recommendation range starting at the supplied start angle in a sweepAngle degrees arc*/
-	void DrawRecommendationRangeStartSweep(float start_angle, float sweep_angle, bool recommended);
+	LLA CalculateGaugeCenterPosition(LLA const * const position, Vec2 const * const velocity) const;
 
-	void BuildTexPath(char* catBuf, char* tex_fname, const char* plugin_path);
+	bool LoadTexture(char * tex_path, int tex_id) const;
+
+	/* Draws the outer gauge ring.*/
+	void DrawOuterGauge() const;
+	/* Draw the inner vertical speed gauge rings. */
+	void DrawInnerGauge() const;
+	/* Draws the vertical speed indicator needle on the gauge from the supplied vertical velocity.*/
+	void DrawGaugeNeedle(double const user_aircraft_vert_vel) const;
+
+	void DrawIntrudingAircraft(LLA const * const intruder_pos, LLA const * const gauge_center_pos, Distance const * const range) const;
+
+	/* Draws the supplied recommendation range. */
+	void DrawRecommendationRange(RecommendationRange& rec_range) const;
+	/* Draws the supplied vertical speed range as either recommended (green) or not recommended (red). */
+	void DrawRecommendedVerticalSpeedRange(double min_vert_speed, double max_vert_speed, bool recommended) const;
+	/* Draws the supplied degree range as either recommended (green) or not recommended (red).*/
+	void DrawRecommendationRangeStartStop(double start_angle, double stop_angle, bool recommended) const;
+	/* Draws a recommendation range starting at the supplied start angle in a sweep_angle degrees arc.*/
+	void DrawRecommendationRangeStartSweep(double start_angle, double sweep_angle, bool recommended) const;
 };

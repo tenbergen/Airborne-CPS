@@ -2,6 +2,7 @@
 
 #include "Angle.h"
 #include "Distance.h"
+#include "Vec2.h"
 
 /* Representation of a latitude, longitude, and altitude triplet with latitude between [-90,90], with +90 corresponding to north,
 longitude between [-180, 180], with +180 corresponding to east, and altitude measured relative to mean sea level. */
@@ -16,8 +17,9 @@ public:
 	LLA(Angle lat, Angle lon);
 	LLA();
 
-	const static LLA ZERO;
-	const static Distance kRadiusEarth_;
+	static LLA const ZERO;
+	static Vec2 const NORTH;
+	static Distance const kRadiusEarth_;
 
 	//https://en.wikipedia.org/wiki/Latitude#Length_of_a_degree_of_latitude
 	static double const kMetersPerDegLatConst1_;
@@ -30,15 +32,17 @@ public:
 
 	/* Calculates the range (distance) to the supplied LLA using the haversine formula.
 	Taken from: https://en.wikipedia.org/wiki/Great-circle_distance#Computational_formulas */
-	Distance Range(LLA *const other) const;
+	Distance Range(LLA const *const other) const;
 
 	/* Calculates the north-referenced bearing (aka azimuth).*/
-	Angle Bearing(LLA *const other) const;
+	Angle Bearing(LLA const *const other) const;
 
 	/* Returns an LLA that results from a translatation by the supplied distances according to the distance per degree 
 	latitude and longitude at the current position. Any of the parameters may be null, in which case the translation for 
 	that parameter is 0.*/
 	LLA Translate(Distance const *const delta_lat, Distance const *const delta_lon, Distance const *const delta_alt) const;
+	/*Returns an LLA that results from a translation of the supplied distance in the supplied heading (bearing).*/
+	LLA Translate(Angle const *const bearing, Distance const *const distance) const;
 
 	LLA operator + (LLA const & l) const;
 	LLA operator - (LLA const & l) const;

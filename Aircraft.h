@@ -9,6 +9,9 @@
 class Aircraft
 {
 public:
+	static Angle VelocityToBearing(Vec2 const * const velocity);
+	static Angle HeadingToBearing(Vec2 const * const heading);
+
 	Aircraft(std::string const id);
 
 	std::string const id_;

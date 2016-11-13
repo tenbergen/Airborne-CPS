@@ -14,10 +14,10 @@ public:
 
 	double ToUnits(DistanceUnits units) const;
 
-	double ToFeet() const;
-	double ToMeters() const;
-	double ToMiles() const;
-	double ToNMI() const;
+	double to_feet() const;
+	double to_meters() const;
+	double to_miles() const;
+	double to_nmi() const;
 
 	Distance operator + (Distance const & d) const;
 	Distance operator - (Distance const & d) const;

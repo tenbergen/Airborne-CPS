@@ -75,7 +75,7 @@ private:
 	void DrawInnerGauge() const;
 	/* Draws the vertical speed indicator needle on the gauge from the supplied vertical velocity.*/
 	void DrawGaugeNeedle(double const user_aircraft_vert_vel) const;
-
+	/*  */
 	void DrawIntrudingAircraft(LLA const * const intruder_pos, LLA const * const gauge_center_pos, Distance const * const range) const;
 
 	/* Draws the supplied recommendation range. */

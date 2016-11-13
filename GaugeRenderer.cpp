@@ -90,9 +90,13 @@ bool GaugeRenderer::LoadTexture(char* tex_path, int tex_id) const {
 }
 
 void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft * const intruder, RecommendationRange*  recommended, RecommendationRange* not_recommended) {
-	LLA* const user_pos = user_aircraft->position_.load();
-	Vec2* const user_vel = user_aircraft->horizontal_velocity_.load();
-	double const user_aircraft_vert_vel = user_aircraft->vertical_velocity.load();
+	user_aircraft->lock_.lock();
+
+	LLA const user_pos = *user_aircraft->position_;
+	Vec2 const user_vel = *user_aircraft->horizontal_velocity_;
+	double const user_aircraft_vert_vel = user_aircraft->vertical_velocity;
+
+	user_aircraft->lock_.unlock();
 
 	/// Turn off alpha blending and depth testing
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 0/*AlphaBlending*/, 0/*DepthTesting*/, 0/*DepthWriting*/);
@@ -102,6 +106,9 @@ void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft 
 
 	// Push the MV matrix onto the stack
 	glPushMatrix();
+
+	// Draw the gauge
+	XPLMBindTexture2d(glTextures_[texture_constants::GAUGE_ID], 0);
 
 	DrawOuterGauge();
 
@@ -125,15 +132,17 @@ void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft 
 
 	// Draw intruding aircraft
 	if (intruder) {		
-		LLA* const intruder_pos = intruder->position_.load();
+		intruder->lock_.lock();
+		LLA const intruder_pos = *intruder->position_;
+		intruder->lock_.unlock();
 
-		LLA gauge_center_pos = CalculateGaugeCenterPosition(user_pos, user_vel);
+		LLA gauge_center_pos = CalculateGaugeCenterPosition(&user_pos, &user_vel);
 
 		// Here is where to insert for each aircraft
-		Distance range = gauge_center_pos.Range(intruder_pos);
+		Distance range = gauge_center_pos.Range(&intruder_pos);
 
 		if (range.to_feet() < kGaugeInnerCircleRadius_.to_feet()) {
-			DrawIntrudingAircraft(intruder_pos, &gauge_center_pos, &range);
+			DrawIntrudingAircraft(&intruder_pos, &gauge_center_pos, &range);
 		}
 	}
 
@@ -166,32 +175,36 @@ void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, LLA co
 	double symbol_bot = symbol_center_y - 8;
 	double symbol_top = symbol_center_y + 8;
 
+	texture_constants::TexCoords symbol_coords = texture_constants::kSymbolRedSquare;
+
 	glBegin(GL_QUADS);
-	glTexCoord2d(0.15625, 0.96875); glVertex2d(symbol_right, symbol_bot);
-	glTexCoord2d(0.125, 0.96875); glVertex2d(symbol_left, symbol_bot);
-	glTexCoord2d(0.12, 1.0); glVertex2d(symbol_left, symbol_top);
-	glTexCoord2d(0.15625, 1.0); glVertex2d(symbol_right, symbol_top);
+	glTexCoord2d(symbol_coords.right, symbol_coords.bottom); glVertex2d(symbol_right, symbol_bot);
+	glTexCoord2d(symbol_coords.left, symbol_coords.bottom); glVertex2d(symbol_left, symbol_bot);
+	glTexCoord2d(symbol_coords.left, symbol_coords.top); glVertex2d(symbol_left, symbol_top);
+	glTexCoord2d(symbol_coords.right, symbol_coords.top); glVertex2d(symbol_right, symbol_top);
 	glEnd();
 }
 
 
 void GaugeRenderer::DrawOuterGauge() const {
-	XPLMBindTexture2d(glTextures_[texture_constants::GAUGE_ID], 0);
+	texture_constants::TexCoords outer_gauge = texture_constants::kOuterGauge;
 
 	glBegin(GL_QUADS);
-	glTexCoord2f(0.5f, 0.0f); glVertex2f(kGaugePosRight, kGaugePosBot);
-	glTexCoord2f(0.0f, 0.0f); glVertex2f(kGaugePosLeft, kGaugePosBot);
-	glTexCoord2f(0.0f, 0.5f); glVertex2f(kGaugePosLeft, kGaugePosTop);
-	glTexCoord2f(0.5f, 0.5f); glVertex2f(kGaugePosRight, kGaugePosTop);
+	glTexCoord2d(outer_gauge.right, outer_gauge.bottom); glVertex2f(kGaugePosRight, kGaugePosBot);
+	glTexCoord2d(outer_gauge.left, outer_gauge.bottom); glVertex2f(kGaugePosLeft, kGaugePosBot);
+	glTexCoord2d(outer_gauge.left, outer_gauge.top); glVertex2f(kGaugePosLeft, kGaugePosTop);
+	glTexCoord2d(outer_gauge.right, outer_gauge.top); glVertex2f(kGaugePosRight, kGaugePosTop);
 	glEnd();
 }
 
 void GaugeRenderer::DrawInnerGauge() const {
+	texture_constants::TexCoords inner_gauge = texture_constants::kInnerGauge;
+
 	glBegin(GL_QUADS);
-	glTexCoord2f(1.0f, 0.0f); glVertex2f(kGaugePosRight, kGaugePosBot);
-	glTexCoord2f(0.5f, 0.0f); glVertex2f(kGaugePosLeft, kGaugePosBot);
-	glTexCoord2f(0.5f, 0.5f); glVertex2f(kGaugePosLeft, kGaugePosTop);
-	glTexCoord2f(1.0f, 0.5f); glVertex2f(kGaugePosRight, kGaugePosTop);
+	glTexCoord2d(inner_gauge.right, inner_gauge.bottom); glVertex2f(kGaugePosRight, kGaugePosBot);
+	glTexCoord2d(inner_gauge.left, inner_gauge.bottom); glVertex2f(kGaugePosLeft, kGaugePosBot);
+	glTexCoord2d(inner_gauge.left, inner_gauge.top); glVertex2f(kGaugePosLeft, kGaugePosTop);
+	glTexCoord2d(inner_gauge.right, inner_gauge.top); glVertex2f(kGaugePosRight, kGaugePosTop);
 	glEnd();
 }
 
@@ -211,22 +224,27 @@ void GaugeRenderer::DrawGaugeNeedle(double const user_aircraft_vert_vel) const {
 
 	// Draw Needle Mask
 	XPLMBindTexture2d(glTextures_[texture_constants::NEEDLE_MASK_ID], 0);
+
+	texture_constants::TexCoords needle_mask = texture_constants::kNeedleMask;
+
 	glBegin(GL_QUADS);
-	glTexCoord2f(1, 0.0f); glVertex2f(kNeedlePosRight, kNeedlePosBot);
-	glTexCoord2f(0, 0.0f); glVertex2f(kNeedlePosLeft, kNeedlePosBot);
-	glTexCoord2f(0, 1.0f); glVertex2f(kNeedlePosLeft, kNeedlePosTop);
-	glTexCoord2f(1, 1.0f); glVertex2f(kNeedlePosRight, kNeedlePosTop);
+	glTexCoord2d(needle_mask.right, needle_mask.bottom); glVertex2f(kNeedlePosRight, kNeedlePosBot);
+	glTexCoord2d(needle_mask.left, needle_mask.bottom); glVertex2f(kNeedlePosLeft, kNeedlePosBot);
+	glTexCoord2d(needle_mask.left, needle_mask.top); glVertex2f(kNeedlePosLeft, kNeedlePosTop);
+	glTexCoord2d(needle_mask.right, needle_mask.top); glVertex2f(kNeedlePosRight, kNeedlePosTop);
 	glEnd();
 
 	glBlendFunc(GL_ONE, GL_ONE);
 
+	texture_constants::TexCoords needle = texture_constants::kNeedle;
+
 	// Draw Needle
 	XPLMBindTexture2d(glTextures_[texture_constants::NEEDLE_ID], 0);
 	glBegin(GL_QUADS);
-	glTexCoord2f(1, 0.0f); glVertex2f(kNeedlePosRight, kNeedlePosBot);
-	glTexCoord2f(0, 0.0f); glVertex2f(kNeedlePosLeft, kNeedlePosBot);
-	glTexCoord2f(0, 1.0f); glVertex2f(kNeedlePosLeft, kNeedlePosTop);
-	glTexCoord2f(1, 1.0f); glVertex2f(kNeedlePosRight, kNeedlePosTop);
+	glTexCoord2d(needle.right, needle.bottom); glVertex2f(kNeedlePosRight, kNeedlePosBot);
+	glTexCoord2d(needle.left, needle.bottom); glVertex2f(kNeedlePosLeft, kNeedlePosBot);
+	glTexCoord2d(needle.left, needle.top); glVertex2f(kNeedlePosLeft, kNeedlePosTop);
+	glTexCoord2d(needle.right, needle.top); glVertex2f(kNeedlePosRight, kNeedlePosTop);
 	glEnd();
 }
 

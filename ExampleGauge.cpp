@@ -61,25 +61,21 @@ static XPLMHotKeyID gExampleGaugeHotKey = NULL;
 static char gPluginDataFile[255];
 static float verticalSpeed1;
 
-Aircraft* user_aircraft;
-Aircraft* intruding_aircraft;
+Vec2 user_ac_vel = { 30.0, 30.0 };
+Vec2 intr_ac_vel = { -30.0, 30.0 };
 
-Vec2* user_ac_vel;
-Vec2* intr_ac_vel;
+LLA user_ac_pos = { 43.0, -76.0, 10000.0, Angle::DEGREES, Distance::FEET };
+LLA intr_ac_pos = { 43.6, -75.685, 10000.0, Angle::DEGREES, Distance::FEET };
 
-LLA* user_ac_pos;
-LLA* intr_ac_pos;
+Aircraft user_aircraft = {"user", user_ac_pos, user_ac_vel, 10000.0};
+Aircraft intruding_aircraft = { "intruder", intr_ac_pos, intr_ac_vel, 10000.0 };
 
 GaugeRenderer* gauge_renderer;
-RecommendationRange pos_rec_range;
-RecommendationRange neg_rec_range;
 
-#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
-#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+RecommendationRange pos_rec_range = {0.0, GaugeRenderer::kMaxVertSpeed_, true};
+RecommendationRange neg_rec_range = {GaugeRenderer::kMinVertSpeed_, 0.0, false};
 
-static char uniqueID[128];
-
-static concurrency::concurrent_unordered_map<std::string, Aircraft> intruding_aircraft_map;
+concurrency::concurrent_unordered_map<std::string const, Aircraft*> const intruding_aircraft_map;
 
 static void getDatarefsToSendOverLAN(void);
 
@@ -160,31 +156,13 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 	BLUE = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag,   "F8",   ExampleGaugeHotKey, NULL);
+	
+	//intruding_aircraft_map.insert(intruding_aircraft.id_, &intruding_aircraft);
+	// TEST
 
-	pos_rec_range.min_vertical_speed = 0.0;
-	pos_rec_range.max_vertical_speed = GaugeRenderer::kMaxVertSpeed_;
-	pos_rec_range.recommended = true;
-
-	neg_rec_range.min_vertical_speed = GaugeRenderer::kMinVertSpeed_;
-	neg_rec_range.max_vertical_speed = 0.0;
-	neg_rec_range.recommended = false;
-
-	user_ac_pos = new LLA(43.0, -76.0, 10000.0, Angle::DEGREES, Distance::FEET);
-	user_ac_vel = new Vec2(30.0, 30.0);
-
-	user_aircraft = new Aircraft("temp_id");
-	user_aircraft->horizontal_velocity_.store(user_ac_vel);
-	user_aircraft->position_.store(user_ac_pos);
-	user_aircraft->vertical_velocity.store(0.0);
-
-	//intr_ac_pos = new LLA(43.2, -75.8, 10000.0, Angle::DEGREES, Distance::FEET);
-	intr_ac_pos = new LLA(43.6, -75.685, 10000.0, Angle::DEGREES, Distance::FEET);
-	intr_ac_vel = new Vec2(-30.0, 30.0);
-
-	intruding_aircraft = new Aircraft("intruder_id");
-	intruding_aircraft->horizontal_velocity_.store(intr_ac_vel);
-	intruding_aircraft->position_.store(intr_ac_pos);
-	intruding_aircraft->vertical_velocity.store(0.0);
+	Aircraft test = { "test", user_ac_pos, user_ac_vel, 10000 };
+	
+	// TEST
 
 	// Load the textures and bind them etc.
 	gauge_renderer = new GaugeRenderer(gPluginDataFile);
@@ -203,14 +181,6 @@ PLUGIN_API void	XPluginStop(void)
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
-
-	delete user_aircraft;
-	delete user_ac_pos;
-	delete user_ac_vel;
-
-	delete intruding_aircraft;
-	delete intr_ac_pos;
-	delete intr_ac_vel;
 
 	delete gauge_renderer;
 }
@@ -233,7 +203,7 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 {
 	// Do the actual drawing, but only if the window is active
 	if (ExampleGaugeDisplayPanelWindow) {
-		user_aircraft->vertical_velocity.store(XPLMGetDataf(verticalSpeed));
+		user_aircraft.vertical_velocity = XPLMGetDataf(verticalSpeed);
 		DrawGLScene();
 	}
 	return 1;
@@ -308,7 +278,7 @@ void ExampleGaugeHotKey(void * refCon)
 void DrawGLScene()
 {
 	float rgb[3] = { XPLMGetDataf(RED), XPLMGetDataf(GREEN), XPLMGetDataf(BLUE) };
-	gauge_renderer->Render(rgb, user_aircraft, intruding_aircraft, NULL, NULL);
+	gauge_renderer->Render(rgb, &user_aircraft, &intruding_aircraft, NULL, NULL);
 }
 
 /* This callback does the work of drawing our window once per sim cycle each time

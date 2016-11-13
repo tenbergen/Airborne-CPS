@@ -47,7 +47,9 @@ DWORD Transponder::receive()
 	for (;;)
 	{
 		int size = myLocation.ByteSize();
-		char * buffer = (char *)malloc(size);
+
+		char * buffer = (char *) malloc(size);
+
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
 		intruder.ParseFromArray(buffer, size);
 		intruderID = intruder.id();
@@ -76,7 +78,7 @@ DWORD Transponder::send()
 		int size = myLocation.ByteSize();
 		void * buffer = malloc(size);
 		myLocation.SerializeToArray(buffer, size);
-		sendto(outSocket, (const char *)buffer, strlen(msg), 0, (struct sockaddr *) &outgoing, sinlen);
+		sendto(outSocket, (const char *) buffer, strlen(msg), 0, (struct sockaddr *) &outgoing, sinlen);
 		free(buffer);
 		Sleep(1000);
 	}

@@ -228,16 +228,6 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, voi
 {
 }
 
-/* Convert to gauge face representation
- *
- * This converts the raw vertical speed dataref to a value that can be used as 
- * the rotational degrees in the gRotatef() function for roatating the needle on the 
- * gauge. */
-float convertToRotation(float inputFloat, float divisor) 
-{
-	return ((inputFloat / divisor) * 150)-90;
-}
-
 /* This will draw our gauge during the Xplane gauge drawing phase. */
 int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) 
 {

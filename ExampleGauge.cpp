@@ -2,18 +2,15 @@
 
 /*
 NOTES:
-	1. 
-	On windows you will need to add these to the linker/input/AdditionalDependencies settings
+	1. On windows you will need to add these to the linker/input/AdditionalDependencies settings
        glu32.lib 
 	   glaux.lib
 
-	2. 
-	If you want to have the xpl go directly to the plugin directory you need to 
+	2. If you want to have the xpl go directly to the plugin directory you need to 
 	set path variables. Currently I set it to build in the top directory of the 
 	project.
 	
-	3. 
-	Networking might be easier to do with UDP through the menu options as it is
+	3. Networking might be easier to do with UDP through the menu options as it is
 	available. There are options for things like reading inputs from the network
 	and also saving to the local disk. These are found under the settings menu ->
 	data input and output, and network options. This is called the Data Set in 
@@ -39,10 +36,6 @@ NOTES:
 #define TRUE 1
 #define FALSE 0
 
-#include <ConcurrencySal.h>
-#include <ppl.h>
-#include <concurrent_unordered_map.h>
-
 #include "XPLMDefs.h"
 #include "XPLMDisplay.h"
 #include "XPLMDataAccess.h"
@@ -51,7 +44,8 @@ NOTES:
 #include "Transponder.h"
 #include "GaugeRenderer.h"
 
-static XPLMDataRef	verticalSpeed = NULL;
+static XPLMDataRef verticalSpeed = NULL;
+XPLMDataRef latitude_ref, longitude_ref, altitude_ref;
 static XPLMDataRef	RED = NULL, GREEN = NULL, BLUE = NULL;
 
 static XPLMWindowID	gExampleGaugePanelDisplayWindow = NULL;
@@ -68,16 +62,17 @@ LLA user_ac_pos = { 43.0, -76.0, 10000.0, Angle::DEGREES, Distance::FEET };
 LLA intr_ac_pos = { 43.6, -75.685, 10000.0, Angle::DEGREES, Distance::FEET };
 
 Aircraft user_aircraft = {"user", user_ac_pos, user_ac_vel, 10000.0};
-Aircraft intruding_aircraft = { "intruder", intr_ac_pos, intr_ac_vel, 10000.0 };
+Aircraft test_intruder = { "intruder", intr_ac_pos, intr_ac_vel, 10000.0 };
 
 GaugeRenderer* gauge_renderer;
+
+concurrency::concurrent_unordered_map<std::string const, Aircraft*> intruding_aircraft;
+Transponder transponder;
 
 RecommendationRange pos_rec_range = {0.0, GaugeRenderer::kMaxVertSpeed_, true};
 RecommendationRange neg_rec_range = {GaugeRenderer::kMinVertSpeed_, 0.0, false};
 
-//concurrency::concurrent_unordered_map<std::string const, Aircraft*> const intruding_aircraft_map {std::hash};
-
-static void getDatarefsToSendOverLAN(void);
+static void UpdateFromDataRefs();
 
 /// Used for dragging plugin panel window.
 static	int	CoordInRect(int x, int y, int l, int t, int r, int b);
@@ -96,9 +91,6 @@ static void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XP
 
 static int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
-Transponder transponder;
-
-// BEGIN STUFF I ADDED (Wesam)
 static XPLMWindowID	gWindow = NULL;
 static int gClicked = 0;
 
@@ -138,7 +130,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 	strcpy(outSig, "AirborneCPS");
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
 
-	getDatarefsToSendOverLAN();
+	UpdateFromDataRefs();
 
 	/* Now we create a window.  We pass in a rectangle in left, top, right, bottom screen coordinates.  We pass in three callbacks. */
 	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, MyDrawWindowCallback, MyHandleKeyCallback, MyHandleMouseClickCallback, NULL);
@@ -151,21 +143,36 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 
 	verticalSpeed = XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot");
 
+	latitude_ref = XPLMFindDataRef("sim/flightmodel/position/latitude");
+	longitude_ref = XPLMFindDataRef("sim/flightmodel/position/longitude");
+	altitude_ref = XPLMFindDataRef("sim/flightmodel/position/elevation");
+
 	RED = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_r");
 	GREEN = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
 	BLUE = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag,   "F8",   ExampleGaugeHotKey, NULL);
-	
-	//intruding_aircraft_map.insert(intruding_aircraft.id_, &intruding_aircraft);
-	// TEST
 
-	Aircraft test = { "test", user_ac_pos, user_ac_vel, 10000 };
-	
-	// TEST
+	// Concurrent map usage
+
+	// Simple insert
+	intruding_aircraft[test_intruder.id_] = &test_intruder;
+
+	/* Simple find
+	Aircraft * aircraft = intruding_aircraft[aircraft.id_]; */
+
+	/* Determining if present 
+		// this line can be equivalently written auto where = ... and the compiler will figure out the type
+		concurrency::concurrent_unordered_map<std::string, Aircraft*>::const_iterator where = intruding_aircraft.find(test_intruder.id_);
+		
+		// A value is specified as not being contained in the map if the iterator returned by find is equal to the iterator returned by end
+		if (where == intruding_aircraft.end()) {
+			intruding_aircraft.insert(where, std::make_pair(test_intruder.id_, &test_intruder));
+		}
+	*/
 
 	// Load the textures and bind them etc.
-	gauge_renderer = new GaugeRenderer(gPluginDataFile);
+	gauge_renderer = new GaugeRenderer(gPluginDataFile, &user_aircraft, &intruding_aircraft);
 	gauge_renderer->LoadTextures();
 
 	// start broadcasting location, and listening for aircraft
@@ -185,25 +192,31 @@ PLUGIN_API void	XPluginStop(void)
 	delete gauge_renderer;
 }
 
-PLUGIN_API void XPluginDisable(void)
-{
-}
+PLUGIN_API void XPluginDisable(void) {}
 
 PLUGIN_API int XPluginEnable(void)
 {
 	return 1;
 }
 
-PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void * inParam)
-{
-}
+PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void * inParam){}
 
 /* This will draw our gauge during the Xplane gauge drawing phase. */
 int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) 
 {
 	// Do the actual drawing, but only if the window is active
 	if (ExampleGaugeDisplayPanelWindow) {
+		LLA updated = { Angle {XPLMGetDatad(latitude_ref), Angle::DEGREES}, 
+			Angle{XPLMGetDatad(longitude_ref), Angle::DEGREES}, 
+			Distance {XPLMGetDatad(altitude_ref), Distance::METERS} };
+
+		user_aircraft.lock_.lock();
+
 		user_aircraft.vertical_velocity_ = XPLMGetDataf(verticalSpeed);
+		user_aircraft.position_ = updated;
+
+		user_aircraft.lock_.unlock();
+
 		DrawGLScene();
 	}
 	return 1;
@@ -278,7 +291,7 @@ void ExampleGaugeHotKey(void * refCon)
 void DrawGLScene()
 {
 	float rgb[3] = { XPLMGetDataf(RED), XPLMGetDataf(GREEN), XPLMGetDataf(BLUE) };
-	gauge_renderer->Render(rgb, &user_aircraft, &intruding_aircraft, NULL, NULL);
+	gauge_renderer->Render(rgb, NULL, NULL);
 }
 
 /* This callback does the work of drawing our window once per sim cycle each time
@@ -289,7 +302,7 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
 {
 	int		left, top, right, bottom;
 	float	color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
-	getDatarefsToSendOverLAN();
+	UpdateFromDataRefs();
 
 	/* Getting the altitude from the dataref in X-Plane. This is just testing
 	* local initialization vs the global way.
@@ -368,7 +381,7 @@ int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseS
 	return 1;
 }
 
-void getDatarefsToSendOverLAN(void)
+void UpdateFromDataRefs()
 {
 	/*The ground speed of the aircraft: float, meters/sec*/
 	groundSpeed = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/groundspeed"));

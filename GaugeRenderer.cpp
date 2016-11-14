@@ -31,7 +31,7 @@ const double GaugeRenderer::kDiskOuterRadius_ = 105.0;
 const int GaugeRenderer::kDiskSlices_ = 32;
 const int GaugeRenderer::kDiskLoops_ = 2;
 
-GaugeRenderer::GaugeRenderer(char const * const app_path) : app_path_(app_path) {
+GaugeRenderer::GaugeRenderer(char const * const app_path, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string const, Aircraft*> * const intruding_aircraft) : app_path_(app_path), user_aircraft_(user_aircraft), intruders_(intruding_aircraft) {
 	quadric_ = gluNewQuadric();
 
 	gluQuadricNormals(quadric_, GLU_SMOOTH);
@@ -89,14 +89,14 @@ bool GaugeRenderer::LoadTexture(char* tex_path, int tex_id) const {
 	return loaded_successfully;
 }
 
-void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft * const intruder, RecommendationRange*  recommended, RecommendationRange* not_recommended) {
-	user_aircraft->lock_.lock();
+void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, RecommendationRange* not_recommended) {
+	user_aircraft_->lock_.lock();
 
-	LLA const user_pos = user_aircraft->position_;
-	Vec2 const user_vel = user_aircraft->horizontal_velocity_;
-	double const user_aircraft_vert_vel = user_aircraft->vertical_velocity_;
+	LLA const user_pos = user_aircraft_->position_;
+	Vec2 const user_vel = user_aircraft_->horizontal_velocity_;
+	double const user_aircraft_vert_vel = user_aircraft_->vertical_velocity_;
 
-	user_aircraft->lock_.unlock();
+	user_aircraft_->lock_.unlock();
 
 	/// Turn off alpha blending and depth testing
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 0/*AlphaBlending*/, 0/*DepthTesting*/, 0/*DepthWriting*/);
@@ -130,19 +130,23 @@ void GaugeRenderer::Render(float* rgb, Aircraft * const user_aircraft, Aircraft 
 
 	DrawInnerGauge();
 
-	// Draw intruding aircraft
-	if (intruder) {		
-		intruder->lock_.lock();
-		LLA const intruder_pos = intruder->position_;
-		intruder->lock_.unlock();
+	concurrency::concurrent_unordered_map<std::string, Aircraft*>::const_iterator & iter = intruders_->cbegin();
 
+	if (iter != intruders_->cend()) {
 		LLA gauge_center_pos = CalculateGaugeCenterPosition(&user_pos, &user_vel);
 
-		// Here is where to insert for each aircraft
-		Distance range = gauge_center_pos.Range(&intruder_pos);
+		for (; iter != intruders_->cend(); ++iter) {
+			Aircraft* intruder = iter->second;
+			intruder->lock_.lock();
 
-		if (range.to_feet() < kGaugeInnerCircleRadius_.to_feet()) {
-			DrawIntrudingAircraft(&intruder_pos, &gauge_center_pos, &range);
+			LLA const intruder_pos = intruder->position_;
+			intruder->lock_.unlock();
+
+			// Here is where to insert for each aircraft
+			Distance range = gauge_center_pos.Range(&intruder_pos);
+
+			if (range.to_feet() < kGaugeInnerCircleRadius_.to_feet())
+				DrawIntrudingAircraft(&intruder_pos, &gauge_center_pos, &range);
 		}
 	}
 

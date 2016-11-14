@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <concurrent_unordered_map.h>
 #include "XPLMUtilities.h"
 
 #include "RecommendationRange.h"
@@ -14,11 +16,11 @@
 class GaugeRenderer
 {
 public:
-	GaugeRenderer(char const * const app_path);
+	GaugeRenderer(char const * const app_path, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string const, Aircraft*> * intruding_aircraft);
 	~GaugeRenderer();
 
 	void LoadTextures();
-	void Render(float* rgb, Aircraft * const user_aircraft, Aircraft * const intruder, RecommendationRange*  recommended, RecommendationRange* not_recommended);
+	void Render(float* rgb, RecommendationRange*  recommended, RecommendationRange* not_recommended);
 
 	// The minimum and maximum vertical speed values in units of feet per minute
 	static double const kMinVertSpeed_, kMaxVertSpeed_;
@@ -59,6 +61,9 @@ private:
 
 	// The "application path", which for the plugin is the directory that the plugin is contained in
 	char const * const app_path_;
+
+	Aircraft * const user_aircraft_;
+	concurrency::concurrent_unordered_map<std::string const, Aircraft*> * const intruders_;
 
 	// An OpenGL quadric (quadratic) object required for use with the GLUT library's partial disk function.
 	GLUquadricObj* quadric_;

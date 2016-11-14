@@ -16,7 +16,7 @@
 class GaugeRenderer
 {
 public:
-	GaugeRenderer(char const * const app_path, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string const, Aircraft*> * intruding_aircraft);
+	GaugeRenderer(char const * const app_path, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * intruding_aircraft);
 	~GaugeRenderer();
 
 	void LoadTextures();
@@ -63,7 +63,7 @@ private:
 	char const * const app_path_;
 
 	Aircraft * const user_aircraft_;
-	concurrency::concurrent_unordered_map<std::string const, Aircraft*> * const intruders_;
+	concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intruders_;
 
 	// An OpenGL quadric (quadratic) object required for use with the GLUT library's partial disk function.
 	GLUquadricObj* quadric_;

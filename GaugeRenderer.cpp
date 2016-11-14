@@ -31,7 +31,7 @@ const double GaugeRenderer::kDiskOuterRadius_ = 105.0;
 const int GaugeRenderer::kDiskSlices_ = 32;
 const int GaugeRenderer::kDiskLoops_ = 2;
 
-GaugeRenderer::GaugeRenderer(char const * const app_path, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string const, Aircraft*> * const intruding_aircraft) : app_path_(app_path), user_aircraft_(user_aircraft), intruders_(intruding_aircraft) {
+GaugeRenderer::GaugeRenderer(char const * const app_path, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intruding_aircraft) : app_path_(app_path), user_aircraft_(user_aircraft), intruders_(intruding_aircraft) {
 	quadric_ = gluNewQuadric();
 
 	gluQuadricNormals(quadric_, GLU_SMOOTH);

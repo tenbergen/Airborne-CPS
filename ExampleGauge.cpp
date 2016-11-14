@@ -66,8 +66,8 @@ Aircraft test_intruder = { "intruder", intr_ac_pos, intr_ac_vel, 10000.0 };
 
 GaugeRenderer* gauge_renderer;
 
-concurrency::concurrent_unordered_map<std::string const, Aircraft*> intruding_aircraft;
-Transponder transponder;
+concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft;
+Transponder transponder = { &user_aircraft };
 
 RecommendationRange pos_rec_range = {0.0, GaugeRenderer::kMaxVertSpeed_, true};
 RecommendationRange neg_rec_range = {GaugeRenderer::kMinVertSpeed_, 0.0, false};
@@ -81,14 +81,11 @@ static int	CoordInRect(int x, int y, int l, int t, int r, int b)
 
 /// Prototypes for callbacks etc.
 static void DrawGLScene();
+
 static int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
-
 static void ExampleGaugeHotKey(void * refCon);
-
 static void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
-
 static void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
-
 static int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
 static XPLMWindowID	gWindow = NULL;

@@ -101,6 +101,7 @@ float indAirspeed2 = 0;
 float trueAirspeed = 0;
 float verticalSpeedData = 0;
 float latREF, lonREF = 0;
+float I_latREF, I_lonREF = 0;
 
 static void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
 
@@ -126,6 +127,9 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 	strcpy(outSig, "AirborneCPS");
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
 
+	/* Simple insert */
+	intruding_aircraft[test_intruder.id_] = &test_intruder;
+
 	UpdateFromDataRefs();
 
 	/* Now we create a window.  We pass in a rectangle in left, top, right, bottom screen coordinates.  We pass in three callbacks. */
@@ -149,13 +153,13 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag,   "F8",   ExampleGaugeHotKey, NULL);
 
-	// Concurrent map usage
+	/* Concurrent map usage */
 
-	// Simple insert
-	intruding_aircraft[test_intruder.id_] = &test_intruder;
+	/* Simple insert */
+	//intruding_aircraft[test_intruder.id_] = &test_intruder;
 
-	/* Simple find
-	Aircraft * aircraft = intruding_aircraft[aircraft.id_]; */
+	/* Simple find */
+	//Aircraft * aircraft = intruding_aircraft[aircraft.id_];
 
 	/* Determining if present 
 		// this line can be equivalently written auto where = ... and the compiler will figure out the type
@@ -166,6 +170,8 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 			intruding_aircraft.insert(where, std::make_pair(test_intruder.id_, &test_intruder));
 		}
 	*/
+
+	//UpdateFromDataRefs();
 
 	// Load the textures and bind them etc.
 	gauge_renderer = new GaugeRenderer(gPluginDataFile, &user_aircraft, &intruding_aircraft);
@@ -337,11 +343,10 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
 	char calcVSChar[128];
 	snprintf(calcVSChar, 128, "verticalSpeedCalc: %f", (verticalSpeed1+90));
 
-	char lat[128];
-	snprintf(lat, 128, "lat: %f", latREF);
-
-	char lon[128];
-	snprintf(lon, 128, "lon: %f", lonREF);
+	char lat[128]; snprintf(lat, 128, "lat: %f", latREF);
+	char lon[128]; snprintf(lon, 128, "lon: %f", lonREF);
+	char I_lat[128]; snprintf(I_lat, 128, "I_lat: %f", I_latREF);
+	char I_lon[128]; snprintf(I_lon, 128, "I_lon: %f", I_lonREF);
 
 	/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
 	XPLMDrawString(color, left + 5, top - 40, (char*)(verticalSpeedDataChar), NULL, xplmFont_Basic);
@@ -349,6 +354,8 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
 
 	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 140, (char*)(I_lat), NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 160, (char*)(I_lon), NULL, xplmFont_Basic);
 	//XPLMDrawString(color, left + 5, top - 120, transponder->msg, NULL, xplmFont_Basic);
 }
 
@@ -403,9 +410,15 @@ void UpdateFromDataRefs()
 	/*Indicated vertical speed in feet per minute, pilot system: float, feet/minute*/
 	verticalSpeedData = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot"));
 
-	/*The latitude of the aircraft: double, degrees*/
+	/*The latitude of this aircraft: double, degrees*/
 	latREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
 
-	/*The longitude of the aircraft: double, degrees*/
+	/*The longitude of this aircraft: double, degrees*/
 	lonREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
+
+	/*The latitude of the intruder aircraft: double, degrees*/
+	I_latREF = (float)intruding_aircraft["intruder"]->position_.latitude_.to_degrees();
+
+	/*The longitude of the intruder aircraft: double, degrees*/
+	I_lonREF = (float)intruding_aircraft["intruder"]-> position_.longitude_.to_degrees();
 }

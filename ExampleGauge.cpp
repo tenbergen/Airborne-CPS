@@ -42,7 +42,6 @@ NOTES:
 #include "XPLMNavigation.h"
 
 #include "Transponder.h"
-#include "GaugeRenderer.h"
 
 static XPLMDataRef verticalSpeed = NULL;
 XPLMDataRef latitude_ref, longitude_ref, altitude_ref;
@@ -67,7 +66,7 @@ Aircraft test_intruder = { "intruder", intr_ac_pos, intr_ac_vel, 10000.0 };
 GaugeRenderer* gauge_renderer;
 
 concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft;
-Transponder transponder = { &user_aircraft };
+Transponder transponder = { &user_aircraft, &intruding_aircraft };
 
 RecommendationRange pos_rec_range = {0.0, GaugeRenderer::kMaxVertSpeed_, true};
 RecommendationRange neg_rec_range = {GaugeRenderer::kMinVertSpeed_, 0.0, false};

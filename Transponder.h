@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include "location.pb.h"
 #include "Aircraft.h"
+#include "GaugeRenderer.h"
 
 #include "XPLMUtilities.h"
 
@@ -30,7 +31,7 @@ class Transponder
 {
 public:
 	Aircraft* aircraft;
-	Transponder(Aircraft*);
+	Transponder(Aircraft*, concurrency::concurrent_unordered_map<std::string, Aircraft*>*);
 	~Transponder();
 	DWORD receive();
 	DWORD send();
@@ -43,7 +44,8 @@ protected:
 	int buflen;
 	unsigned sinlen;
 	struct sockaddr_in incoming, outgoing;
-	xplane::Location intruder, myLocation;
+	xplane::Location intruderLocation, myLocation;
+	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
 	struct lla {
 		double lat;
 		double lon;

@@ -2,13 +2,14 @@
 
 #pragma comment(lib,"WS2_32")
 
-Transponder::Transponder(Aircraft* ac)
+Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruders)
 {
 	if (WSAStartup(0x0101, &w) != 0) {
 		exit(0);
 	}
 
 	aircraft = ac;
+	intrudersMap = intruders;
 
 	myLocation.set_id(getHardwareAddress());
 	sinlen = sizeof(struct sockaddr_in);
@@ -53,21 +54,27 @@ DWORD Transponder::receive()
 		char * buffer = (char *) malloc(size);
 		myID = myLocation.id().c_str();
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
-		intruder.ParseFromArray(buffer, size);
-		intruderID = intruder.id().c_str();
-		if (strcmp(myID, intruderID) == 0) {
-			intruderLLA.lat = intruder.lat();
-			intruderLLA.lon = intruder.lon();
-			intruderLLA.alt = intruder.alt();
+		intruderLocation.ParseFromArray(buffer, size);
+		intruderID = intruderLocation.id().c_str();
+		if (strcmp(myID, intruderID) != 0) {
+			intruderLLA.lat = intruderLocation.lat();
+			intruderLLA.lon = intruderLocation.lon();
+			intruderLLA.alt = intruderLocation.alt();
 			char qwe[128];
 			XPLMDebugString(intruderID);
 			sprintf(qwe, " -> (lla) %f::%f::%f\n", intruderLLA.lat, intruderLLA.lon, intruderLLA.alt);
 			XPLMDebugString(qwe);
+			Aircraft intruder = { intruderID };
+			Angle latitude = { intruderLocation.lat(), Angle::ANGLE_UNITS::DEGREES };
+			Angle longitude = { intruderLocation.lon(), Angle::ANGLE_UNITS::DEGREES };
+			Distance altitude = { intruderLocation.alt(), Distance::DistanceUnits::METERS };
+			LLA intruderPosition = { latitude, longitude, altitude };
+			intruder.position_ = intruderPosition;
+			(*intrudersMap)[intruder.id_] = &intruder;
 		} else {
 			// error
 		}
 		free(buffer);
-		// TODO map the aircraft
 	}
 	return 0;
 }

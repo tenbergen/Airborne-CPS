@@ -345,8 +345,7 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
 
 	char lat[128]; snprintf(lat, 128, "lat: %f", latREF);
 	char lon[128]; snprintf(lon, 128, "lon: %f", lonREF);
-	char I_lat[128]; snprintf(I_lat, 128, "I_lat: %f", I_latREF);
-	char I_lon[128]; snprintf(I_lon, 128, "I_lon: %f", I_lonREF);
+	
 
 	/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
 	XPLMDrawString(color, left + 5, top - 40, (char*)(verticalSpeedDataChar), NULL, xplmFont_Basic);
@@ -354,8 +353,22 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
 
 	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 140, (char*)(I_lat), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 160, (char*)(I_lon), NULL, xplmFont_Basic);
+	
+	concurrency::concurrent_unordered_map<std::string, Aircraft*>::const_iterator & iter = intruding_aircraft.cbegin();
+	int offset = 120;
+	char buff[128];
+
+		for (; iter != intruding_aircraft.cend(); ++iter) {
+			Aircraft* intruder = iter->second;
+			intruder->lock_.lock();
+
+			LLA const intruder_pos = intruder->position_;
+			intruder->lock_.unlock();
+
+			snprintf(buff, 128, "latitude: %f, longitude: %f", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees());
+			XPLMDrawString(color, left + 5, top - offset, (char*)buff, NULL, xplmFont_Basic);
+			offset += 20;
+		}
 	//XPLMDrawString(color, left + 5, top - 120, transponder->msg, NULL, xplmFont_Basic);
 }
 

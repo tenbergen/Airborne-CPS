@@ -75,8 +75,9 @@ static void UpdateFromDataRefs();
 
 /// Used for dragging plugin panel window.
 static	int	CoordInRect(int x, int y, int l, int t, int r, int b);
-static int	CoordInRect(int x, int y, int l, int t, int r, int b)
-{	return ((x >= l) && (x < r) && (y < t) && (y >= b)); }
+static int	CoordInRect(int x, int y, int l, int t, int r, int b) {	
+	return ((x >= l) && (x < r) && (y < t) && (y >= b)); 
+}
 
 /// Prototypes for callbacks etc.
 static void DrawGLScene();
@@ -109,9 +110,7 @@ static void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlag
 
 static int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
-PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
-{
-	XPLMDebugString("ExampleGauge::XPluginStart");
+PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	/// Handle cross platform differences
 #if IBM
 	char *pFileName = "Resources\\Plugins\\AirborneCPS\\";
@@ -184,8 +183,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc)
 	return 1;
 }
 
-PLUGIN_API void	XPluginStop(void)
-{
+PLUGIN_API void	XPluginStop(void) {
 	/// Clean up
 	XPLMUnregisterDrawCallback(ExampleGaugeDrawCallback, xplm_Phase_Gauges, 0, NULL);
 	XPLMDestroyWindow(gWindow);
@@ -197,16 +195,12 @@ PLUGIN_API void	XPluginStop(void)
 
 PLUGIN_API void XPluginDisable(void) {}
 
-PLUGIN_API int XPluginEnable(void)
-{
-	return 1;
-}
+PLUGIN_API int XPluginEnable(void) { return 1; }
 
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void * inParam){}
 
 /* This will draw our gauge during the Xplane gauge drawing phase. */
-int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) 
-{
+int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) {
 	// Do the actual drawing, but only if the window is active
 	if (ExampleGaugeDisplayPanelWindow) {
 		LLA updated ={ Angle {XPLMGetDatad(latitude_ref), Angle::DEGREES}, 
@@ -241,19 +235,15 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 /* This callback does not do any drawing as such.
  * We use the mouse callback below to handle dragging of the window
  * X-Plane will automatically do the redraw. */
-void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon)
-{
-}
+void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon){}
 
 /* Our key handling callback does nothing in this plugin.  This is ok;
  * we simply don't use keyboard input.*/
-void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID,char inKey, XPLMKeyFlags inFlags,char inVirtualKey, void * inRefcon, int losingFocus)
-{
-}
+void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID,char inKey, 
+	XPLMKeyFlags inFlags,char inVirtualKey, void * inRefcon, int losingFocus){}
 
 /* Our mouse click callback updates the position that the windows is dragged to. */
-int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon)
-{
+int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon){
 	int	dX = 0, dY = 0;
 	int	Weight = 0, Height = 0;
 	int	Left, Top, Right, Bottom;
@@ -269,8 +259,7 @@ int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, X
 	switch(inMouse) {
 	case xplm_MouseDown:
 		/// Test for the mouse in the top part of the window
-		if (CoordInRect(x, y, Left, Top, Right, Top-15))
-		{
+		if (CoordInRect(x, y, Left, Top, Right, Top-15)){
 			dX = x - Left;
 			dY = y - Top;
 			Weight = Right - Left;
@@ -280,8 +269,7 @@ int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, X
 		break;
 	case xplm_MouseDrag:
 		/// We are dragging so update the window position
-		if (gDragging)
-		{
+		if (gDragging) {
 			Left = (x - dX);
 			Right = Left + Weight;
 			Top = (y - dY);
@@ -297,14 +285,12 @@ int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, X
 }
 
 /// Toggle between display and non display
-void ExampleGaugeHotKey(void * refCon)
-{
+void ExampleGaugeHotKey(void * refCon) {
 	ExampleGaugeDisplayPanelWindow = !ExampleGaugeDisplayPanelWindow;
 }
 
 /// Draws the textures that make up the gauge
-void DrawGLScene()
-{
+void DrawGLScene() {
 	float rgb[3] = { XPLMGetDataf(RED), XPLMGetDataf(GREEN), XPLMGetDataf(BLUE) };
 	gauge_renderer->Render(rgb, NULL, NULL);
 }
@@ -313,8 +299,7 @@ void DrawGLScene()
 * it is needed.  It dynamically changes the text depending on the saved mouse
 * status.  Note that we don't have to tell X-Plane to redraw us when our text
 * changes; we are redrawn by the sim continuously. */
-void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
-{
+void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int		left, top, right, bottom;
 	float	color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
 	UpdateFromDataRefs();
@@ -356,26 +341,24 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
 	char calcVSChar[128];
 	snprintf(calcVSChar, 128, "verticalSpeedCalc: %f", (verticalSpeed1+90));
 
-	char lat[128]; snprintf(lat, 128, "lat: %f", latREF);
-	char lon[128]; snprintf(lon, 128, "lon: %f", lonREF);
+	char lat[128]; snprintf(lat, 128, "lat: %f", latREF); char lon[128]; snprintf(lon, 128, "lon: %f", lonREF);
 	
-
 	/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
 	XPLMDrawString(color, left + 5, top - 40, (char*)(verticalSpeedDataChar), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 60, (char*)(calcVSChar), NULL, xplmFont_Basic);
-
 	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
 	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
 	
+	/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>::const_iterator & iter = intruding_aircraft.cbegin();
 	int offset = 120;
 	char buff[128];
 
 	for (; iter != intruding_aircraft.cend(); ++iter) {
-		Aircraft* intruder = iter->second;
-		intruder->lock_.lock();
+		Aircraft* intruder = iter -> second;
 
-		LLA const intruder_pos = intruder->position_current_;
+		intruder->lock_.lock();
+		LLA const intruder_pos = intruder -> position_current_;
 		intruder->lock_.unlock();
 
 		snprintf(buff, 128, "latitude: %f, longitude: %f", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees());
@@ -385,15 +368,13 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon)
 }
 
 /* Our key handling callback does nothing in this plugin.  This is ok; we simply don't use keyboard input. */
-void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus)
-{
-}
+void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, 
+	char inVirtualKey, void * inRefcon, int losingFocus){}
 
 /*Our mouse click callback toggles the status of our mouse variable
 * as the mouse is clicked.  We then update our text on the next sim
 * cycle. */
-int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon)
-{
+int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon){
 	/* If we get a down or up, toggle our status click.  We will
 	* never get a down without an up if we accept the down. */
 	if ((inMouse == xplm_MouseDown) || (inMouse == xplm_MouseUp))
@@ -409,8 +390,7 @@ int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseS
 	return 1;
 }
 
-void UpdateFromDataRefs()
-{
+void UpdateFromDataRefs() {
 	/*The ground speed of the aircraft: float, meters/sec*/
 	groundSpeed = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/groundspeed"));
 

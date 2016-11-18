@@ -15,6 +15,7 @@ public:
 	LLA(Angle lat, Angle lon, Distance alt);
 
 	LLA(Angle lat, Angle lon);
+
 	LLA();
 
 	static LLA const ZERO;
@@ -46,7 +47,7 @@ public:
 
 	LLA operator + (LLA const & l) const;
 	LLA operator - (LLA const & l) const;
-	LLA operator = (LLA const & l) const;
+	void operator = (LLA const & l);
 
 	/*Returns the distance per 1 degree of latitude at this LLA. Note: the distance per degree latitude is dependent 
 	on the latitude so it should be recalculated for different locations.*/
@@ -56,7 +57,7 @@ public:
 	on the latitude so it should be recalculated for different locations.*/
 	Distance DistPerDegreeLon() const;
 
-	Angle const latitude_;
-	Angle const longitude_;
-	Distance const altitude_;
+	Angle latitude_;
+	Angle longitude_;
+	Distance altitude_;
 };

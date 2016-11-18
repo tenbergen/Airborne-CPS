@@ -36,6 +36,6 @@ Angle Angle::operator - (Angle const & a) const {
 	return Angle(value_degrees_ - a.value_degrees_, Angle::DEGREES);
 }
 
-Angle Angle::operator = (Angle const & a) const {
-	return Angle(value_degrees_, Angle::DEGREES);
+void Angle::operator = (Angle const & a) {
+	value_degrees_ = a.value_degrees_;
 }

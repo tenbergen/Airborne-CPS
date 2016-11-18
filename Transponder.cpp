@@ -69,7 +69,7 @@ DWORD Transponder::receive()
 			Angle longitude = { intruderLocation.lon(), Angle::ANGLE_UNITS::DEGREES };
 			Distance altitude = { intruderLocation.alt(), Distance::DistanceUnits::METERS };
 			LLA intruderPosition = { latitude, longitude, altitude };
-			intruder.position_ = intruderPosition;
+			intruder.position_current_ = intruderPosition;
 			(*intrudersMap)[intruder.id_] = &intruder;
 		} else {
 			// error
@@ -84,7 +84,7 @@ DWORD Transponder::send()
 	for (;;)
 	{
 		aircraft->lock_.lock();
-		LLA position = aircraft->position_;
+		LLA position = aircraft->position_current_;
 		aircraft->lock_.unlock();
 		myLocation.set_lat(position.latitude_.to_degrees());
 		myLocation.set_lon(position.longitude_.to_degrees());

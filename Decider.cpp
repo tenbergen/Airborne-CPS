@@ -1,5 +1,9 @@
 #include "Decider.h"
 
+#ifndef _DECIDER_H_
+#define _DECIDER_H_
+#endif // !_DECIDER_H_
+
 Decider::Decider(Aircraft* this_Aircraft,
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruding_aircraft) : thisAircraft_(this_Aircraft), intruderAircraft_(intruding_aircraft) {}
 
@@ -7,6 +11,7 @@ void Decider::Start() {
 	Decider::Analyze(thisAircraft_, *intruderAircraft_);
 }
 
+/*	void Analyze(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft); */
 void Decider::Analyze(Aircraft * thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft) {
 	Aircraft* intruder = Decider::QueryIntrudingAircraftMap(intruding_aircraft, "testAircraftID");
 	Decider::DetermineActionRequired(intruder);
@@ -19,21 +24,21 @@ Aircraft* Decider::QueryIntrudingAircraftMap(concurrency::concurrent_unordered_m
 
 void Decider::DetermineActionRequired(Aircraft* intruder) {
 	/* Need to have access to two measurements of range and the time between those measurements to calculate rate */
-	LLA thisAircraftsPosition = thisAircraft_->position_;
-	LLA const intrudersPosition = intruder->position_;
+	LLA thisAircraftsPosition = thisAircraft_->position_current_;
+	LLA const intrudersPosition = intruder->position_current_;
 	double thisAircraftsAltitude = thisAircraftsPosition.altitude_.to_feet();
 	double intrudersAltitude = intrudersPosition.altitude_.to_feet();
 
 	double horizontalSeparation = thisAircraftsPosition.Range(&intrudersPosition).to_feet();
-	double horizontalRate = Decider::CalculateRate(horizontalSeparation, 0.0, 0.0, 0.0); //need 2x measure
+	double horizontalRate = Decider::CalculateRate(horizontalSeparation, 0.0, 0, 0); //need 2x measure
 	double hoizontalTau = Decider::CalculateTau(horizontalSeparation, horizontalRate);
 
 	double verticalSeparation = Decider::CalculateVerticalSeparation(thisAircraftsAltitude, intrudersAltitude);
-	double verticalRate = Decider::CalculateRate(verticalSeparation, 0.0, 0.0, 0.0); //need 2x measure
+	double verticalRate = Decider::CalculateRate(verticalSeparation, 0.0, 0, 0); //need 2x measure
 	double verticalTau = Decider::CalculateTau(verticalSeparation, verticalRate);
 
 	double slantRange = Decider::CalculateSlantRange(horizontalSeparation, verticalSeparation);
-	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, 0.0, 0.0); //need 2x measure
+	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, 0, 0); //need 2x measure
 	double slantRangeTau = Decider::CalculateTau(slantRange, slantRangeRate);
 
 	if (hoizontalTau <= raThreshold && verticalTau <= raThreshold) {

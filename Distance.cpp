@@ -79,6 +79,6 @@ Distance Distance::operator / (Distance const & d) const {
 	}
 }
 
-Distance Distance::operator = (Distance const & d) const {
-	return Distance(value_ft_, Distance::FEET);
+void Distance::operator = (Distance const & d) {
+	value_ft_ = d.value_ft_;
 }

@@ -104,6 +104,8 @@ LLA LLA::operator - (LLA const & l) const {
 	return LLA(latitude_ - l.latitude_, longitude_ - l.longitude_, altitude_ - l.altitude_);
 }
 
-LLA LLA::operator = (LLA const & l) const {
-	return LLA(latitude_, longitude_, altitude_);
+void LLA::operator = (LLA const & l) {
+	latitude_ = l.latitude_;
+	longitude_ = l.longitude_;
+	altitude_ = l.altitude_;
 }

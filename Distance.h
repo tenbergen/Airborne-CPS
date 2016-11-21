@@ -24,7 +24,7 @@ public:
 	Distance operator * (Distance const & d) const;
 	/*Division by zero will return the ZERO distance.*/
 	Distance operator / (Distance const & d) const;
-	Distance operator = (Distance const & d) const;
+	void operator = (Distance const & d);
 
 private:
 	static const double kFtPerMeter_;
@@ -35,5 +35,5 @@ private:
 	static const double kNmiPerFt_;
 	static const double kMilesPerFt_;
 
-	const double value_ft_;
+	double value_ft_;
 };

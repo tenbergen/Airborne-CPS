@@ -92,7 +92,7 @@ bool GaugeRenderer::LoadTexture(char* tex_path, int tex_id) const {
 void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, RecommendationRange* not_recommended) {
 	user_aircraft_->lock_.lock();
 
-	LLA const user_pos = user_aircraft_->position_;
+	LLA const user_pos = user_aircraft_->position_current_;
 	Vec2 const user_vel = user_aircraft_->horizontal_velocity_;
 	double const user_aircraft_vert_vel = user_aircraft_->vertical_velocity_;
 
@@ -139,7 +139,7 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 			Aircraft* intruder = iter->second;
 			intruder->lock_.lock();
 
-			LLA const intruder_pos = intruder->position_;
+			LLA const intruder_pos = intruder->position_current_;
 			intruder->lock_.unlock();
 
 			// Here is where to insert for each aircraft

@@ -19,7 +19,8 @@ public:
 
 	std::string const id_;
 
-	LLA position_;
+	LLA position_current_;
+	LLA position_old_;
 
 	// The horizontal velocity (x,z)
 	Vec2 horizontal_velocity_;

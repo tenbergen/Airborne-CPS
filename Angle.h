@@ -28,7 +28,7 @@ public:
 
 	Angle operator + (Angle const & a) const;
 	Angle operator - (Angle const & a) const;
-	Angle operator = (Angle const & a) const;
+	void operator = (Angle const & a);
 private:
-	double const value_degrees_;
+	double value_degrees_;
 };

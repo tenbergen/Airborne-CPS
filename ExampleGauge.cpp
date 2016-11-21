@@ -128,7 +128,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
 
 	/* Simple insert */
-	intruding_aircraft[test_intruder.id_] = &test_intruder;
+	//intruding_aircraft[test_intruder.id_] = &test_intruder;
 
 	UpdateFromDataRefs();
 
@@ -203,16 +203,28 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, voi
 int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) {
 	// Do the actual drawing, but only if the window is active
 	if (ExampleGaugeDisplayPanelWindow) {
-		LLA updated = { Angle {XPLMGetDatad(latitude_ref), Angle::DEGREES}, 
+		LLA updated ={ Angle {XPLMGetDatad(latitude_ref), Angle::DEGREES}, 
 			Angle{XPLMGetDatad(longitude_ref), Angle::DEGREES}, 
 			Distance {XPLMGetDatad(altitude_ref), Distance::METERS} };
+		double updated_vvel = XPLMGetDataf(verticalSpeed);
 
 		user_aircraft.lock_.lock();
 
-		user_aircraft.vertical_velocity_ = XPLMGetDataf(verticalSpeed);
-		user_aircraft.position_ = updated;
+		user_aircraft.position_old_ = user_aircraft.position_current_;
+		LLA current_pos = user_aircraft.position_current_;
+		double current_vvel = user_aircraft.vertical_velocity_;
+
+		user_aircraft.vertical_velocity_ = updated_vvel;
+		user_aircraft.position_current_ = updated;
+
+		LLA updated_pos_set = user_aircraft.position_current_;
+		double updated_vvel_set = user_aircraft.vertical_velocity_;
 
 		user_aircraft.lock_.unlock();
+
+		char buf[512];
+		snprintf(buf, 512, "ExampleGauge::ExampleGaugeDrawCallback - current_pos: (%f, %f), current_vvel: %f, new_pos: (%f, %f), new_vvel: %f, updated_pos: (%f, %f), updated_vvel: %f\n", current_pos.latitude_.to_degrees(), current_pos.longitude_.to_degrees(), current_vvel, updated.latitude_.to_degrees(), updated.longitude_.to_degrees(), updated_vvel, updated_pos_set.latitude_.to_degrees(), updated_pos_set.longitude_.to_degrees(), updated_vvel_set);
+		XPLMDebugString(buf);
 
 		DrawGLScene();
 	}
@@ -344,9 +356,9 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 
 	for (; iter != intruding_aircraft.cend(); ++iter) {
 		Aircraft* intruder = iter -> second;
-		intruder->lock_.lock();
 
-		LLA const intruder_pos = intruder -> position_;
+		intruder->lock_.lock();
+		LLA const intruder_pos = intruder -> position_current_;
 		intruder->lock_.unlock();
 
 		snprintf(buff, 128, "latitude: %f, longitude: %f", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees());
@@ -410,8 +422,8 @@ void UpdateFromDataRefs() {
 	lonREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 
 	/*The latitude of the intruder aircraft: double, degrees*/
-	I_latREF = (float)intruding_aircraft["intruder"]->position_.latitude_.to_degrees();
+	//I_latREF = (float)intruding_aircraft["intruder"]->position_.latitude_.to_degrees();
 
 	/*The longitude of the intruder aircraft: double, degrees*/
-	I_lonREF = (float)intruding_aircraft["intruder"]-> position_.longitude_.to_degrees();
+	//I_lonREF = (float)intruding_aircraft["intruder"]-> position_.longitude_.to_degrees();
 }

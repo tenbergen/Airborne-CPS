@@ -9,8 +9,8 @@ public:
 	Vec2(double x, double y) : x_(x), y_(y) {}
 	Vec2() : x_(0.0f), y_(0.0f) {}
 
-	double const x_;
-	double const y_;
+	double x_;
+	double y_;
 
 	Vec2 operator + (Vec2 const & v) const;
 	Vec2 add(double dx, double dy) const;

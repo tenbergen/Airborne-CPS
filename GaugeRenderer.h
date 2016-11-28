@@ -70,6 +70,8 @@ private:
 
 	XPLMTextureID glTextures_[texture_constants::kNumTextures];
 
+	static texture_constants::TexCoords const * AircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threat_class);
+
 	bool LoadTexture(char * tex_path, int tex_id) const;
 
 	/* Draws the outer gauge ring.*/
@@ -79,7 +81,7 @@ private:
 	/* Draws the vertical speed indicator needle on the gauge from the supplied vertical velocity.*/
 	void DrawGaugeNeedle(Velocity const user_aircraft_vert_vel) const;
 	/*  */
-	void DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range) const;
+	void DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const;
 
 	/* Draws the supplied recommendation range. */
 	void DrawRecommendationRange(RecommendationRange& rec_range) const;

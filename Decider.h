@@ -15,7 +15,7 @@ public:
 private:
 	Aircraft* thisAircraft_;
 	Aircraft* intruderFromMap;
-	State currentState;
+
 	double taThreshold = 60.0; // seconds
 	double raThreshold = 30.0; // seconds
 	std::map<std::string, State> stateMap;

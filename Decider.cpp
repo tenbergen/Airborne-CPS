@@ -24,8 +24,14 @@ Aircraft* Decider::QueryIntrudingAircraftMap(concurrency::concurrent_unordered_m
 
 void Decider::DetermineActionRequired(Aircraft* intruder) {
 	/* Need to have access to two measurements of range and the time between those measurements to calculate rate */
+	thisAircraft_->lock_.lock();
 	LLA thisAircraftsPosition = thisAircraft_->position_current_;
+	thisAircraft_->lock_.unlock();
+
+	intruder->lock_.lock();
 	LLA const intrudersPosition = intruder->position_current_;
+	intruder->lock_.unlock();
+
 	double thisAircraftsAltitude = thisAircraftsPosition.altitude_.to_feet();
 	double intrudersAltitude = intrudersPosition.altitude_.to_feet();
 
@@ -41,15 +47,24 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, 0, 0); //need 2x measure
 	double slantRangeTau = Decider::CalculateTau(slantRange, slantRangeRate);
 
+	Aircraft::ThreatClassification threat_class;
+
 	if (hoizontalTau <= raThreshold && verticalTau <= raThreshold) {
 		Decider::SetState(intruder, TA);
+		threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 	}
 	else if (hoizontalTau <= taThreshold && verticalTau <= taThreshold) {
 		Decider::SetState(intruder, RA);
+		threat_class = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
 	}
 	else {
+		threat_class = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
 		Decider::SetState(intruder, NORMAL);
 	}
+	
+	intruder->lock_.lock();
+	intruder->threat_classification_ = threat_class;
+	intruder->lock_.unlock();
 }
 
 double Decider::CalculateVerticalSeparation(double thisAircraftsAltitude, double intrudersAltitude) {

@@ -144,6 +144,7 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 
 			intruder->lock_.lock();
 			LLA const intruder_pos = intruder->position_current_;
+			Aircraft::ThreatClassification threat_class = intruder->threat_classification_;
 			intruder->lock_.unlock();
 
 			Distance range = gauge_center_pos.Range(&intruder_pos);
@@ -152,7 +153,7 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 				/*debug_buf[0] = '\0';
 				snprintf(debug_buf, 128, "GaugeRenderer::Render - drawing aircraft: %s\n", intruder->id_.c_str());
 				XPLMDebugString(debug_buf);*/
-				DrawIntrudingAircraft(&intruder_pos, &user_heading, &gauge_center_pos, &range);
+				DrawIntrudingAircraft(&intruder_pos, &user_heading, &gauge_center_pos, &range, threat_class);
 			}
 		}
 	}
@@ -166,7 +167,7 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 	glFlush();
 }
 
-void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range) const {
+void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const {
 	Angle bearing = gauge_center_pos->Bearing(intruder_pos);
 	double init_bearing = bearing.to_degrees();
 	bearing = bearing - *user_heading;
@@ -193,16 +194,7 @@ void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Angle 
 	double symbol_bot = symbol_center_y - 8;
 	double symbol_top = symbol_center_y + 8;
 
-	texture_constants::TexCoords const * symbol_coords;
-
-	if (cartesian_angle.to_degrees() < 90.0)
-		symbol_coords = &texture_constants::kSymbolRedSquare;
-	else if (cartesian_angle.to_degrees() < 180.0)
-		symbol_coords = &texture_constants::kSymbolYellowCircle;
-	else if (cartesian_angle.to_degrees() < 270.0)
-		symbol_coords = &texture_constants::kSymbolBlueDiamondCutout;
-	else
-		symbol_coords = &texture_constants::kSymbolBlueDiamondWhole;
+	texture_constants::TexCoords const * symbol_coords = AircraftSymbolFromThreatClassification(threat_class);
 
 	glBegin(GL_QUADS);
 	glTexCoord2d(symbol_coords->right, symbol_coords->bottom); glVertex2d(symbol_right, symbol_bot);
@@ -212,6 +204,22 @@ void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Angle 
 	glEnd();
 }
 
+
+texture_constants::TexCoords const * GaugeRenderer::AircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threat_class) {
+	switch (threat_class) {
+	case Aircraft::ThreatClassification::NON_THREAT_TRAFFIC:
+		return &texture_constants::kSymbolBlueDiamondCutout;
+	case Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC:
+		return &texture_constants::kSymbolBlueDiamondWhole;
+	case Aircraft::ThreatClassification::TRAFFIC_ADVISORY:
+		return &texture_constants::kSymbolYellowCircle;
+	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
+		return &texture_constants::kSymbolRedSquare;
+	default:
+		XPLMDebugString("GaugeRenderer::DetermineAircraftSymbol - Aircraft with unknown threat classification.");
+		return &texture_constants::kSymbolRedSquare;
+	}
+}
 
 void GaugeRenderer::DrawOuterGauge() const {
 	texture_constants::TexCoords outer_gauge = texture_constants::kOuterGauge;

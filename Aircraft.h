@@ -3,6 +3,7 @@
 #include <string>
 #include <mutex>
 
+#include "Velocity.h"
 #include "LLA.h"
 #include "Vec2.h"
 
@@ -13,18 +14,18 @@ public:
 	static Angle HeadingToBearing(Vec2 const * const heading);
 
 	Aircraft(std::string const id);
-	Aircraft(std::string const id, LLA position, Vec2 horizontal_vel, double vert_velocity);
+	Aircraft(std::string const id, LLA position, Angle heading, Velocity vertical_velocity);
 
 	std::mutex lock_;
 
 	std::string const id_;
 
+	/// Values that are updated via datarefs from xplane
 	LLA position_current_;
 	LLA position_old_;
 
-	// The horizontal velocity (x,z)
-	Vec2 horizontal_velocity_;
+	Angle heading_;
 
 	// The rate of change of the altitude
-	double vertical_velocity_;
+	Velocity vertical_velocity_;
 };

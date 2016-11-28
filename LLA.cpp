@@ -1,7 +1,7 @@
 ﻿#include "LLA.h"
 
 // Mean earth radius is 3958.7613 mi
-Distance const LLA::kRadiusEarth_ = Distance(3958.7613, Distance::MILES);
+Distance const LLA::kRadiusEarth_ = Distance(3958.7613, Distance::DistanceUnits::MILES);
 Vec2 const LLA::NORTH = Vec2(0.0, 1.0);
 LLA const LLA::ZERO = LLA(Angle::ZERO, Angle::ZERO, Distance::ZERO);
 
@@ -13,7 +13,7 @@ double const LLA::kMetersPerDegLonConst1_ = 111412.84;
 double const LLA::kMetersPerDegLonConst2_ = -93.5;
 double const LLA::kMetersPerDegLonConst3_ = 0.118;
 
-LLA::LLA(double lat, double lon, double alt, Angle::ANGLE_UNITS angle_units, Distance::DistanceUnits dist_units) : latitude_(Angle(lat, angle_units)), longitude_(Angle(lon, angle_units)), altitude_(Distance(alt, dist_units)) {}
+LLA::LLA(double lat, double lon, double alt, Angle::AngleUnits angle_units, Distance::DistanceUnits dist_units) : latitude_(Angle(lat, angle_units)), longitude_(Angle(lon, angle_units)), altitude_(Distance(alt, dist_units)) {}
 
 LLA::LLA(Angle lat, Angle lon, Distance alt) : latitude_(lat), longitude_(lon), altitude_(alt) {}
 
@@ -34,7 +34,7 @@ Distance LLA::Range(LLA const * const other) const {
 	double a = sin_half_lat_delta * sin_half_lat_delta + 
 		cos(latitude_.to_radians()) * cos(other->latitude_.to_radians()) * sin_half_lon_delta * sin_half_lon_delta;
 	kRadiusEarth_.to_feet();
-	return Distance(kRadiusEarth_.to_feet() * 2 * asin(sqrt(a)), Distance::FEET);
+	return Distance(kRadiusEarth_.to_feet() * 2 * asin(sqrt(a)), Distance::DistanceUnits::FEET);
 }
 
 Angle LLA::Bearing(LLA const * const other) const {
@@ -45,7 +45,7 @@ Angle LLA::Bearing(LLA const * const other) const {
 
 	double x = cos_lat_other_rad * sin(delta_lon_rad);
 	double y = cos(lat_this_rad) * sin(lat_other_rad) - sin(lat_this_rad) * cos_lat_other_rad * cos(delta_lon_rad);
-	return Angle(atan2(x, y), Angle::RADIANS);
+	return Angle(atan2(x, y), Angle::AngleUnits::RADIANS);
 }
 
 LLA LLA::Translate(Distance const *const delta_lat, Distance const *const delta_lon, Distance const *const delta_alt) const {
@@ -63,7 +63,7 @@ LLA LLA::Translate(Distance const *const delta_lat, Distance const *const delta_
 		delta_lon_deg = delta_lon->to_meters() / m_per_deg_lon;
 	}
 
-	return LLA(latitude_.to_degrees() + delta_lat_deg, longitude_.to_degrees() + delta_lon_deg, altitude_.to_feet() + d_alt, Angle::DEGREES, Distance::FEET);
+	return LLA(latitude_.to_degrees() + delta_lat_deg, longitude_.to_degrees() + delta_lon_deg, altitude_.to_feet() + d_alt, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET);
 }
 
 LLA LLA::Translate(Angle const *const bearing, Distance const *const distance) const {
@@ -76,24 +76,24 @@ LLA LLA::Translate(Angle const *const bearing, Distance const *const distance) c
 
 	double bearing_rads = bearing->to_radians();
 
-	Angle translated_lat = Angle(asin(sin_lat * cos_dist_ratio + cos_lat * sin_dist_ratio * cos(bearing_rads)), Angle::RADIANS);
+	Angle translated_lat = Angle(asin(sin_lat * cos_dist_ratio + cos_lat * sin_dist_ratio * cos(bearing_rads)), Angle::AngleUnits::RADIANS);
 
 	double y = sin(bearing_rads) * sin_dist_ratio * cos_lat;
 	double x = cos_dist_ratio - sin_lat * sin(translated_lat.to_radians());
 
-	Angle translated_lon = Angle(longitude_.to_radians() + atan2(y, x), Angle::RADIANS);
+	Angle translated_lon = Angle(longitude_.to_radians() + atan2(y, x), Angle::AngleUnits::RADIANS);
 
 	return LLA(translated_lat, translated_lon, altitude_);
 }
 
 Distance LLA::DistPerDegreeLat() const {
 	double lat_rad = latitude_.to_radians();
-	return Distance(kMetersPerDegLatConst1_ + kMetersPerDegLatConst2_ * cos(2.0 * lat_rad) + kMetersPerDegLatConst3_ * cos(4.0 * lat_rad), Distance::METERS);
+	return Distance(kMetersPerDegLatConst1_ + kMetersPerDegLatConst2_ * cos(2.0 * lat_rad) + kMetersPerDegLatConst3_ * cos(4.0 * lat_rad), Distance::DistanceUnits::METERS);
 }
 
 Distance LLA::DistPerDegreeLon() const {
 	double lat_rad = latitude_.to_radians();
-	return Distance(kMetersPerDegLonConst1_ * cos(lat_rad) + kMetersPerDegLonConst2_ * cos(3.0 * lat_rad) + kMetersPerDegLonConst3_ * cos(5.0 * lat_rad), Distance::METERS);
+	return Distance(kMetersPerDegLonConst1_ * cos(lat_rad) + kMetersPerDegLonConst2_ * cos(3.0 * lat_rad) + kMetersPerDegLonConst3_ * cos(5.0 * lat_rad), Distance::DistanceUnits::METERS);
 }
 
 LLA LLA::operator + (LLA const & l) const {

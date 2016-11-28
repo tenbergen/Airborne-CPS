@@ -6,7 +6,7 @@
 class Angle
 {
 public:
-	enum ANGLE_UNITS { DEGREES, RADIANS };
+	enum class AngleUnits { DEGREES, RADIANS };
 
 	static double DegreesFromRadians(double degrees);
 	static double RadiansFromDegrees(double radians);
@@ -21,10 +21,12 @@ public:
 	static double const kMinDegrees_;
 	static double const kMaxDegrees_;
 	
-	Angle(double value, ANGLE_UNITS units);
+	Angle(double value, AngleUnits units);
 	
 	double to_degrees() const;
 	double to_radians() const;
+
+	void normalize();
 
 	Angle operator + (Angle const & a) const;
 	Angle operator - (Angle const & a) const;

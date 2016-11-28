@@ -1,5 +1,9 @@
 #include "Vec2.h"
 
+Vec2::Vec2(Vec2 const & v) : x_(v.x_), y_(v.y_) {}
+
+Vec2::Vec2(double x, double y) : x_(x), y_(y) {}
+
 Vec2 Vec2::operator + (Vec2 const & v) const {
 	return add(v.x_, v.y_);
 }
@@ -33,6 +37,7 @@ Vec2 Vec2::nor() const {
 	return Vec2(x_ / length, y_ / length);
 }
 
-Vec2 Vec2::operator = (Vec2 const & v) const {
-	return Vec2(v.x_, v.y_);
+void Vec2::operator = (Vec2 const & v) {
+	x_ = v.x_;
+	y_ = v.y_;
 }

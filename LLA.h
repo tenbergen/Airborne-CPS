@@ -10,7 +10,7 @@ longitude between [-180, 180], with +180 corresponding to east, and altitude mea
 class LLA
 {
 public:
-	LLA(double lat, double lon, double alt, Angle::ANGLE_UNITS angle_units, Distance::DistanceUnits dist_units);
+	LLA(double lat, double lon, double alt, Angle::AngleUnits angle_units, Distance::DistanceUnits dist_units);
 
 	LLA(Angle lat, Angle lon, Distance alt);
 

@@ -1,0 +1,63 @@
+#include "Velocity.h"
+
+double const Velocity::kFtPerMinToMetersPerSec_ = 2.54 / 500.0;
+double const Velocity::kFtPerMinToMph_ = 60.0 / 5280.0;
+double const Velocity::kFtPerMinToKnots_ = 0.00987473;
+
+double const Velocity::kMetersPerSecToFtPerMin_ = 500.0 / 2.54;
+double const Velocity::kMphToFtPerMin_ = 5280.0 / 60.0;
+double const Velocity::kKnotsToFtPerMin_ = 101.269;
+
+Velocity const Velocity::ZERO = {0.0, VelocityUnits::FEET_PER_MIN};
+
+Velocity::Velocity(double val, VelocityUnits units) : val_ft_per_min_(FeetPerMinFromUnits(val, units)) {}
+
+double Velocity::FeetPerMinFromUnits(double val, VelocityUnits from_units) {
+	switch (from_units) {
+	case VelocityUnits::MPH:
+		return val * kMphToFtPerMin_;
+	case VelocityUnits::METERS_PER_S:
+		return val * kMetersPerSecToFtPerMin_;
+	case VelocityUnits::KNOTS:
+		return val * kKnotsToFtPerMin_;
+	default:
+		return val;
+	}
+}
+
+double Velocity::UnitsFromFeetPerMin(double val, VelocityUnits to_units) {
+	switch (to_units) {
+	case VelocityUnits::MPH:
+		return val * kFtPerMinToMph_;
+	case VelocityUnits::METERS_PER_S:
+		return val * kFtPerMinToMetersPerSec_;
+	case VelocityUnits::KNOTS:
+		return val * kFtPerMinToKnots_;
+	default:
+		return val;
+	}
+}
+
+double Velocity::ToUnits(VelocityUnits units) const {
+	return UnitsFromFeetPerMin(val_ft_per_min_, units);
+}
+
+double Velocity::to_feet_per_min() const {
+	return val_ft_per_min_;
+}
+
+double Velocity::to_mph() const {
+	return val_ft_per_min_ * kFtPerMinToMph_;
+}
+
+double Velocity::to_meters_per_s() const {
+	return val_ft_per_min_ * kFtPerMinToMetersPerSec_;
+}
+
+double Velocity::to_knots() const {
+	return val_ft_per_min_ * kFtPerMinToKnots_;
+}
+
+void Velocity::operator = (Velocity const & that) {
+	val_ft_per_min_ = that.val_ft_per_min_;
+}

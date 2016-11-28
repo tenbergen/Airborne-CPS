@@ -12,6 +12,7 @@
 #pragma comment(lib, "IPHLPAPI.lib")
 #include <iphlpapi.h>
 
+#include <vector>
 #include <string>
 #include <sys/types.h>
 #include <stdio.h>
@@ -24,18 +25,17 @@
 #define PORT 21237
 #define MSG_SIZE 256
 
-#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
-#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
-
 class Transponder
 {
 public:
-	Aircraft* aircraft;
+	
 	Transponder(Aircraft*, concurrency::concurrent_unordered_map<std::string, Aircraft*>*);
 	~Transponder();
+
 	DWORD receive();
 	DWORD send();
 	void start();
+
 	static std::string getHardwareAddress(void);
 
 protected:
@@ -51,4 +51,8 @@ protected:
 		double lon;
 		double alt;
 	} myLLA;
+
+private:
+	Aircraft* aircraft;
+	std::vector<Aircraft*> allocated_aircraft;
 };

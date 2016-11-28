@@ -70,8 +70,6 @@ private:
 
 	XPLMTextureID glTextures_[texture_constants::kNumTextures];
 
-	LLA CalculateGaugeCenterPosition(LLA const * const position, Vec2 const * const velocity) const;
-
 	bool LoadTexture(char * tex_path, int tex_id) const;
 
 	/* Draws the outer gauge ring.*/
@@ -79,9 +77,9 @@ private:
 	/* Draw the inner vertical speed gauge rings. */
 	void DrawInnerGauge() const;
 	/* Draws the vertical speed indicator needle on the gauge from the supplied vertical velocity.*/
-	void DrawGaugeNeedle(double const user_aircraft_vert_vel) const;
+	void DrawGaugeNeedle(Velocity const user_aircraft_vert_vel) const;
 	/*  */
-	void DrawIntrudingAircraft(LLA const * const intruder_pos, LLA const * const gauge_center_pos, Distance const * const range) const;
+	void DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range) const;
 
 	/* Draws the supplied recommendation range. */
 	void DrawRecommendationRange(RecommendationRange& rec_range) const;
@@ -91,4 +89,7 @@ private:
 	void DrawRecommendationRangeStartStop(double start_angle, double stop_angle, bool recommended) const;
 	/* Draws a recommendation range starting at the supplied start angle in a sweep_angle degrees arc.*/
 	void DrawRecommendationRangeStartSweep(double start_angle, double sweep_angle, bool recommended) const;
+
+	GaugeRenderer (const GaugeRenderer& that) = delete;
+	GaugeRenderer& operator=(const GaugeRenderer& that) = delete;
 };

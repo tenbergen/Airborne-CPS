@@ -8,17 +8,17 @@ const double Distance::kMetersPerFt_ = 0.3048;
 const double Distance::kNmiPerFt_ = 0.0001645788;
 const double Distance::kMilesPerFt_ = 0.0001893939;
 
-const Distance Distance::ZERO = Distance(0.0, Distance::FEET);
+const Distance Distance::ZERO = Distance(0.0, DistanceUnits::FEET);
 
 Distance::Distance(double val, Distance::DistanceUnits units) : value_ft_{ FeetFromUnits(val, units) } {};
 
 double Distance::UnitsFromFeet(double val, Distance::DistanceUnits units) {
 	switch (units) {
-	case MILES:
+	case DistanceUnits::MILES:
 		return val * kMilesPerFt_;
-	case NMI:
+	case DistanceUnits::NMI:
 		return val * kNmiPerFt_;
-	case METERS:
+	case DistanceUnits::METERS:
 		return val * kMetersPerFt_;
 	default:
 		return val;
@@ -27,11 +27,11 @@ double Distance::UnitsFromFeet(double val, Distance::DistanceUnits units) {
 
 double Distance::FeetFromUnits(double val, Distance::DistanceUnits units) {
 	switch (units) {
-	case MILES:
+	case DistanceUnits::MILES:
 		return val * kFtPerMile_;
-	case NMI:
+	case DistanceUnits::NMI:
 		return val * kFtPerNmi_;
-	case METERS:
+	case DistanceUnits::METERS:
 		return val * kFtPerMeter_;
 	default:
 		return val;
@@ -59,20 +59,20 @@ double Distance::ToUnits(Distance::DistanceUnits units) const {
 }
 
 Distance Distance::operator + (Distance const & d) const { 
-	return Distance(value_ft_ + d.value_ft_, Distance::FEET);
+	return Distance(value_ft_ + d.value_ft_, DistanceUnits::FEET);
 }
 
 Distance Distance::operator - (Distance const & d) const {
-	return Distance(value_ft_ - d.value_ft_, Distance::FEET);
+	return Distance(value_ft_ - d.value_ft_, DistanceUnits::FEET);
 }
 
 Distance Distance::operator * (Distance const & d) const {
-	return Distance(value_ft_ * d.value_ft_, Distance::FEET);
+	return Distance(value_ft_ * d.value_ft_, DistanceUnits::FEET);
 }
 
 Distance Distance::operator / (Distance const & d) const {
 	if (d.value_ft_ != 0.0) {
-		return Distance(value_ft_ / d.value_ft_, Distance::FEET);
+		return Distance(value_ft_ / d.value_ft_, DistanceUnits::FEET);
 	}
 	else {
 		return Distance::ZERO;

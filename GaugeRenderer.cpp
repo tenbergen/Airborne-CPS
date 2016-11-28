@@ -1,8 +1,8 @@
 #include "GaugeRenderer.h"
 
 const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 75.0;
-Distance const GaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::NMI };
-Distance const GaugeRenderer::kAircraftToGaugeCenterOffset_ { (28.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.to_feet() * 2.0, Distance::FEET};
+Distance const GaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::DistanceUnits::NMI };
+Distance const GaugeRenderer::kAircraftToGaugeCenterOffset_ { (28.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.to_feet() * 2.0, Distance::DistanceUnits::FEET};
 
 const float GaugeRenderer::kGaugePosLeft = 768.0f;
 const float GaugeRenderer::kGaugePosRight = 1024.0f;
@@ -93,8 +93,8 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 	user_aircraft_->lock_.lock();
 
 	LLA const user_pos = user_aircraft_->position_current_;
-	Vec2 const user_vel = user_aircraft_->horizontal_velocity_;
-	double const user_aircraft_vert_vel = user_aircraft_->vertical_velocity_;
+	Angle const user_heading = user_aircraft_->heading_;
+	Velocity const user_aircraft_vert_vel = user_aircraft_->vertical_velocity_;
 
 	user_aircraft_->lock_.unlock();
 
@@ -133,20 +133,27 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>::const_iterator & iter = intruders_->cbegin();
 
 	if (iter != intruders_->cend()) {
-		LLA gauge_center_pos = CalculateGaugeCenterPosition(&user_pos, &user_vel);
+		//char debug_buf[128];
+		LLA gauge_center_pos = user_pos.Translate(&user_heading, &kAircraftToGaugeCenterOffset_);
+
+		//snprintf(debug_buf, 128, "GaugeRenderer::Render - gauge_center: (%.3f, %.3f)\n", gauge_center_pos.latitude_.to_degrees(), gauge_center_pos.longitude_.to_degrees());
+		//XPLMDebugString(debug_buf);
 
 		for (; iter != intruders_->cend(); ++iter) {
 			Aircraft* intruder = iter->second;
-			intruder->lock_.lock();
 
+			intruder->lock_.lock();
 			LLA const intruder_pos = intruder->position_current_;
 			intruder->lock_.unlock();
 
-			// Here is where to insert for each aircraft
 			Distance range = gauge_center_pos.Range(&intruder_pos);
 
-			if (range.to_feet() < kGaugeInnerCircleRadius_.to_feet())
-				DrawIntrudingAircraft(&intruder_pos, &gauge_center_pos, &range);
+			if (range.to_feet() < kGaugeInnerCircleRadius_.to_feet()) {
+				/*debug_buf[0] = '\0';
+				snprintf(debug_buf, 128, "GaugeRenderer::Render - drawing aircraft: %s\n", intruder->id_.c_str());
+				XPLMDebugString(debug_buf);*/
+				DrawIntrudingAircraft(&intruder_pos, &user_heading, &gauge_center_pos, &range);
+			}
 		}
 	}
 
@@ -159,33 +166,49 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 	glFlush();
 }
 
-void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, LLA const * const gauge_center_pos, Distance const * const range) const {
+void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range) const {
 	Angle bearing = gauge_center_pos->Bearing(intruder_pos);
-	double bearing_rads = bearing.to_radians();
+	double init_bearing = bearing.to_degrees();
+	bearing = bearing - *user_heading;
+	bearing.normalize();
 
 	double range_over_max_range_ratio = range->to_feet() / kGaugeInnerCircleRadius_.to_feet();
 	double pixel_offset = range_over_max_range_ratio * kGaugeInnerCircleRadiusPxls_;
 
-	double pixel_offset_x = cos(bearing_rads) * pixel_offset;
-	double pixel_offset_y = sin(bearing_rads) * pixel_offset;
+	Angle cartesian_angle = math_util::BearingToCartesianAngle(&bearing);
+	double pixel_offset_x = cos(cartesian_angle.to_radians()) * pixel_offset;
+	double pixel_offset_y = sin(cartesian_angle.to_radians()) * pixel_offset;
 
 	double symbol_center_x = kGaugeCenterX + pixel_offset_x;
 	double symbol_center_y = kGaugeCenterY + pixel_offset_y;
 
+	/*char debug_buf[256];
+	snprintf(debug_buf, 256, "GaugeRenderer::DrawIntrudingAircraft - bearing: %.3f, user_heading: %.3f, bearing_adj: %.3f, cart_angle: %.3f, intr_pos: (%.3f, %.3f)\n", init_bearing, user_heading->to_degrees(), bearing.to_degrees(), cartesian_angle.to_degrees(), intruder_pos->latitude_.to_degrees(), intruder_pos->longitude_.to_degrees());
+	XPLMDebugString(debug_buf);*/
+
 	// The symbols are contained in 16x16 pixel squares in the texture so to find the vertices, 
-	//calculate the 16 pixel square centered around the symbol center
+	// calculate the sides of the 16 px square centered around the symbol center
 	double symbol_left = symbol_center_x - 8;
 	double symbol_right = symbol_center_x + 8;
 	double symbol_bot = symbol_center_y - 8;
 	double symbol_top = symbol_center_y + 8;
 
-	texture_constants::TexCoords symbol_coords = texture_constants::kSymbolRedSquare;
+	texture_constants::TexCoords const * symbol_coords;
+
+	if (cartesian_angle.to_degrees() < 90.0)
+		symbol_coords = &texture_constants::kSymbolRedSquare;
+	else if (cartesian_angle.to_degrees() < 180.0)
+		symbol_coords = &texture_constants::kSymbolYellowCircle;
+	else if (cartesian_angle.to_degrees() < 270.0)
+		symbol_coords = &texture_constants::kSymbolBlueDiamondCutout;
+	else
+		symbol_coords = &texture_constants::kSymbolBlueDiamondWhole;
 
 	glBegin(GL_QUADS);
-	glTexCoord2d(symbol_coords.right, symbol_coords.bottom); glVertex2d(symbol_right, symbol_bot);
-	glTexCoord2d(symbol_coords.left, symbol_coords.bottom); glVertex2d(symbol_left, symbol_bot);
-	glTexCoord2d(symbol_coords.left, symbol_coords.top); glVertex2d(symbol_left, symbol_top);
-	glTexCoord2d(symbol_coords.right, symbol_coords.top); glVertex2d(symbol_right, symbol_top);
+	glTexCoord2d(symbol_coords->right, symbol_coords->bottom); glVertex2d(symbol_right, symbol_bot);
+	glTexCoord2d(symbol_coords->left, symbol_coords->bottom); glVertex2d(symbol_left, symbol_bot);
+	glTexCoord2d(symbol_coords->left, symbol_coords->top); glVertex2d(symbol_left, symbol_top);
+	glTexCoord2d(symbol_coords->right, symbol_coords->top); glVertex2d(symbol_right, symbol_top);
 	glEnd();
 }
 
@@ -212,12 +235,12 @@ void GaugeRenderer::DrawInnerGauge() const {
 	glEnd();
 }
 
-void GaugeRenderer::DrawGaugeNeedle(double const user_aircraft_vert_vel) const {
+void GaugeRenderer::DrawGaugeNeedle(Velocity const user_aircraft_vert_vel) const {
 	// Translate the needle so it's properly rotated in place about the gauge center
 	glTranslatef(kNeedleTranslationX, kNeedleTranslationY, 0.0f);
 
 	// Rotate the needle according to the current vertical velocity - 4,000 ft/min is 150 degree rotation relative to 0 ft/min
-	double vert_speed_deg = (user_aircraft_vert_vel / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlAngleOffset_;
+	double vert_speed_deg = (user_aircraft_vert_vel.to_feet_per_min() / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlAngleOffset_;
 	vert_speed_deg = math_util::clampd(vert_speed_deg, -240.0, 60.0);
 	glRotated(vert_speed_deg, 0.0, 0.0, -1.0);
 
@@ -250,11 +273,6 @@ void GaugeRenderer::DrawGaugeNeedle(double const user_aircraft_vert_vel) const {
 	glTexCoord2d(needle.left, needle.top); glVertex2f(kNeedlePosLeft, kNeedlePosTop);
 	glTexCoord2d(needle.right, needle.top); glVertex2f(kNeedlePosRight, kNeedlePosTop);
 	glEnd();
-}
-
-LLA GaugeRenderer::CalculateGaugeCenterPosition(LLA const * const position, Vec2 const * const velocity) const {
-	Angle bearing = Aircraft::VelocityToBearing(velocity);
-	return position->Translate(&bearing, &kAircraftToGaugeCenterOffset_);
 }
 
 void GaugeRenderer::DrawRecommendationRange(RecommendationRange& rec_range) const {

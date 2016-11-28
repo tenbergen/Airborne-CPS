@@ -3,12 +3,12 @@
 class Distance
 {
 public:
-	enum DistanceUnits {FEET, METERS, NMI, MILES};
+	enum class DistanceUnits {FEET, METERS, NMI, MILES};
 	
 	static double UnitsFromFeet(double val, DistanceUnits units);
 	static double FeetFromUnits(double val, DistanceUnits units);
 
-	static const Distance ZERO;
+	static Distance const ZERO;
 
 	Distance(double val, DistanceUnits units);
 
@@ -19,21 +19,21 @@ public:
 	double to_miles() const;
 	double to_nmi() const;
 
-	Distance operator + (Distance const & d) const;
-	Distance operator - (Distance const & d) const;
-	Distance operator * (Distance const & d) const;
+	Distance operator + (Distance const & that) const;
+	Distance operator - (Distance const & that) const;
+	Distance operator * (Distance const & that) const;
 	/*Division by zero will return the ZERO distance.*/
-	Distance operator / (Distance const & d) const;
-	void operator = (Distance const & d);
+	Distance operator / (Distance const & that) const;
+	void operator = (Distance const & that);
 
 private:
-	static const double kFtPerMeter_;
-	static const double kFtPerNmi_;
-	static const double kFtPerMile_;
-
-	static const double kMetersPerFt_;
-	static const double kNmiPerFt_;
-	static const double kMilesPerFt_;
+	static double const kFtPerMeter_;
+	static double const kFtPerNmi_;
+	static double const kFtPerMile_;
+				  
+	static double const kMetersPerFt_;
+	static double const kNmiPerFt_;
+	static double const kMilesPerFt_;
 
 	double value_ft_;
 };

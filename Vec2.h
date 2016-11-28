@@ -6,8 +6,8 @@
 class Vec2
 {
 public:
-	Vec2(double x, double y) : x_(x), y_(y) {}
-	Vec2() : x_(0.0f), y_(0.0f) {}
+	Vec2(Vec2 const & v);
+	Vec2(double x = 0.0, double y = 0.0);
 
 	double x_;
 	double y_;
@@ -21,7 +21,7 @@ public:
 	Vec2 operator * (Vec2 const & v) const;
 	Vec2 mult(double dx, double dy) const;
 
-	Vec2 operator = (Vec2 const & v) const;
+	void operator = (Vec2 const & v);
 
 	double len() const;
 	Vec2 nor() const;

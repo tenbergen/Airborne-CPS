@@ -1,8 +1,9 @@
 #include "Aircraft.h"
 
-Aircraft::Aircraft(std::string const id) : id_(id) {}
+Aircraft::Aircraft(std::string const id) : id_(id), heading_(Angle::ZERO), vertical_velocity_(Velocity::ZERO) {}
 
-Aircraft::Aircraft(std::string const id, LLA position, Vec2 horizontal_vel, double vert_vel) : id_(id), position_current_(position), horizontal_velocity_(horizontal_vel), vertical_velocity_(vert_vel) {}
+Aircraft::Aircraft(std::string const id, LLA position, Angle heading, Velocity vert_vel) : 
+	id_(id), position_current_(position), position_old_(position), heading_(heading), vertical_velocity_(vert_vel) {}
 
 Angle Aircraft::VelocityToBearing(Vec2 const * const velocity){
 	Vec2 vel_nor = velocity->nor();
@@ -17,5 +18,5 @@ Angle Aircraft::HeadingToBearing(Vec2 const * const heading) {
 	if (north_referenced_angle < 0.0)
 		north_referenced_angle += Angle::k360Degrees_.to_degrees();
 	
-	return Angle(north_referenced_angle, Angle::DEGREES);
+	return Angle(north_referenced_angle, Angle::AngleUnits::DEGREES);
 }

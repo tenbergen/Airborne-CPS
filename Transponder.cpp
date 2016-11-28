@@ -37,40 +37,55 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 
 Transponder::~Transponder()
 {
-	closesocket(outSocket);
+	/*closesocket(outSocket);
 	closesocket(inSocket);
 	WSACleanup();
+	XPLMDebugString("Transponder::~Transponder - performed WSACleanup()\n");*/
+
+	for (std::vector<Aircraft*>::iterator iter = allocated_aircraft.begin(); iter != allocated_aircraft.end(); ) {
+		delete *iter;
+		iter = allocated_aircraft.erase(iter);
+	}
+
+	XPLMDebugString("Transponder::~Transponder - deleted");
 }
 
 DWORD Transponder::receive()
 {
 	char const * intruderID;
 	char const * myID;
-	
+
 	lla intruderLLA;
 	for (;;)
 	{
 		int size = myLocation.ByteSize();
-		char * buffer = (char *) malloc(size);
+		char * buffer = (char *)malloc(size);
 		myID = myLocation.id().c_str();
+
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+
 		intruderLocation.ParseFromArray(buffer, size);
 		intruderID = intruderLocation.id().c_str();
+
 		if (strcmp(myID, intruderID) != 0) {
 			intruderLLA.lat = intruderLocation.lat();
 			intruderLLA.lon = intruderLocation.lon();
 			intruderLLA.alt = intruderLocation.alt();
+
 			char qwe[128];
 			XPLMDebugString(intruderID);
 			sprintf(qwe, " -> (lla) %f::%f::%f\n", intruderLLA.lat, intruderLLA.lon, intruderLLA.alt);
 			XPLMDebugString(qwe);
-			Aircraft intruder = { intruderID };
-			Angle latitude = { intruderLocation.lat(), Angle::ANGLE_UNITS::DEGREES };
-			Angle longitude = { intruderLocation.lon(), Angle::ANGLE_UNITS::DEGREES };
-			Distance altitude = { intruderLocation.alt(), Distance::DistanceUnits::METERS };
-			LLA intruderPosition = { latitude, longitude, altitude };
-			intruder.position_current_ = intruderPosition;
-			(*intrudersMap)[intruder.id_] = &intruder;
+
+			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
+
+			if (!intruder) {
+				intruder = new Aircraft(intruderLocation.id());
+				allocated_aircraft.push_back(intruder);
+			}
+			
+			intruder->position_current_ = { intruderLocation.lat(), intruderLocation.lon(), intruderLocation.alt(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
+			(*intrudersMap)[intruder->id_] = intruder;
 		} else {
 			// error
 		}
@@ -86,13 +101,18 @@ DWORD Transponder::send()
 		aircraft->lock_.lock();
 		LLA position = aircraft->position_current_;
 		aircraft->lock_.unlock();
+
 		myLocation.set_lat(position.latitude_.to_degrees());
 		myLocation.set_lon(position.longitude_.to_degrees());
 		myLocation.set_alt(position.altitude_.to_meters());
+
 		int size = myLocation.ByteSize();
 		void * buffer = malloc(size);
+
 		myLocation.SerializeToArray(buffer, size);
+
 		sendto(outSocket, (const char *) buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
+
 		free(buffer);
 		Sleep(1000);
 	}
@@ -145,7 +165,7 @@ std::string Transponder::getHardwareAddress()
 		}
 	}
 	else {
-		XPLMDebugString("Failed to retrieve network adapter information.\n");
+		XPLMDebugString("Transponder::getHardwareAddress - Failed to retrieve network adapter information.\n");
 	}
 
 	free(pAdapterInfo);

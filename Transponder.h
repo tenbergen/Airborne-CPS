@@ -15,14 +15,17 @@
 #include <string>
 #include <sys/types.h>
 #include <stdio.h>
+#include <unordered_map>
 #include "location.pb.h"
 #include "Aircraft.h"
 #include "GaugeRenderer.h"
 
 #include "XPLMUtilities.h"
 
-#define PORT 21237
+#define PORT 21221
 #define MSG_SIZE 256
+#define ON 1
+#define OFF 0
 
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
@@ -33,22 +36,17 @@ public:
 	Aircraft* aircraft;
 	Transponder(Aircraft*, concurrency::concurrent_unordered_map<std::string, Aircraft*>*);
 	~Transponder();
-	DWORD receive();
-	DWORD send();
+	DWORD receive(), send(), keepalive();
 	void start();
-	static std::string getHardwareAddress(void);
+	static std::string getHardwareAddress();
 
 protected:
 	WSADATA w;
 	SOCKET outSocket, inSocket;
-	int buflen;
+	int buflen, communication;
 	unsigned sinlen;
 	struct sockaddr_in incoming, outgoing;
 	xplane::Location intruderLocation, myLocation;
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
-	struct lla {
-		double lat;
-		double lon;
-		double alt;
-	} myLLA;
+	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap;
 };

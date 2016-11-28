@@ -7,36 +7,30 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	if (WSAStartup(0x0101, &w) != 0) {
 		exit(0);
 	}
-
 	aircraft = ac;
 	intrudersMap = intruders;
-
 	myLocation.set_id(getHardwareAddress());
+	
 	sinlen = sizeof(struct sockaddr_in);
 	memset(&incoming, 0, sinlen);
-
 	inSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
 	incoming.sin_addr.s_addr = htonl(INADDR_ANY);
 	incoming.sin_port = htons(PORT);
 	incoming.sin_family = PF_INET;
-
 	bind(inSocket, (struct sockaddr *)&incoming, sinlen);
 
 	outSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
 	BOOL bOptVal = TRUE;
 	setsockopt(outSocket, SOL_SOCKET, SO_BROADCAST, (char *)&bOptVal, sizeof(int));
-
 	outgoing.sin_addr.s_addr = htonl(-1);
 	outgoing.sin_port = htons(PORT);
 	outgoing.sin_family = PF_INET;
-
 	bind(outSocket, (struct sockaddr *)&outgoing, sinlen);
 }
 
 Transponder::~Transponder()
 {
+	communication = OFF;
 	closesocket(outSocket);
 	closesocket(inSocket);
 	WSACleanup();
@@ -46,9 +40,7 @@ DWORD Transponder::receive()
 {
 	char const * intruderID;
 	char const * myID;
-	
-	lla intruderLLA;
-	for (;;)
+	while (communication == ON)
 	{
 		int size = myLocation.ByteSize();
 		char * buffer = (char *) malloc(size);
@@ -57,13 +49,6 @@ DWORD Transponder::receive()
 		intruderLocation.ParseFromArray(buffer, size);
 		intruderID = intruderLocation.id().c_str();
 		if (strcmp(myID, intruderID) != 0) {
-			intruderLLA.lat = intruderLocation.lat();
-			intruderLLA.lon = intruderLocation.lon();
-			intruderLLA.alt = intruderLocation.alt();
-			char qwe[128];
-			XPLMDebugString(intruderID);
-			sprintf(qwe, " -> (lla) %f::%f::%f\n", intruderLLA.lat, intruderLLA.lon, intruderLLA.alt);
-			XPLMDebugString(qwe);
 			Aircraft intruder = { intruderID };
 			Angle latitude = { intruderLocation.lat(), Angle::ANGLE_UNITS::DEGREES };
 			Angle longitude = { intruderLocation.lon(), Angle::ANGLE_UNITS::DEGREES };
@@ -71,8 +56,6 @@ DWORD Transponder::receive()
 			LLA intruderPosition = { latitude, longitude, altitude };
 			intruder.position_current_ = intruderPosition;
 			(*intrudersMap)[intruder.id_] = &intruder;
-		} else {
-			// error
 		}
 		free(buffer);
 	}
@@ -81,7 +64,7 @@ DWORD Transponder::receive()
 
 DWORD Transponder::send()
 {
-	for (;;)
+	while (communication == ON)
 	{
 		aircraft->lock_.lock();
 		LLA position = aircraft->position_current_;
@@ -99,6 +82,23 @@ DWORD Transponder::send()
 	return 0;
 }
 
+DWORD Transponder::keepalive()
+{
+	while (communication == ON)
+	{
+		concurrency::concurrent_unordered_map<std::string, int>::iterator &iter = keepAliveMap.begin();
+		for (; iter != keepAliveMap.cend(); ++iter)
+		{
+			if (--(iter->second) == 0) {
+				intrudersMap->unsafe_erase(iter->first);
+				keepAliveMap.unsafe_erase(iter->first);
+			}
+		}
+		Sleep(1000);
+	}
+	return 0;
+}
+
 static DWORD WINAPI startBroadcasting(void* param)
 {
 	Transponder* t = (Transponder*)param;
@@ -111,11 +111,19 @@ static DWORD WINAPI startListening(void* param)
 	return t->receive();
 }
 
+static DWORD WINAPI startKeepAliveTimer(void* param)
+{
+	Transponder* t = (Transponder*)param;
+	return t->keepalive();
+}
+
 void Transponder::start()
 {
+	communication = ON;
 	DWORD ThreadID;
 	CreateThread(NULL, 0, startListening, (void*) this, 0, &ThreadID);
 	CreateThread(NULL, 0, startBroadcasting, (void*) this, 0, &ThreadID);
+	CreateThread(NULL, 0, startKeepAliveTimer, (void*) this, 0, &ThreadID);
 }
 
 std::string Transponder::getHardwareAddress()

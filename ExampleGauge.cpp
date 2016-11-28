@@ -166,7 +166,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	strcpy(outSig, "AirborneCPS");
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
 	
-	test();
+	//test();
 
 	UpdateFromDataRefs();
 
@@ -257,6 +257,8 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 
 		user_aircraft.lock_.lock();
 
+		user_aircraft.position_old_ = user_aircraft.position_current_;
+		user_aircraft.position_current_ = updated;
 		user_aircraft.vertical_velocity_ = updated_vvel;
 		user_aircraft.heading_ = Angle(XPLMGetDataf(heading_true_north_deg_ref), Angle::AngleUnits::DEGREES);
 

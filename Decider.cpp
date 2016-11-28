@@ -4,6 +4,8 @@
 #define _DECIDER_H_
 #endif // !_DECIDER_H_
 
+Distance const Decider::kProtectionVolumeRadius_ = {30.0, Distance::DistanceUnits::NMI};
+
 Decider::Decider(Aircraft* this_Aircraft,
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruding_aircraft) : thisAircraft_(this_Aircraft), intruderAircraft_(intruding_aircraft) {}
 
@@ -11,60 +13,78 @@ void Decider::Start() {
 	Decider::Analyze(thisAircraft_, *intruderAircraft_);
 }
 
-/*	void Analyze(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft); */
 void Decider::Analyze(Aircraft * thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft) {
 	Aircraft* intruder = Decider::QueryIntrudingAircraftMap(intruding_aircraft, "testAircraftID");
 	Decider::DetermineActionRequired(intruder);
 }
 
 Aircraft* Decider::QueryIntrudingAircraftMap(concurrency::concurrent_unordered_map<std::string, Aircraft*> intr_aircraft, char* ID) {
-	if (Aircraft* intruderFromMap = intr_aircraft[ID]) { return intruderFromMap; }
-	else { return NULL; }
+	if (Aircraft* intruderFromMap = intr_aircraft[ID]) { return intruderFromMap; } else { return NULL; }
 }
 
 void Decider::DetermineActionRequired(Aircraft* intruder) {
-	/* Need to have access to two measurements of range and the time between those measurements to calculate rate */
 	thisAircraft_->lock_.lock();
-	LLA thisAircraftsPosition = thisAircraft_->position_current_;
+	LLA thisAircraftsCurrentPosition = thisAircraft_->position_current_;
+	LLA thisAircraftsPreviousPosition = thisAircraft_->position_old_;
 	thisAircraft_->lock_.unlock();
 
 	intruder->lock_.lock();
-	LLA const intrudersPosition = intruder->position_current_;
+	LLA const intrudersPreviousPosition = intruder->position_old_;
+	LLA const intrudersCurrentPosition = intruder->position_current_;
 	intruder->lock_.unlock();
 
-	double thisAircraftsAltitude = thisAircraftsPosition.altitude_.to_feet();
-	double intrudersAltitude = intrudersPosition.altitude_.to_feet();
+	double thisAircraftsPreviousAltitude = thisAircraftsPreviousPosition.altitude_.to_feet();
+	double intrudersPreviousAltitude = intrudersPreviousPosition.altitude_.to_feet();
+	double previousHorizontalSeparation = thisAircraftsPreviousPosition.Range(&intrudersPreviousPosition).to_feet();
+	double previousVerticalSeparation = Decider::CalculateVerticalSeparation(thisAircraftsPreviousAltitude, intrudersPreviousAltitude);
+	double previousSlantRange = Decider::CalculateSlantRange(previousHorizontalSeparation, previousVerticalSeparation);
 
-	double horizontalSeparation = thisAircraftsPosition.Range(&intrudersPosition).to_feet();
-	double horizontalRate = Decider::CalculateRate(horizontalSeparation, 0.0, 0, 0); //need 2x measure
-	double hoizontalTau = Decider::CalculateTau(horizontalSeparation, horizontalRate);
+	double thisAircraftsCurrentAltitude = thisAircraftsCurrentPosition.altitude_.to_feet();
+	double intrudersCurrentAltitude = intrudersCurrentPosition.altitude_.to_feet();
+	double currentHorizontalSeparation = thisAircraftsCurrentPosition.Range(&intrudersCurrentPosition).to_feet();
+	double currentVerticalSeparation = Decider::CalculateVerticalSeparation(thisAircraftsCurrentAltitude, intrudersCurrentAltitude);
+	double currentSlantRange = Decider::CalculateSlantRange(currentHorizontalSeparation, currentVerticalSeparation);
 
-	double verticalSeparation = Decider::CalculateVerticalSeparation(thisAircraftsAltitude, intrudersAltitude);
-	double verticalRate = Decider::CalculateRate(verticalSeparation, 0.0, 0, 0); //need 2x measure
-	double verticalTau = Decider::CalculateTau(verticalSeparation, verticalRate);
+	double horizontalRate = Decider::CalculateRate(currentHorizontalSeparation, previousHorizontalSeparation, 1, 2);
+	double hoizontalTau = Decider::CalculateTau(currentHorizontalSeparation, horizontalRate);
 
-	double slantRange = Decider::CalculateSlantRange(horizontalSeparation, verticalSeparation);
-	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, 0, 0); //need 2x measure
-	double slantRangeTau = Decider::CalculateTau(slantRange, slantRangeRate);
+	double verticalRate = Decider::CalculateRate(currentVerticalSeparation, previousVerticalSeparation, 1, 2);
+	double verticalTau = Decider::CalculateTau(currentVerticalSeparation, verticalRate);
+
+	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, 0, 0);
+	double slantRangeTau = Decider::CalculateTau(currentSlantRange, slantRangeRate);
 
 	Aircraft::ThreatClassification threat_class;
 
-	if (hoizontalTau <= raThreshold && verticalTau <= raThreshold) {
-		Decider::SetState(intruder, TA);
-		threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
-	}
-	else if (hoizontalTau <= taThreshold && verticalTau <= taThreshold) {
-		Decider::SetState(intruder, RA);
-		threat_class = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
+	if (currentSlantRange < kProtectionVolumeRadius_.to_feet()) {
+		if (hoizontalTau <= raThreshold && verticalTau <= raThreshold) {
+			Decider::SetState(intruder, RA);
+			threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
+		}
+		else if (hoizontalTau <= taThreshold && verticalTau <= taThreshold) {
+			Decider::SetState(intruder, TA);
+			threat_class = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
+		}
+		else {
+			Decider::SetState(intruder, NORMAL);
+			threat_class = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
+		}
 	}
 	else {
-		threat_class = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
-		Decider::SetState(intruder, NORMAL);
+		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 	}
-	
+
 	intruder->lock_.lock();
 	intruder->threat_classification_ = threat_class;
 	intruder->lock_.unlock();
+}
+
+void Decider::SetState(Aircraft* intruder, State state) { //Argument decision: Aircraft or Aircraft ID
+	Decider::stateMap[intruder->id_] = state;
+}
+
+Decider::State Decider::GetState(Aircraft* intruder) { //Argument decision: Aircraft or Aircraft ID
+	return Decider::stateMap[intruder->id_];
 }
 
 double Decider::CalculateVerticalSeparation(double thisAircraftsAltitude, double intrudersAltitude) {
@@ -85,12 +105,4 @@ double Decider::CalculateSlantRange(double horizontalSeparation, double vertical
 
 double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t t1, time_t t2) {
 	return (sqrt((pow(horizontalRate, 2), pow(verticalRate, 2))) / (t2 - t1));
-}
-
-void Decider::SetState(Aircraft* intruder, State state) {
-	Decider::stateMap[intruder->id_] = state;
-}
-
-Decider::State Decider::GetState(Aircraft* intruder) {
-	return Decider::stateMap[intruder->id_];
 }

@@ -13,6 +13,8 @@ public:
 	State GetState(Aircraft* intruder);
 
 private:
+	static Distance const kProtectionVolumeRadius_;
+
 	Aircraft* thisAircraft_;
 	Aircraft* intruderFromMap;
 

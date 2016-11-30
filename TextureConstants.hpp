@@ -39,6 +39,7 @@ namespace texture_constants {
 	TexCoords constexpr kSymbolBlueDiamondCutout = { 32.0 / 512.0, 48.0 / 512.0, 496.0 / 512.0, 1.0 };
 	TexCoords constexpr kSymbolRedSquare = { 64.0 / 512.0, 80.0 / 512.0, 496.0 / 512.0, 1.0 };
 	TexCoords constexpr kSymbolYellowCircle = { 96.0 / 512.0, 112.0 / 512.0, 496.0 / 512.0, 1.0 };
+	TexCoords constexpr kDebugSymbol = { 72.0 / 512.0, 88.0 / 512.0, 496.0 / 512.0, 1.0 };
 	TexCoords constexpr kVertArrowDown = {232.0 / 512.0, 240.0 / 512.0, 496.0 / 512.0, 1.0 };
 	TexCoords constexpr kVertArrowUp = { 232.0 / 512.0, 240.0 / 512.0, 1.0, 496.0 / 512.0 };
 

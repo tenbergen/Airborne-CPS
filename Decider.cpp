@@ -6,6 +6,9 @@ Decider::Decider(Aircraft* this_Aircraft,
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruding_aircraft) : thisAircraft_(this_Aircraft), intruderAircraft_(intruding_aircraft) {}
 
 void Decider::Analyze(Aircraft* intruder) {
+	/*char debug_buf[128];
+	snprintf(debug_buf, 128, "Decider::Analyze - intruder_id: %s\n", intruder->id_.c_str());
+	XPLMDebugString(debug_buf);*/
 	Decider::DetermineActionRequired(intruder);
 }
 
@@ -20,6 +23,21 @@ void Decider::Analyze(Aircraft * thisAircraft, concurrency::concurrent_unordered
 
 Aircraft* Decider::QueryIntrudingAircraftMap(concurrency::concurrent_unordered_map<std::string, Aircraft*> intr_aircraft, char* ID) {
 	if (Aircraft* intruderFromMap = intr_aircraft[ID]) { return intruderFromMap; } else { return NULL; }
+}
+
+std::string get_threat_class_str(Aircraft::ThreatClassification threat_class) {
+	switch (threat_class) {
+	case Aircraft::ThreatClassification::NON_THREAT_TRAFFIC:
+		return "Non-Threat Traffic";
+	case Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC:
+		return "Proximity Intruder Traffic";
+	case Aircraft::ThreatClassification::TRAFFIC_ADVISORY:
+		return "Traffic Advisory";
+	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
+		return "Resolution Advisory";
+	default:
+		return "Unknown Threat Class";
+	}
 }
 
 void Decider::DetermineActionRequired(Aircraft* intruder) {
@@ -46,7 +64,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double currentSlantRange = Decider::CalculateSlantRange(currentHorizontalSeparation, currentVerticalSeparation);
 
 	double horizontalRate = Decider::CalculateRate(currentHorizontalSeparation, previousHorizontalSeparation, 1, 2);
-	double hoizontalTau = Decider::CalculateTau(currentHorizontalSeparation, horizontalRate);
+	double horizontalTau = Decider::CalculateTau(currentHorizontalSeparation, horizontalRate);
 
 	double verticalRate = Decider::CalculateRate(currentVerticalSeparation, previousVerticalSeparation, 1, 2);
 	double verticalTau = Decider::CalculateTau(currentVerticalSeparation, verticalRate);
@@ -57,11 +75,11 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	Aircraft::ThreatClassification threat_class;
 
 	if (currentSlantRange < kProtectionVolumeRadius_.to_feet()) {
-		if (hoizontalTau <= raThreshold && verticalTau <= raThreshold) {
+		if (horizontalTau <= raThreshold && verticalTau <= raThreshold) {
 			Decider::SetState(intruder, RA);
 			threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 		}
-		else if (hoizontalTau <= taThreshold && verticalTau <= taThreshold) {
+		else if (horizontalTau <= taThreshold && verticalTau <= taThreshold) {
 			Decider::SetState(intruder, TA);
 			threat_class = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
 		}
@@ -73,6 +91,10 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	else {
 		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 	}
+
+	char debug_buf[256];
+	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currentSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
+	XPLMDebugString(debug_buf);
 
 	intruder->lock_.lock();
 	intruder->threat_classification_ = threat_class;
@@ -100,7 +122,7 @@ double Decider::CalculateTau(double separation, double rate) {
 }
 
 double Decider::CalculateSlantRange(double horizontalSeparation, double verticalSeparation) {
-	return sqrt(pow((horizontalSeparation, 2), pow(verticalSeparation, 2)));
+	return sqrt(horizontalSeparation * horizontalSeparation + verticalSeparation * verticalSeparation);
 }
 
 double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t t1, time_t t2) {

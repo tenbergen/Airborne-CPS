@@ -1,5 +1,6 @@
 #pragma once
 
+#include "XPLMUtilities.h"
 #include "Distance.h"
 #include "Aircraft.h"
 #include <map>

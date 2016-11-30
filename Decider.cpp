@@ -1,13 +1,13 @@
 #include "Decider.h"
 
-#ifndef _DECIDER_H_
-#define _DECIDER_H_
-#endif // !_DECIDER_H_
-
 Distance const Decider::kProtectionVolumeRadius_ = {30.0, Distance::DistanceUnits::NMI};
 
 Decider::Decider(Aircraft* this_Aircraft,
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruding_aircraft) : thisAircraft_(this_Aircraft), intruderAircraft_(intruding_aircraft) {}
+
+void Decider::Analyze(Aircraft* intruder) {
+	Decider::DetermineActionRequired(intruder);
+}
 
 void Decider::Start() {
 	Decider::Analyze(thisAircraft_, *intruderAircraft_);

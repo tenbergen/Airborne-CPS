@@ -12,6 +12,7 @@ public:
 	enum State { NORMAL, TA, RA };
 	State GetState(Aircraft* intruder);
 
+	void Analyze(Aircraft* intruder);
 private:
 	static Distance const kProtectionVolumeRadius_;
 

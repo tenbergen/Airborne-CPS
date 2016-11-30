@@ -12,6 +12,7 @@
 #pragma comment(lib, "IPHLPAPI.lib")
 #include <iphlpapi.h>
 
+#include <atomic>
 #include <vector>
 #include <string>
 #include <sys/types.h>
@@ -20,19 +21,18 @@
 #include "location.pb.h"
 #include "Aircraft.h"
 #include "GaugeRenderer.h"
+#include "Decider.h"
 
 #include "XPLMUtilities.h"
 
 #define PORT 21221
 #define MSG_SIZE 256
-#define ON 1
-#define OFF 0
 
 class Transponder
 {
 public:
 	
-	Transponder(Aircraft*, concurrency::concurrent_unordered_map<std::string, Aircraft*>*);
+	Transponder(Aircraft*, concurrency::concurrent_unordered_map<std::string, Aircraft*>*, Decider*);
 	~Transponder();
 
 	DWORD receive(), send(), keepalive();
@@ -42,7 +42,8 @@ public:
 protected:
 	WSADATA w;
 	SOCKET outSocket, inSocket;
-	int buflen, communication;
+	int buflen;
+	std::atomic<int> communication;
 	unsigned sinlen;
 	struct sockaddr_in incoming, outgoing;
 	xplane::Location intruderLocation, myLocation;
@@ -55,6 +56,7 @@ protected:
 	} myLLA;
 
 private:
+	Decider * decider_;
 	Aircraft* aircraft;
 	std::vector<Aircraft*> allocated_aircraft;
 

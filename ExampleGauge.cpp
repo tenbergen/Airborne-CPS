@@ -30,7 +30,6 @@ NOTES:
 	// fms, while the data access is the api for reading and writing plane/sensor
 	// info. DataRefs:
 	// http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
-
 */
 
 #define TRUE 1
@@ -89,6 +88,8 @@ GaugeRenderer* gauge_renderer;
 concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft;
 Transponder* transponder;
 
+Decider* decider;
+
 RecommendationRange pos_rec_range = {0.0, GaugeRenderer::kMaxVertSpeed_, true};
 RecommendationRange neg_rec_range = {GaugeRenderer::kMinVertSpeed_, 0.0, false};
 
@@ -132,10 +133,10 @@ static void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlag
 static int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
 void test() {
-	intruding_aircraft[test_intr_ne.id_] = &test_intr_ne;
+	/*intruding_aircraft[test_intr_ne.id_] = &test_intr_ne;
 	intruding_aircraft[test_intr_nw.id_] = &test_intr_nw;
 	intruding_aircraft[test_intr_sw.id_] = &test_intr_sw;
-	intruding_aircraft[test_intr_se.id_] = &test_intr_se;
+	intruding_aircraft[test_intr_se.id_] = &test_intr_se;*/
 	//intruding_aircraft[test_intr_n.id_] = &test_intr_n;
 
 	Angle bearing_ne = user_ac_pos.Bearing(&test_intr_ne.position_current_);
@@ -215,12 +216,14 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 
 	//UpdateFromDataRefs();
 
+	decider = new Decider(&user_aircraft, &intruding_aircraft);
+
 	// Load the textures and bind them etc.
 	gauge_renderer = new GaugeRenderer(gPluginDataFile, &user_aircraft, &intruding_aircraft);
 	gauge_renderer->LoadTextures();
 
 	// start broadcasting location, and listening for aircraft
-	transponder = new Transponder(&user_aircraft, &intruding_aircraft);
+	transponder = new Transponder(&user_aircraft, &intruding_aircraft, decider);
 	transponder->start();
 
 	return 1;

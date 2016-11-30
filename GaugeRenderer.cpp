@@ -216,8 +216,8 @@ texture_constants::TexCoords const * GaugeRenderer::AircraftSymbolFromThreatClas
 	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
 		return &texture_constants::kSymbolRedSquare;
 	default:
-		XPLMDebugString("GaugeRenderer::DetermineAircraftSymbol - Aircraft with unknown threat classification.");
-		return &texture_constants::kSymbolRedSquare;
+		XPLMDebugString("GaugeRenderer::DetermineAircraftSymbol - Aircraft with unknown threat classification.\n");
+		return &texture_constants::kDebugSymbol;
 	}
 }
 

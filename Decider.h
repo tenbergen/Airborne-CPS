@@ -1,6 +1,10 @@
 #pragma once
 
 #include "XPLMUtilities.h"
+<<<<<<< HEAD
+=======
+#include "Distance.h"
+>>>>>>> eb51575a43423865f6a3a7a90af18061a06eb56a
 #include "Aircraft.h"
 #include <map>
 #include <concurrent_unordered_map.h>

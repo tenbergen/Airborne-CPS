@@ -63,17 +63,22 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double currentVerticalSeparation = Decider::CalculateVerticalSeparation(thisAircraftsCurrentAltitude, intrudersCurrentAltitude);
 	double currentSlantRange = Decider::CalculateSlantRange(currentHorizontalSeparation, currentVerticalSeparation);
 
+<<<<<<< HEAD
 	double intruderElapsedTime = Decider::CalculateElapsedTime(Decider::ToMinutes(intruder->position_old_time_),
 		Decider::ToMinutes(intruder->position_current_time_));
 	double thisAircraftsElapsedTime = Decider::CalculateElapsedTime(Decider::ToMinutes(thisAircraft_->position_old_time_),
 		Decider::ToMinutes(thisAircraft_->position_current_time_));
 
 	double horizontalRate = Decider::CalculateRate(currentHorizontalSeparation, previousHorizontalSeparation, thisAircraftsElapsedTime);
+=======
+	double horizontalRate = Decider::CalculateRate(currentHorizontalSeparation, previousHorizontalSeparation, 1, 2);
+>>>>>>> eb51575a43423865f6a3a7a90af18061a06eb56a
 	double horizontalTau = Decider::CalculateTau(currentHorizontalSeparation, horizontalRate);
 
 	double verticalRate = Decider::CalculateRate(currentVerticalSeparation, previousVerticalSeparation, thisAircraftsElapsedTime);
 	double verticalTau = Decider::CalculateTau(currentVerticalSeparation, verticalRate);
 
+<<<<<<< HEAD
 	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, thisAircraftsElapsedTime);
 	double slantRangeTau = Decider::CalculateTau(currentSlantRange, slantRangeRate); //Time to Closest Point of Approach
 
@@ -89,13 +94,25 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 
 	double separationV = thisAircraftsVerticalProjection - intruderVerticalProjection;
 	double resolution = DetermineResolution(separationV);
+=======
+	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, 1, 2);
+	double slantRangeTau = Decider::CalculateTau(currentSlantRange, slantRangeRate);
+>>>>>>> eb51575a43423865f6a3a7a90af18061a06eb56a
 
 	Aircraft::ThreatClassification threat_class;
 
 	if (currentSlantRange < kProtectionVolumeRadius_.to_feet()) {
 		if (horizontalTau <= raThreshold && verticalTau <= raThreshold) {
+<<<<<<< HEAD
 			threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 		} else if (horizontalTau <= taThreshold && verticalTau <= taThreshold) {
+=======
+			Decider::SetState(intruder, RA);
+			threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
+		}
+		else if (horizontalTau <= taThreshold && verticalTau <= taThreshold) {
+			Decider::SetState(intruder, TA);
+>>>>>>> eb51575a43423865f6a3a7a90af18061a06eb56a
 			threat_class = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
 		} else {
 			threat_class = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
@@ -103,6 +120,10 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	} else {
 		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 	}
+	char debug_buf[256];
+	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currentSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
+	XPLMDebugString(debug_buf);
+
 	char debug_buf[256];
 	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currentSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
 	XPLMDebugString(debug_buf);
@@ -151,9 +172,17 @@ double Decider::CalculateTau(double separation, double rate) {
 }
 
 double Decider::CalculateSlantRange(double horizontalSeparation, double verticalSeparation) {
+<<<<<<< HEAD
 	return sqrt((pow(horizontalSeparation, 2) + pow(verticalSeparation, 2)));
 }
 
 double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t elapsedTime) {
 	return sqrt((pow(horizontalRate, 2) + pow(verticalRate, 2))) / elapsedTime;
+=======
+	return sqrt(horizontalSeparation * horizontalSeparation + verticalSeparation * verticalSeparation);
+}
+
+double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t t1, time_t t2) {
+	return (sqrt(horizontalRate * horizontalRate + verticalRate * verticalRate)) / (t2 - t1);
+>>>>>>> eb51575a43423865f6a3a7a90af18061a06eb56a
 }

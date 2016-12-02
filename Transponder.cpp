@@ -56,6 +56,9 @@ DWORD Transponder::receive()
 		char * buffer = (char *)malloc(size);
 		myID = myLocation.id().c_str();
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+
+		std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+
 		intruderLocation.ParseFromArray(buffer, size);
 		intruderID = intruderLocation.id().c_str();
 
@@ -74,18 +77,25 @@ DWORD Transponder::receive()
 			if (!intruder) {
 				intruder = new Aircraft(intruderLocation.id());
 				allocated_aircraft.push_back(intruder);
+				
+				// Fill in the current values so that the aircraft will not have to wildly different position values
+				// If the position current is not set, position old will get set to LLA::ZERO while position current will
+				// be some real value, so setting the position current here prevents the LLAs from being radically different
 				intruder->position_current_ = updated_position;
+				intruder->position_current_time_ = ms_since_epoch;
 
 				(*intrudersMap)[intruder->id_] = intruder;
-			}
-			else {
-				decider_->Analyze(intruder);
 			}
 				
 			keepAliveMap[intruder->id_] = 10;
 			intruder->position_old_ = intruder->position_current_;
+			intruder->position_old_time_ = intruder->position_current_time_;
+
 			intruder->position_current_ = updated_position;
-		}
+			intruder->position_current_time_ = ms_since_epoch;
+
+			decider_->Analyze(intruder);
+			}
 		free(buffer);
 	}
 	return 0;

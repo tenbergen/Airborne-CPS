@@ -32,9 +32,6 @@ NOTES:
 	// http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
 */
 
-#define TRUE 1
-#define FALSE 0
-
 #include "XPLMDefs.h"
 #include "XPLMDisplay.h"
 #include "XPLMDataAccess.h"
@@ -257,13 +254,17 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 			Angle{XPLMGetDatad(longitude_ref), Angle::AngleUnits::DEGREES}, 
 			Distance {XPLMGetDatad(altitude_ref), Distance::DistanceUnits::METERS} };
 		Velocity updated_vvel = Velocity(XPLMGetDataf(verticalSpeed), Velocity::VelocityUnits::FEET_PER_MIN);
+		std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
 		user_aircraft.lock_.lock();
 
 		user_aircraft.position_old_ = user_aircraft.position_current_;
+		user_aircraft.position_old_time_ = user_aircraft.position_current_time_;
 		user_aircraft.position_current_ = updated;
+
 		user_aircraft.vertical_velocity_ = updated_vvel;
 		user_aircraft.heading_ = Angle(XPLMGetDataf(heading_true_north_deg_ref), Angle::AngleUnits::DEGREES);
+		user_aircraft.position_current_time_ = ms_since_epoch;
 
 		user_aircraft.lock_.unlock();
 
@@ -359,44 +360,19 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	/* We now use an XPLMGraphics routine to draw a translucent dark
 	* rectangle that is our window's shape. */
 	XPLMDrawTranslucentDarkBox(left, top, right, bottom);
-
-	/* These lines convert the types to char arrays to be used as strings. */
-	char verticalVelocityChar[128];
-	snprintf(verticalVelocityChar, 128, "%f", verticalVelocity);
-
-	char indAirspeedChar[128];
-	snprintf(indAirspeedChar, 128, "%f", indAirspeed);
-
-	char indAirspeed2Char[128];
-	snprintf(indAirspeed2Char, 128, "%f", indAirspeed2);
-
-	char trueAirspeedChar[128];
-	snprintf(trueAirspeedChar, 128, "%f", trueAirspeed);
-
-	char altitudeInt0Char[128];
-	snprintf(altitudeInt0Char, 128, "%d", altitudeInt0);
-
-	char verticalSpeedDataChar[128];
-	snprintf(verticalSpeedDataChar, 128, "XPLMGetDataf(vvi_fpm_pilot): %f", verticalSpeedData);
-
-	char calcVSChar[128];
-	snprintf(calcVSChar, 128, "verticalSpeedCalc: %f", (verticalSpeed1+90));
-
-	char lat[128]; snprintf(lat, 128, "lat: %f", latREF); char lon[128]; snprintf(lon, 128, "lon: %f", lonREF);
 	
 	/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
-	XPLMDrawString(color, left + 5, top - 40, (char*)(verticalSpeedDataChar), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 60, (char*)(calcVSChar), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 80, (char*)(lat), NULL, xplmFont_Basic);
-	XPLMDrawString(color, left + 5, top - 100, (char*)(lon), NULL, xplmFont_Basic);
+	char position_buf[128];
+	snprintf(position_buf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitude_ref), XPLMGetDataf(longitude_ref), XPLMGetDataf(altitude_ref));
+	XPLMDrawString(color, left + 5, top - 20, position_buf, NULL, xplmFont_Basic);
 
 	char heading_vals[128];
 	snprintf(heading_vals, 128, "Headings - ahars: %.3f, true_mag: %.3f, true_north: %.3f", XPLMGetDataf(heading_ahars_deg_ref), XPLMGetDataf(heading_true_mag_deg_ref), XPLMGetDataf(heading_true_north_deg_ref));
-	XPLMDrawString(color, left + 5, top - 120, heading_vals, NULL, xplmFont_Basic);
+	XPLMDrawString(color, left + 5, top - 40, heading_vals, NULL, xplmFont_Basic);
 
 	/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>::const_iterator & iter = intruding_aircraft.cbegin();
-	int offset = 140;
+	int offset = 60;
 	char buff[128];
 
 	for (; iter != intruding_aircraft.cend(); ++iter) {

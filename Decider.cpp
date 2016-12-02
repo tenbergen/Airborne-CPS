@@ -69,7 +69,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double verticalRate = Decider::CalculateRate(currentVerticalSeparation, previousVerticalSeparation, 1, 2);
 	double verticalTau = Decider::CalculateTau(currentVerticalSeparation, verticalRate);
 
-	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, 0, 0);
+	double slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, 1, 2);
 	double slantRangeTau = Decider::CalculateTau(currentSlantRange, slantRangeRate);
 
 	Aircraft::ThreatClassification threat_class;
@@ -126,5 +126,5 @@ double Decider::CalculateSlantRange(double horizontalSeparation, double vertical
 }
 
 double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t t1, time_t t2) {
-	return (sqrt((pow(horizontalRate, 2), pow(verticalRate, 2))) / (t2 - t1));
+	return (sqrt(horizontalRate * horizontalRate + verticalRate * verticalRate)) / (t2 - t1);
 }

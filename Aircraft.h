@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <mutex>
 
@@ -29,7 +30,10 @@ public:
 	std::string const id_;
 
 	/// Values that are updated via datarefs from xplane
+	std::chrono::milliseconds position_current_time_;
 	LLA position_current_;
+
+	std::chrono::milliseconds position_old_time_;
 	LLA position_old_;
 
 	// The rate of change of the altitude

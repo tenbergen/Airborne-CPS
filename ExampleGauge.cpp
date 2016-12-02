@@ -254,13 +254,17 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 			Angle{XPLMGetDatad(longitude_ref), Angle::AngleUnits::DEGREES}, 
 			Distance {XPLMGetDatad(altitude_ref), Distance::DistanceUnits::METERS} };
 		Velocity updated_vvel = Velocity(XPLMGetDataf(verticalSpeed), Velocity::VelocityUnits::FEET_PER_MIN);
+		std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
 		user_aircraft.lock_.lock();
 
 		user_aircraft.position_old_ = user_aircraft.position_current_;
+		user_aircraft.position_old_time_ = user_aircraft.position_current_time_;
 		user_aircraft.position_current_ = updated;
+
 		user_aircraft.vertical_velocity_ = updated_vvel;
 		user_aircraft.heading_ = Angle(XPLMGetDataf(heading_true_north_deg_ref), Angle::AngleUnits::DEGREES);
+		user_aircraft.position_current_time_ = ms_since_epoch;
 
 		user_aircraft.lock_.unlock();
 

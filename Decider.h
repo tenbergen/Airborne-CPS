@@ -15,14 +15,9 @@ public:
 
 private:
 	static Distance const kProtectionVolumeRadius_;
-
 	Aircraft* thisAircraft_;
-	Aircraft* intruderFromMap;
-
 	double taThreshold = 60.0; // seconds
 	double raThreshold = 30.0; // seconds
-	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruderAircraft_;
-
 	void DetermineActionRequired(Aircraft* intruder);
 	double CalculateVerticalSeparation(double thisAircraftsAltitude, double intrudersAltitude);
 	double CalculateRate(double separation, double temp, time_t elapsedTime);

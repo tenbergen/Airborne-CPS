@@ -3,27 +3,13 @@
 
 Distance const Decider::kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUnits::NMI };
 
-Decider::Decider(Aircraft* this_Aircraft,
-	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruding_aircraft) : thisAircraft_(this_Aircraft), intruderAircraft_(intruding_aircraft) {}
+Decider::Decider(Aircraft* this_Aircraft) : thisAircraft_(this_Aircraft) {}
 
 void Decider::Analyze(Aircraft* intruder) {
 	/*char debug_buf[128];
 	snprintf(debug_buf, 128, "Decider::Analyze - intruder_id: %s\n", intruder->id_.c_str());
 	XPLMDebugString(debug_buf);*/
 	Decider::DetermineActionRequired(intruder);
-}
-
-void Decider::Start() {
-	Decider::Analyze(thisAircraft_, *intruderAircraft_);
-}
-
-void Decider::Analyze(Aircraft * thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft) {
-	Aircraft* intruder = Decider::QueryIntrudingAircraftMap(intruding_aircraft, "testAircraftID");
-	Decider::DetermineActionRequired(intruder);
-}
-
-Aircraft* Decider::QueryIntrudingAircraftMap(concurrency::concurrent_unordered_map<std::string, Aircraft*> intr_aircraft, char* ID) {
-	if (Aircraft* intruderFromMap = intr_aircraft[ID]) { return intruderFromMap; } else { return NULL; }
 }
 
 std::string get_threat_class_str(Aircraft::ThreatClassification threat_class) {
@@ -43,7 +29,6 @@ std::string get_threat_class_str(Aircraft::ThreatClassification threat_class) {
 
 void Decider::DetermineActionRequired(Aircraft* intruder) {
 	thisAircraft_->lock_.lock();
-	/* ta = 'thisAircrafts'  in = 'intruders' */
 	LLA taCurrPosition = thisAircraft_->position_current_;
 	LLA taPrevPosition = thisAircraft_->position_old_;
 	thisAircraft_->lock_.unlock();
@@ -83,11 +68,6 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double taHorizontalVelocity = taCurrPosition.Range(&taPrevPosition).to_feet() / taElapsedTime;
 	double taVerticalVelocity = thisAircraft_->vertical_velocity_.to_feet_per_min;
 
-	Sense sense = Decider::DetermineResolutionSense(taCurrAltitude, taVerticalVelocity, inVerticalVelocity, slantRangeTau);
-
-
-
-
 	Aircraft::ThreatClassification threat_class;
 
 	if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
@@ -105,6 +85,8 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
 	XPLMDebugString(debug_buf);
 
+	Sense sense = Decider::DetermineResolutionSense(taCurrAltitude, taVerticalVelocity, inVerticalVelocity, slantRangeTau);
+
 	intruder->lock_.lock();
 	intruder->threat_classification_ = threat_class;
 	intruder->lock_.unlock();
@@ -112,7 +94,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 
 Decider::Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, double inVV, double slantRangeTau) {
 	double verticalRateDelta = 1500;
-	double minVertSep = 1000;
+	double minVertSep = 3000;
 	double taVertProj = taVV * slantRangeTau;
 	double inVertProj = inVV * slantRangeTau;
 	double taClimbProj = (taVV + verticalRateDelta) * slantRangeTau;
@@ -127,7 +109,15 @@ Decider::Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, 
 			if (taClimbProj - inVertProj >= minVertSep) { return UPWARD; }
 		} else { return DOWNWARD; }
 	} else {
-		;//maintain
+		return MAINTAIN;
+	}
+}
+
+Decider::Strength Decider::DetermineStrength(Sense s) {
+	if (s = UPWARD) {
+		return CLIMB;
+	} else if (s = DOWNWARD) {
+		return CROSSING_CLIMB;
 	}
 }
 

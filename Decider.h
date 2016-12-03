@@ -8,10 +8,10 @@
 
 class Decider {
 public:
-	Decider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruding_aircraft);
-	void Start();
+	Decider(Aircraft* thisAircraft);
 	void Analyze(Aircraft* intruder);
-	enum Sense { UPWARD, DOWNWARD };
+	enum Sense { UPWARD, DOWNWARD, MAINTAIN };
+	enum Strength { CLIMB, CROSSING_CLIMB, MAINTAIN_CLIMB, DO_NOT_DESCEND_500, DO_NOT_DESCEND_1000, DO_NOT_DESCEND_2000 };
 
 private:
 	static Distance const kProtectionVolumeRadius_;
@@ -23,8 +23,6 @@ private:
 	double raThreshold = 30.0; // seconds
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruderAircraft_;
 
-	void Analyze(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft);
-	Aircraft* QueryIntrudingAircraftMap(concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft, char* ID);
 	void DetermineActionRequired(Aircraft* intruder);
 	double CalculateVerticalSeparation(double thisAircraftsAltitude, double intrudersAltitude);
 	double CalculateRate(double separation, double temp, time_t elapsedTime);
@@ -35,4 +33,5 @@ private:
 	double CalculateElapsedTime(double t1, double t2);
 	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,
 		double intruderVerticalVelocity, double slantRangeTau);
+	Strength DetermineStrength(Sense s);
 }

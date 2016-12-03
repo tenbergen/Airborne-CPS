@@ -64,9 +64,9 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double slantRangeTau = Decider::CalculateTau(currSlantRange, slantRangeRate); //Time to Closest Point of Approach (CPA)
 
 	double inHorizontalVelocity = inCurrPosition.Range(&inPrevPosition).to_feet() / inElapsedTime;
-	double inVerticalVelocity = intruder->vertical_velocity_.to_feet_per_min;
+	double inVerticalVelocity = intruder->vertical_velocity_.to_feet_per_min();
 	double taHorizontalVelocity = taCurrPosition.Range(&taPrevPosition).to_feet() / taElapsedTime;
-	double taVerticalVelocity = thisAircraft_->vertical_velocity_.to_feet_per_min;
+	double taVerticalVelocity = thisAircraft_->vertical_velocity_.to_feet_per_min();
 
 	Aircraft::ThreatClassification threat_class;
 

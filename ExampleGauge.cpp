@@ -213,7 +213,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 
 	//UpdateFromDataRefs();
 
-	decider = new Decider(&user_aircraft, &intruding_aircraft);
+	decider = new Decider(&user_aircraft);// , &intruding_aircraft);
 
 	// Load the textures and bind them etc.
 	gauge_renderer = new GaugeRenderer(gPluginDataFile, &user_aircraft, &intruding_aircraft);

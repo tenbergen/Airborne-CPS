@@ -12,7 +12,7 @@ public:
 	void Analyze(Aircraft* intruder);
 	enum Sense { UPWARD, DOWNWARD, MAINTAIN };
 	enum Strength { CLIMB, MAINTAIN_CLIMB, DO_NOT_DESCEND_500, DO_NOT_DESCEND_1000, DO_NOT_DESCEND_2000, 
-		DESCEND, MAINTAIN_DESCEND, DO_NOT_CLIMB_500, DO_NOT_CLIMB_1000, DO_NOT_CLIMB_2000 };
+		DESCEND, MAINTAIN_DESCEND, DO_NOT_CLIMB_500, DO_NOT_CLIMB_1000, DO_NOT_CLIMB_2000, CROSSING_CLIMB };
 
 private:
 	static Distance const kProtectionVolumeRadius_;
@@ -30,4 +30,4 @@ private:
 	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,
 		double intruderVerticalVelocity, double slantRangeTau);
 	Strength DetermineStrength(Sense s);
-}
+};

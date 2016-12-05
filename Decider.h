@@ -8,35 +8,31 @@
 
 class Decider {
 public:
-	Decider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruding_aircraft);
-	void Start();
-	enum State { NORMAL, TA, RA };
-	State GetState(Aircraft* intruder);
-
+	Decider(Aircraft* thisAircraft);
 	void Analyze(Aircraft* intruder);
 	
 	std::mutex recommendation_range_lock_;
 	RecommendationRange positive_recommendation_range_;
 	RecommendationRange negative_recommendation_range_;
 
+	enum Sense { UPWARD, DOWNWARD, MAINTAIN };
+	enum Strength { CLIMB, MAINTAIN_CLIMB, DO_NOT_DESCEND_500, DO_NOT_DESCEND_1000, DO_NOT_DESCEND_2000, 
+		DESCEND, MAINTAIN_DESCEND, DO_NOT_CLIMB_500, DO_NOT_CLIMB_1000, DO_NOT_CLIMB_2000, CROSSING_CLIMB };
+
 private:
 	static Distance const kProtectionVolumeRadius_;
-
 	Aircraft* thisAircraft_;
-	Aircraft* intruderFromMap;
-
-	double taThreshold = 60.0; // seconds
-	double raThreshold = 30.0; // seconds
-	std::map<std::string, State> stateMap;
-	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruderAircraft_;
-
-	void Analyze(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft);
-	Aircraft* QueryIntrudingAircraftMap(concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft, char* ID);
+	double taThreshold = 60.0; //seconds
+	double raThreshold = 30.0; //seconds
 	void DetermineActionRequired(Aircraft* intruder);
-	void SetState(Aircraft* intruder, State state);
 	double CalculateVerticalSeparation(double thisAircraftsAltitude, double intrudersAltitude);
-	double CalculateRate(double separation, double temp, time_t t1, time_t t2);
+	double CalculateRate(double separation, double temp, time_t elapsedTime);
 	double CalculateTau(double a, double b);
 	double CalculateSlantRange(double horizontalSeparation, double verticalSeparation);
-	double CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t t1, time_t t2);
+	double CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t elapsedTime);
+	double ToMinutes(std::chrono::milliseconds time);
+	double CalculateElapsedTime(double t1, double t2);
+	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,
+		double intruderVerticalVelocity, double slantRangeTau);
+	Strength DetermineStrength(Sense s);
 };

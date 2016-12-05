@@ -1,11 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include <concurrent_unordered_map.h>
-#include "XPLMUtilities.h"
 
-#include "RecommendationRange.h"
-#include "Aircraft.h"
+#include "Decider.h"
 #include "BMPLoader.h"
 #include "Renderer.inc"
 
@@ -16,11 +13,11 @@
 class GaugeRenderer
 {
 public:
-	GaugeRenderer(char const * const app_path, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * intruding_aircraft);
+	GaugeRenderer(char const * const app_path, Decider * const decider, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * intruding_aircraft);
 	~GaugeRenderer();
 
 	void LoadTextures();
-	void Render(float* rgb, RecommendationRange*  recommended, RecommendationRange* not_recommended);
+	void Render(texture_constants::GlRgb8Color cockpit_lighting);
 
 	// The minimum and maximum vertical speed values in units of feet per minute
 	static double const kMinVertSpeed_, kMaxVertSpeed_;
@@ -61,7 +58,8 @@ private:
 
 	// The "application path", which for the plugin is the directory that the plugin is contained in
 	char const * const app_path_;
-
+	
+	Decider * const decider_;
 	Aircraft * const user_aircraft_;
 	concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intruders_;
 
@@ -71,6 +69,7 @@ private:
 	XPLMTextureID glTextures_[texture_constants::kNumTextures];
 
 	static texture_constants::TexCoords const * AircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threat_class);
+	static texture_constants::GlRgb8Color const * GaugeRenderer::SymbolColorFromThreatClassification(Aircraft::ThreatClassification threat_class);
 
 	bool LoadTexture(char * tex_path, int tex_id) const;
 
@@ -84,13 +83,17 @@ private:
 	void DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const;
 
 	/* Draws the supplied recommendation range. */
-	void DrawRecommendationRange(RecommendationRange& rec_range) const;
+	void DrawRecommendationRange(RecommendationRange* rec_range, bool recommended) const;
 	/* Draws the supplied vertical speed range as either recommended (green) or not recommended (red). */
-	void DrawRecommendedVerticalSpeedRange(double min_vert_speed, double max_vert_speed, bool recommended) const;
+	void DrawRecommendedVerticalSpeedRange(Velocity min_vert_speed, Velocity max_vert_speed, bool recommended) const;
 	/* Draws the supplied degree range as either recommended (green) or not recommended (red).*/
-	void DrawRecommendationRangeStartStop(double start_angle, double stop_angle, bool recommended) const;
+	void DrawRecommendationRangeStartStop(Angle start, Angle stop, bool recommended) const;
 	/* Draws a recommendation range starting at the supplied start angle in a sweep_angle degrees arc.*/
-	void DrawRecommendationRangeStartSweep(double start_angle, double sweep_angle, bool recommended) const;
+	void DrawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const;
+
+	void DrawTextureRegion(texture_constants::TexCoords const * tex_coords, double vert_left, double vert_right, double vert_top, double vert_bot) const;
+
+	texture_constants::TexCoords const * GaugeRenderer::GaugeTexCoordsFromDigitCharacter(char) const;
 
 	GaugeRenderer (const GaugeRenderer& that) = delete;
 	GaugeRenderer& operator=(const GaugeRenderer& that) = delete;

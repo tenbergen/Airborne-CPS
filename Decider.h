@@ -1,7 +1,7 @@
 #pragma once
 
 #include "XPLMUtilities.h"
-#include "Distance.h"
+#include "RecommendationRange.h"
 #include "Aircraft.h"
 #include <map>
 #include <concurrent_unordered_map.h>
@@ -14,6 +14,11 @@ public:
 	State GetState(Aircraft* intruder);
 
 	void Analyze(Aircraft* intruder);
+	
+	std::mutex recommendation_range_lock_;
+	RecommendationRange positive_recommendation_range_;
+	RecommendationRange negative_recommendation_range_;
+
 private:
 	static Distance const kProtectionVolumeRadius_;
 

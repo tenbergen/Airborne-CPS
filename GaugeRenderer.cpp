@@ -4,34 +4,35 @@ const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 75.0;
 Distance const GaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::DistanceUnits::NMI };
 Distance const GaugeRenderer::kAircraftToGaugeCenterOffset_ { (28.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.to_feet() * 2.0, Distance::DistanceUnits::FEET};
 
-const float GaugeRenderer::kGaugePosLeft = 768.0f;
-const float GaugeRenderer::kGaugePosRight = 1024.0f;
-const float GaugeRenderer::kGaugePosBot = 0.0f;
-const float GaugeRenderer::kGaugePosTop = 256.0f;
+float const GaugeRenderer::kGaugePosLeft = 1024.0f;
+float const GaugeRenderer::kGaugePosRight = 1280.0f;
+float const GaugeRenderer::kGaugePosBot = 0.0f;
+float const GaugeRenderer::kGaugePosTop = 256.0f;
 
-const float GaugeRenderer::kGaugeCenterX = (kGaugePosRight + kGaugePosLeft) / 2.0f;
-const float GaugeRenderer::kGaugeCenterY = (kGaugePosTop + kGaugePosBot) / 2.0f;
+float const GaugeRenderer::kGaugeCenterX = (kGaugePosRight + kGaugePosLeft) / 2.0f;
+float const GaugeRenderer::kGaugeCenterY = (kGaugePosTop + kGaugePosBot) / 2.0f;
 
-const float GaugeRenderer::kNeedlePosLeft = kGaugePosLeft + 125.0f;
-const float GaugeRenderer::kNeedlePosRight = kNeedlePosLeft + 8.0f;
-const float GaugeRenderer::kNeedlePosBot = kGaugePosBot + 123.0f;
-const float GaugeRenderer::kNeedlePosTop = kNeedlePosBot + 80.0f;
+float const GaugeRenderer::kNeedlePosLeft = kGaugePosLeft + 125.0f;
+float const GaugeRenderer::kNeedlePosRight = kNeedlePosLeft + 8.0f;
+float const GaugeRenderer::kNeedlePosBot = kGaugePosBot + 123.0f;
+float const GaugeRenderer::kNeedlePosTop = kNeedlePosBot + 80.0f;
 
-const double GaugeRenderer::kMinVertSpeed_ = -4000.0;
-const double GaugeRenderer::kMaxVertSpeed_ = 4000.0;
+double const GaugeRenderer::kMinVertSpeed_ = -4000.0;
+double const GaugeRenderer::kMaxVertSpeed_ = 4000.0;
 
-const double GaugeRenderer::kMaxVSpeedDegrees = 150.0;
-const float GaugeRenderer::kGlAngleOffset_ = 90.0f;
+double const GaugeRenderer::kMaxVSpeedDegrees = 150.0;
+float const GaugeRenderer::kGlAngleOffset_ = 90.0f;
 
-const float GaugeRenderer::kNeedleTranslationX = kNeedlePosLeft + ((kNeedlePosRight - kNeedlePosLeft) / 2.0f);
-const float GaugeRenderer::kNeedleTranslationY = kNeedlePosBot + 5.0f;
+float const GaugeRenderer::kNeedleTranslationX = kNeedlePosLeft + ((kNeedlePosRight - kNeedlePosLeft) / 2.0f);
+float const GaugeRenderer::kNeedleTranslationY = kNeedlePosBot + 5.0f;
 
-const double GaugeRenderer::kDiskInnerRadius_ = 50.0;
-const double GaugeRenderer::kDiskOuterRadius_ = 105.0;
-const int GaugeRenderer::kDiskSlices_ = 32;
-const int GaugeRenderer::kDiskLoops_ = 2;
+double const GaugeRenderer::kDiskInnerRadius_ = 50.0;
+double const GaugeRenderer::kDiskOuterRadius_ = 105.0;
+int const GaugeRenderer::kDiskSlices_ = 32;
+int const GaugeRenderer::kDiskLoops_ = 2;
 
-GaugeRenderer::GaugeRenderer(char const * const app_path, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intruding_aircraft) : app_path_(app_path), user_aircraft_(user_aircraft), intruders_(intruding_aircraft) {
+GaugeRenderer::GaugeRenderer(char const * const app_path, Decider * const decider, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intruding_aircraft) : 
+	app_path_(app_path), decider_(decider), user_aircraft_(user_aircraft), intruders_(intruding_aircraft) {
 	quadric_ = gluNewQuadric();
 
 	gluQuadricNormals(quadric_, GLU_SMOOTH);
@@ -89,7 +90,7 @@ bool GaugeRenderer::LoadTexture(char* tex_path, int tex_id) const {
 	return loaded_successfully;
 }
 
-void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, RecommendationRange* not_recommended) {
+void GaugeRenderer::Render(texture_constants::GlRgb8Color cockpit_lighting) {
 	user_aircraft_->lock_.lock();
 
 	LLA const user_pos = user_aircraft_->position_current_;
@@ -102,42 +103,41 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 0/*AlphaBlending*/, 0/*DepthTesting*/, 0/*DepthWriting*/);
 
 	/// Color the gauge background according to the day/night coloring inside the cockpit
-	glColor3f(rgb[0], rgb[1], rgb[2]);
+	glColor3f(cockpit_lighting.red, cockpit_lighting.green, cockpit_lighting.blue);
 
 	// Push the MV matrix onto the stack
 	glPushMatrix();
 
 	// Draw the gauge
 	XPLMBindTexture2d(glTextures_[texture_constants::GAUGE_ID], 0);
-
 	DrawOuterGauge();
 
-	// Draw the recommendation ranges if they were provided
-	if (recommended)
-		DrawRecommendationRange(*recommended);
+	decider_->recommendation_range_lock_.lock();
+	RecommendationRange positive = decider_->positive_recommendation_range_;
+	RecommendationRange neg = decider_->negative_recommendation_range_;
+	decider_->recommendation_range_lock_.unlock();
 
-	if (not_recommended)
-		DrawRecommendationRange(*not_recommended);
+	// Draw the recommendation ranges if they should be drawn
+	if (positive.valid)
+		DrawRecommendationRange(&positive, true);
+
+	if (neg.valid)
+		DrawRecommendationRange(&neg, false);
 
 	// Enable alpha blending for drawing the rest of the textures
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 1/*AlphaBlending*/, 0/*DepthTesting*/, 0/*DepthWriting*/);
 
-	// Turn off the day/night tinting while drawing the inner gauge parts; will have to examine if this should be turned off or not.
+	// Turn off the day/night tinting while drawing the inner gauge parts
+	// Will have to examine if this should be turned off or not.
 	glColor3f(1.0f, 1.0f, 1.0f);
 
 	// Specify the blending mode so the inner gauge rings draw on top of the outer gauge with proper transparency.
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	DrawInnerGauge();
-
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>::const_iterator & iter = intruders_->cbegin();
 
 	if (iter != intruders_->cend()) {
-		//char debug_buf[128];
 		LLA gauge_center_pos = user_pos.Translate(&user_heading, &kAircraftToGaugeCenterOffset_);
-
-		//snprintf(debug_buf, 128, "GaugeRenderer::Render - gauge_center: (%.3f, %.3f)\n", gauge_center_pos.latitude_.to_degrees(), gauge_center_pos.longitude_.to_degrees());
-		//XPLMDebugString(debug_buf);
 
 		for (; iter != intruders_->cend(); ++iter) {
 			Aircraft* intruder = iter->second;
@@ -150,13 +150,12 @@ void GaugeRenderer::Render(float* rgb, RecommendationRange*  recommended, Recomm
 			Distance range = gauge_center_pos.Range(&intruder_pos);
 
 			if (range.to_feet() < kGaugeInnerCircleRadius_.to_feet()) {
-				/*debug_buf[0] = '\0';
-				snprintf(debug_buf, 128, "GaugeRenderer::Render - drawing aircraft: %s\n", intruder->id_.c_str());
-				XPLMDebugString(debug_buf);*/
 				DrawIntrudingAircraft(&intruder_pos, &user_heading, &gauge_center_pos, &range, threat_class);
 			}
 		}
 	}
+
+	DrawInnerGauge();
 
 	DrawGaugeNeedle(user_aircraft_vert_vel);
 
@@ -183,27 +182,86 @@ void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Angle 
 	double symbol_center_x = kGaugeCenterX + pixel_offset_x;
 	double symbol_center_y = kGaugeCenterY + pixel_offset_y;
 
-	/*char debug_buf[256];
-	snprintf(debug_buf, 256, "GaugeRenderer::DrawIntrudingAircraft - bearing: %.3f, user_heading: %.3f, bearing_adj: %.3f, cart_angle: %.3f, intr_pos: (%.3f, %.3f)\n", init_bearing, user_heading->to_degrees(), bearing.to_degrees(), cartesian_angle.to_degrees(), intruder_pos->latitude_.to_degrees(), intruder_pos->longitude_.to_degrees());
-	XPLMDebugString(debug_buf);*/
-
 	// The symbols are contained in 16x16 pixel squares in the texture so to find the vertices, 
 	// calculate the sides of the 16 px square centered around the symbol center
-	double symbol_left = symbol_center_x - 8;
-	double symbol_right = symbol_center_x + 8;
-	double symbol_bot = symbol_center_y - 8;
-	double symbol_top = symbol_center_y + 8;
+	double symbol_left = symbol_center_x - 8.0;
+	double symbol_right = symbol_center_x + 8.0;
+	double symbol_bot = symbol_center_y - 8.0;
+	double symbol_top = symbol_center_y + 8.0;
 
 	texture_constants::TexCoords const * symbol_coords = AircraftSymbolFromThreatClassification(threat_class);
 
-	glBegin(GL_QUADS);
-	glTexCoord2d(symbol_coords->right, symbol_coords->bottom); glVertex2d(symbol_right, symbol_bot);
-	glTexCoord2d(symbol_coords->left, symbol_coords->bottom); glVertex2d(symbol_left, symbol_bot);
-	glTexCoord2d(symbol_coords->left, symbol_coords->top); glVertex2d(symbol_left, symbol_top);
-	glTexCoord2d(symbol_coords->right, symbol_coords->top); glVertex2d(symbol_right, symbol_top);
-	glEnd();
+	DrawTextureRegion(symbol_coords, symbol_left, symbol_right, symbol_top, symbol_bot);
+
+	Distance altitude_difference = intruder_pos->altitude_ - gauge_center_pos->altitude_;
+	int alt_diff_hundreds_ft_per_min = (int) std::round(altitude_difference.to_feet() / 100.0);
+
+	texture_constants::TexCoords const * sign_char = alt_diff_hundreds_ft_per_min < 0.0 ? &texture_constants::kCharMinusSign : &texture_constants::kCharPlusSign;
+	alt_diff_hundreds_ft_per_min = abs(alt_diff_hundreds_ft_per_min);
+	std::string alt_string = std::to_string(alt_diff_hundreds_ft_per_min);
+
+	// Characters in the GaugeTex256 texture are 6x10 (6 px wide, 10 px tall)
+	double alt_string_top = symbol_bot;
+	double alt_string_bot = alt_string_top - 10.0;
+	double alt_string_left = symbol_left;
+	double alt_string_right = alt_string_left + 6.0;
+
+	texture_constants::GlRgb8Color const * symbol_color = SymbolColorFromThreatClassification(threat_class);
+	glColor3f(symbol_color->red, symbol_color->green, symbol_color->blue);
+
+	DrawTextureRegion(sign_char, alt_string_left, alt_string_right, alt_string_top, alt_string_bot);
+	alt_string_left = alt_string_right;
+	alt_string_right += 6.0;
+
+	for (char c : alt_string) {
+		texture_constants::TexCoords const * char_coords = GaugeTexCoordsFromDigitCharacter(c);
+		DrawTextureRegion(char_coords, alt_string_left, alt_string_right, alt_string_top, alt_string_bot);
+		alt_string_left = alt_string_right;
+		alt_string_right += 6.0;
+	}
+
+	glColor3f(1.0f, 1.0f, 1.0f);
 }
 
+texture_constants::TexCoords const * GaugeRenderer::GaugeTexCoordsFromDigitCharacter(char c) const {
+	switch (c) {
+	case '0':
+		return &texture_constants::kCharZero;
+	case '1':
+		return &texture_constants::kCharOne;
+	case '2':
+		return &texture_constants::kCharTwo;
+	case '3':
+		return &texture_constants::kCharThree;
+	case '4':
+		return &texture_constants::kCharFour;
+	case '5':
+		return &texture_constants::kCharFive;
+	case '6':
+		return &texture_constants::kCharSix;
+	case '7':
+		return &texture_constants::kCharSeven;
+	case '8':
+		return &texture_constants::kCharEight;
+	case '9':
+		return &texture_constants::kCharNine;
+	default:
+		char debug_buf[128];
+		snprintf(debug_buf, 128, "GaugeRenderer::GaugeTexCoordsFromDigitCharacter - unhandled character %c supplied\n", c);
+
+		return &texture_constants::kDebugSymbol;
+	}
+}
+
+void GaugeRenderer::DrawTextureRegion(texture_constants::TexCoords const * tex_coords, 
+	double vert_left, double vert_right, double vert_top, double vert_bot) const {
+	glBegin(GL_QUADS);
+	glTexCoord2d(tex_coords->right, tex_coords->bottom); glVertex2d(vert_right, vert_bot);
+	glTexCoord2d(tex_coords->left, tex_coords->bottom); glVertex2d(vert_left, vert_bot);
+	glTexCoord2d(tex_coords->left, tex_coords->top); glVertex2d(vert_left, vert_top);
+	glTexCoord2d(tex_coords->right, tex_coords->top); glVertex2d(vert_right, vert_top);
+	glEnd();
+}
 
 texture_constants::TexCoords const * GaugeRenderer::AircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threat_class) {
 	switch (threat_class) {
@@ -216,31 +274,32 @@ texture_constants::TexCoords const * GaugeRenderer::AircraftSymbolFromThreatClas
 	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
 		return &texture_constants::kSymbolRedSquare;
 	default:
-		XPLMDebugString("GaugeRenderer::DetermineAircraftSymbol - Aircraft with unknown threat classification.\n");
+		XPLMDebugString("GaugeRenderer::AircraftSymbolFromThreatClassification - Unknown threat classification.\n");
 		return &texture_constants::kDebugSymbol;
 	}
 }
 
-void GaugeRenderer::DrawOuterGauge() const {
-	texture_constants::TexCoords outer_gauge = texture_constants::kOuterGauge;
+texture_constants::GlRgb8Color const * GaugeRenderer::SymbolColorFromThreatClassification(Aircraft::ThreatClassification threat_class) {
+	switch (threat_class) {
+	case Aircraft::ThreatClassification::NON_THREAT_TRAFFIC:
+	case Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC:
+		return &texture_constants::kSymbolBlueDiamondColor;
+	case Aircraft::ThreatClassification::TRAFFIC_ADVISORY:
+		return &texture_constants::kSymbolYellowCircleColor;
+	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
+		return &texture_constants::kSymbolRedSquareColor;
+	default:
+		XPLMDebugString("GaugeRenderer::SymbolColorFromThreatClassification - Unknown threat classification.\n");
+		return &texture_constants::kRecommendationRangePositive;
+	}
+}
 
-	glBegin(GL_QUADS);
-	glTexCoord2d(outer_gauge.right, outer_gauge.bottom); glVertex2f(kGaugePosRight, kGaugePosBot);
-	glTexCoord2d(outer_gauge.left, outer_gauge.bottom); glVertex2f(kGaugePosLeft, kGaugePosBot);
-	glTexCoord2d(outer_gauge.left, outer_gauge.top); glVertex2f(kGaugePosLeft, kGaugePosTop);
-	glTexCoord2d(outer_gauge.right, outer_gauge.top); glVertex2f(kGaugePosRight, kGaugePosTop);
-	glEnd();
+void GaugeRenderer::DrawOuterGauge() const {
+	DrawTextureRegion(&texture_constants::kOuterGauge, kGaugePosLeft, kGaugePosRight, kGaugePosTop, kGaugePosBot);
 }
 
 void GaugeRenderer::DrawInnerGauge() const {
-	texture_constants::TexCoords inner_gauge = texture_constants::kInnerGauge;
-
-	glBegin(GL_QUADS);
-	glTexCoord2d(inner_gauge.right, inner_gauge.bottom); glVertex2f(kGaugePosRight, kGaugePosBot);
-	glTexCoord2d(inner_gauge.left, inner_gauge.bottom); glVertex2f(kGaugePosLeft, kGaugePosBot);
-	glTexCoord2d(inner_gauge.left, inner_gauge.top); glVertex2f(kGaugePosLeft, kGaugePosTop);
-	glTexCoord2d(inner_gauge.right, inner_gauge.top); glVertex2f(kGaugePosRight, kGaugePosTop);
-	glEnd();
+	DrawTextureRegion(&texture_constants::kInnerGauge, kGaugePosLeft, kGaugePosRight, kGaugePosTop, kGaugePosBot);
 }
 
 void GaugeRenderer::DrawGaugeNeedle(Velocity const user_aircraft_vert_vel) const {
@@ -259,88 +318,71 @@ void GaugeRenderer::DrawGaugeNeedle(Velocity const user_aircraft_vert_vel) const
 
 	// Draw Needle Mask
 	XPLMBindTexture2d(glTextures_[texture_constants::NEEDLE_MASK_ID], 0);
-
-	texture_constants::TexCoords needle_mask = texture_constants::kNeedleMask;
-
-	glBegin(GL_QUADS);
-	glTexCoord2d(needle_mask.right, needle_mask.bottom); glVertex2f(kNeedlePosRight, kNeedlePosBot);
-	glTexCoord2d(needle_mask.left, needle_mask.bottom); glVertex2f(kNeedlePosLeft, kNeedlePosBot);
-	glTexCoord2d(needle_mask.left, needle_mask.top); glVertex2f(kNeedlePosLeft, kNeedlePosTop);
-	glTexCoord2d(needle_mask.right, needle_mask.top); glVertex2f(kNeedlePosRight, kNeedlePosTop);
-	glEnd();
+	DrawTextureRegion(&texture_constants::kNeedleMask, kNeedlePosLeft, kNeedlePosRight, kNeedlePosTop, kNeedlePosBot);
 
 	glBlendFunc(GL_ONE, GL_ONE);
 
-	texture_constants::TexCoords needle = texture_constants::kNeedle;
-
 	// Draw Needle
 	XPLMBindTexture2d(glTextures_[texture_constants::NEEDLE_ID], 0);
-	glBegin(GL_QUADS);
-	glTexCoord2d(needle.right, needle.bottom); glVertex2f(kNeedlePosRight, kNeedlePosBot);
-	glTexCoord2d(needle.left, needle.bottom); glVertex2f(kNeedlePosLeft, kNeedlePosBot);
-	glTexCoord2d(needle.left, needle.top); glVertex2f(kNeedlePosLeft, kNeedlePosTop);
-	glTexCoord2d(needle.right, needle.top); glVertex2f(kNeedlePosRight, kNeedlePosTop);
-	glEnd();
+	DrawTextureRegion(&texture_constants::kNeedle, kNeedlePosLeft, kNeedlePosRight, kNeedlePosTop, kNeedlePosBot);
 }
 
-void GaugeRenderer::DrawRecommendationRange(RecommendationRange& rec_range) const {
-	DrawRecommendedVerticalSpeedRange(rec_range.min_vertical_speed, rec_range.max_vertical_speed, rec_range.recommended);
+void GaugeRenderer::DrawRecommendationRange(RecommendationRange* rec_range, bool recommended) const {
+	DrawRecommendedVerticalSpeedRange(rec_range->min_vertical_speed, rec_range->max_vertical_speed, recommended);
 }
 
-void GaugeRenderer::DrawRecommendedVerticalSpeedRange(double min_vert_speed, double max_vert_speed, bool recommended) const {
-	if (min_vert_speed > max_vert_speed) {
-		double min = min_vert_speed;
-		min_vert_speed = max_vert_speed;
-		max_vert_speed = min;
+void GaugeRenderer::DrawRecommendedVerticalSpeedRange(Velocity min_vertical, Velocity max_vertical, bool recommended) const {
+	if (min_vertical.to_feet_per_min() > max_vertical.to_feet_per_min()) {
+		Velocity min = min_vertical;
+		min_vertical = max_vertical;
+		max_vertical = min;
 	}
 
-	min_vert_speed = math_util::clampd(min_vert_speed, kMinVertSpeed_, kMaxVertSpeed_);
-	max_vert_speed = math_util::clampd(max_vert_speed, kMinVertSpeed_, kMaxVertSpeed_);
+	double min_vert = math_util::clampd(min_vertical.to_feet_per_min(), kMinVertSpeed_, kMaxVertSpeed_);
+	double max_vert = math_util::clampd(max_vertical.to_feet_per_min(), kMinVertSpeed_, kMaxVertSpeed_);
 
-	double start_angle = (min_vert_speed / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlAngleOffset_;
-	double stop_angle = (max_vert_speed / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlAngleOffset_;
+	double start_angle = (min_vert / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlAngleOffset_;
+	double stop_angle = (max_vert / kMaxVertSpeed_) * kMaxVSpeedDegrees - kGlAngleOffset_;
 
-	DrawRecommendationRangeStartStop(start_angle, stop_angle, recommended);
+	DrawRecommendationRangeStartStop(Angle(start_angle, Angle::AngleUnits::DEGREES), Angle(stop_angle, Angle::AngleUnits::DEGREES), recommended);
 }
 
-void GaugeRenderer::DrawRecommendationRangeStartStop(double start_angle, double stop_angle, bool recommended) const {
-	start_angle = math_util::clampd(start_angle, Angle::kMinDegrees_, Angle::kMaxDegrees_);
-	stop_angle = math_util::clampd(stop_angle, Angle::kMinDegrees_, Angle::kMaxDegrees_);
+void GaugeRenderer::DrawRecommendationRangeStartStop(Angle start, Angle stop, bool recommended) const {
+	double start_deg = math_util::clampd(start.to_degrees(), Angle::kMinDegrees_, Angle::kMaxDegrees_);
+	double stop_deg = math_util::clampd(stop.to_degrees(), Angle::kMinDegrees_, Angle::kMaxDegrees_);
 
-	if (start_angle < 0.0f)
-		start_angle += Angle::kMaxDegrees_;
+	if (start_deg < 0.0f)
+		start_deg += Angle::kMaxDegrees_;
 
-	if (stop_angle < 0.0f)
-		stop_angle += Angle::kMaxDegrees_;
+	if (stop_deg < 0.0f)
+		stop_deg += Angle::kMaxDegrees_;
 
-	DrawRecommendationRangeStartSweep(start_angle, stop_angle - start_angle, recommended);
+	DrawRecommendationRangeStartSweep(Angle(start_deg, Angle::AngleUnits::DEGREES), Angle(stop_deg - start_deg, Angle::AngleUnits::DEGREES), recommended);
 }
 
-void GaugeRenderer::DrawRecommendationRangeStartSweep(double start_angle, double sweep_angle, bool recommended) const {
-	start_angle = math_util::clampd(start_angle, Angle::kMinDegrees_, Angle::kMaxDegrees_);
-	sweep_angle = math_util::clampd(sweep_angle, Angle::kMinDegrees_, Angle::kMaxDegrees_);
+void GaugeRenderer::DrawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const {
+	double start_deg = math_util::clampd(start.to_degrees(), Angle::kMinDegrees_, Angle::kMaxDegrees_);
+	double sweep_deg = math_util::clampd(sweep.to_degrees(), Angle::kMinDegrees_, Angle::kMaxDegrees_);
 
-	if (start_angle < 0.0f)
-		start_angle += Angle::kMaxDegrees_;
+	if (start_deg < 0.0)
+		start_deg += Angle::kMaxDegrees_;
 
-	if (sweep_angle < 0.0f)
-		sweep_angle += Angle::kMaxDegrees_;
+	if (sweep_deg < 0.0)
+		sweep_deg += Angle::kMaxDegrees_;
 	
 	glPushMatrix();
 
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
 
-	if (recommended) {
-		glColor4f(0.141f, 0.647f, 0.059f, 1.0f);
-	}
-	else {
-		glColor4f(0.602f, 0.102f, 0.09f, 1.0f);
-	}
+	texture_constants::GlRgb8Color const * rec_range_color = recommended ? 
+		&texture_constants::kRecommendationRangePositive : &texture_constants::kRecommendationRangeNegative;
+
+	glColor4f(rec_range_color->red, rec_range_color->green, rec_range_color->blue, 1.0f);
 
 	glLoadIdentity();
 	glTranslatef(kGaugeCenterX, kGaugeCenterY, 0.0f);
-	gluPartialDisk(quadric_, kDiskInnerRadius_, kDiskOuterRadius_, kDiskSlices_, kDiskLoops_, start_angle, sweep_angle);
+	gluPartialDisk(quadric_, kDiskInnerRadius_, kDiskOuterRadius_, kDiskSlices_, kDiskLoops_, start_deg, sweep_deg);
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);

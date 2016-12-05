@@ -42,6 +42,7 @@ NOTES:
 static XPLMDataRef verticalSpeed = NULL;
 XPLMDataRef latitude_ref, longitude_ref, altitude_ref;
 XPLMDataRef heading_ahars_deg_ref, heading_true_north_deg_ref, heading_true_mag_deg_ref;
+XPLMDataRef true_airspeed_ref, ind_airspeed_ref;
 static XPLMDataRef	RED = NULL, GREEN = NULL, BLUE = NULL;
 
 static XPLMWindowID	gExampleGaugePanelDisplayWindow = NULL;
@@ -63,10 +64,10 @@ LLA user_ac_pos = { 43.0, -76.0, 10000.0, Angle::AngleUnits::DEGREES, Distance::
 //LLA intr_ac_pos_nw = { 43.362, -76.243, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 315.928
 
 /// Relative to test position
-LLA intr_ac_pos_ne = { 43.153, -75.790, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 44.072
-LLA intr_ac_pos_nw = { 43.153, -76.210, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 315.928
-LLA intr_ac_pos_se = { 42.846, -75.791, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 135.515
-LLA intr_ac_pos_sw = { 42.846, -76.209, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 224.485
+LLA intr_ac_pos_ne = { 43.153, -75.790, 11200.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 44.072
+LLA intr_ac_pos_nw = { 43.153, -76.210, 12100.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 315.928
+LLA intr_ac_pos_se = { 42.846, -75.791, 8900.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 135.515
+LLA intr_ac_pos_sw = { 42.846, -76.209, 7800.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 224.485
 
 LLA intr_ac_pos_n = {43.2, -76.0, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET};
 
@@ -86,9 +87,6 @@ concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft
 Transponder* transponder;
 
 Decider* decider;
-
-RecommendationRange pos_rec_range = {0.0, GaugeRenderer::kMaxVertSpeed_, true};
-RecommendationRange neg_rec_range = {GaugeRenderer::kMinVertSpeed_, 0.0, false};
 
 static void UpdateFromDataRefs();
 
@@ -130,21 +128,26 @@ static void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlag
 static int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
 void test() {
-	/*intruding_aircraft[test_intr_ne.id_] = &test_intr_ne;
+	intruding_aircraft[test_intr_ne.id_] = &test_intr_ne;
 	intruding_aircraft[test_intr_nw.id_] = &test_intr_nw;
 	intruding_aircraft[test_intr_sw.id_] = &test_intr_sw;
-	intruding_aircraft[test_intr_se.id_] = &test_intr_se;*/
+	intruding_aircraft[test_intr_se.id_] = &test_intr_se;
 	//intruding_aircraft[test_intr_n.id_] = &test_intr_n;
 
-	Angle bearing_ne = user_ac_pos.Bearing(&test_intr_ne.position_current_);
-	Angle bearing_nw = user_ac_pos.Bearing(&test_intr_nw.position_current_);
-	Angle bearing_se = user_ac_pos.Bearing(&test_intr_se.position_current_);
-	Angle bearing_sw = user_ac_pos.Bearing(&test_intr_sw.position_current_);
-	Angle bearing_n = user_ac_pos.Bearing(&test_intr_n.position_current_);
+	user_aircraft.lock_.lock();
 
-	char debug_str[128];
-	int size = snprintf(debug_str, 128, "ExampleGauge::test - bearings - n: %.3f, ne: %.3f, nw: %.3f, se: %.3f, sw: %.3f\n", bearing_n.to_degrees(), bearing_ne.to_degrees(), bearing_nw.to_degrees(), bearing_se.to_degrees(), bearing_sw.to_degrees());
-	XPLMDebugString(debug_str);
+	user_aircraft.heading_ = Angle::k0Degrees_;
+	user_aircraft.position_current_ = user_ac_pos;
+	user_aircraft.position_old_ = user_ac_pos;
+	user_aircraft.position_old_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+	user_aircraft.position_current_time_ = user_aircraft.position_old_time_;
+
+	user_aircraft.lock_.unlock();
+
+	test_intr_ne.threat_classification_ = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
+	test_intr_nw.threat_classification_ = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
+	test_intr_se.threat_classification_ = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
+	test_intr_sw.threat_classification_ = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 }
 
 PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
@@ -175,7 +178,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	XPLMRegisterDrawCallback(ExampleGaugeDrawCallback, xplm_Phase_Gauges, 0, NULL);
 
 	/// Create our window, setup datarefs and register our hotkey.
-	gExampleGaugePanelDisplayWindow = XPLMCreateWindow(768, 256, 1024, 0, 1, ExampleGaugePanelWindowCallback, ExampleGaugePanelKeyCallback, ExampleGaugePanelMouseClickCallback, NULL);
+	gExampleGaugePanelDisplayWindow = XPLMCreateWindow(1024, 256, 1280, 0, 1, ExampleGaugePanelWindowCallback, ExampleGaugePanelKeyCallback, ExampleGaugePanelMouseClickCallback, NULL);
 
 	verticalSpeed = XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot");
 
@@ -186,6 +189,9 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	heading_ahars_deg_ref = XPLMFindDataRef("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot");
 	heading_true_mag_deg_ref = XPLMFindDataRef("sim/flightmodel/position/mag_psi");
 	heading_true_north_deg_ref = XPLMFindDataRef("sim/flightmodel/position/true_psi");
+
+	true_airspeed_ref = XPLMFindDataRef("sim/flightmodel/position/airspeed_true");
+	ind_airspeed_ref = XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed");
 
 	RED = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_r");
 	GREEN = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
@@ -216,7 +222,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	decider = new Decider(&user_aircraft, &intruding_aircraft);
 
 	// Load the textures and bind them etc.
-	gauge_renderer = new GaugeRenderer(gPluginDataFile, &user_aircraft, &intruding_aircraft);
+	gauge_renderer = new GaugeRenderer(gPluginDataFile, decider, &user_aircraft, &intruding_aircraft);
 	gauge_renderer->LoadTextures();
 
 	// start broadcasting location, and listening for aircraft
@@ -260,11 +266,13 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 
 		user_aircraft.position_old_ = user_aircraft.position_current_;
 		user_aircraft.position_old_time_ = user_aircraft.position_current_time_;
+
 		user_aircraft.position_current_ = updated;
+		user_aircraft.position_current_time_ = ms_since_epoch;
 
 		user_aircraft.vertical_velocity_ = updated_vvel;
-		user_aircraft.heading_ = Angle(XPLMGetDataf(heading_true_north_deg_ref), Angle::AngleUnits::DEGREES);
-		user_aircraft.position_current_time_ = ms_since_epoch;
+		user_aircraft.heading_ = Angle(XPLMGetDataf(heading_true_mag_deg_ref), Angle::AngleUnits::DEGREES);
+		user_aircraft.true_airspeed_ = Velocity(XPLMGetDataf(true_airspeed_ref), Velocity::VelocityUnits::METERS_PER_S);
 
 		user_aircraft.lock_.unlock();
 
@@ -333,8 +341,8 @@ void ExampleGaugeHotKey(void * refCon) {
 
 /// Draws the textures that make up the gauge
 void DrawGLScene() {
-	float rgb[3] = { XPLMGetDataf(RED), XPLMGetDataf(GREEN), XPLMGetDataf(BLUE) };
-	gauge_renderer->Render(rgb, NULL, NULL);
+	texture_constants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(RED), XPLMGetDataf(GREEN), XPLMGetDataf(BLUE) };
+	gauge_renderer->Render(cockpit_lighting);
 }
 
 /* This callback does the work of drawing our window once per sim cycle each time
@@ -366,14 +374,10 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	snprintf(position_buf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitude_ref), XPLMGetDataf(longitude_ref), XPLMGetDataf(altitude_ref));
 	XPLMDrawString(color, left + 5, top - 20, position_buf, NULL, xplmFont_Basic);
 
-	char heading_vals[128];
-	snprintf(heading_vals, 128, "Headings - ahars: %.3f, true_mag: %.3f, true_north: %.3f", XPLMGetDataf(heading_ahars_deg_ref), XPLMGetDataf(heading_true_mag_deg_ref), XPLMGetDataf(heading_true_north_deg_ref));
-	XPLMDrawString(color, left + 5, top - 40, heading_vals, NULL, xplmFont_Basic);
-
 	/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>::const_iterator & iter = intruding_aircraft.cbegin();
-	int offset = 60;
-	char buff[128];
+	int offset = 40;
+	char buff[64];
 
 	for (; iter != intruding_aircraft.cend(); ++iter) {
 		Aircraft* intruder = iter -> second;
@@ -382,7 +386,7 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 		LLA const intruder_pos = intruder -> position_current_;
 		intruder->lock_.unlock();
 
-		snprintf(buff, 128, "latitude: %f, longitude: %f", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees());
+		snprintf(buff, 64, "intr_pos: (%.3f, %.3f)", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees());
 		XPLMDrawString(color, left + 5, top - offset, (char*)buff, NULL, xplmFont_Basic);
 		offset += 20;
 	}
@@ -441,10 +445,4 @@ void UpdateFromDataRefs() {
 
 	/*The longitude of this aircraft: double, degrees*/
 	lonREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
-
-	/*The latitude of the intruder aircraft: double, degrees*/
-	//I_latREF = (float)intruding_aircraft["intruder"]->position_.latitude_.to_degrees();
-
-	/*The longitude of the intruder aircraft: double, degrees*/
-	//I_lonREF = (float)intruding_aircraft["intruder"]-> position_.longitude_.to_degrees();
 }

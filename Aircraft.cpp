@@ -1,9 +1,10 @@
 #include "Aircraft.h"
 
-Aircraft::Aircraft(std::string const id) : id_(id), heading_(Angle::ZERO), vertical_velocity_(Velocity::ZERO) {}
+Aircraft::Aircraft(std::string const id) : id_(id), heading_(Angle::ZERO), vertical_velocity_(Velocity::ZERO), true_airspeed_(Velocity::ZERO) {}
 
 Aircraft::Aircraft(std::string const id, LLA position, Angle heading, Velocity vert_vel) : 
-	id_(id), position_current_(position), position_old_(position), heading_(heading), vertical_velocity_(vert_vel), threat_classification_(ThreatClassification::NON_THREAT_TRAFFIC) {}
+	id_(id), position_current_(position), position_old_(position), heading_(heading), vertical_velocity_(vert_vel), 
+	threat_classification_(ThreatClassification::NON_THREAT_TRAFFIC), true_airspeed_(Velocity::ZERO) {}
 
 Angle Aircraft::VelocityToBearing(Vec2 const * const velocity){
 	Vec2 vel_nor = velocity->nor();

@@ -38,6 +38,7 @@ public:
 
 	// The rate of change of the altitude
 	Velocity vertical_velocity_;
+	Velocity true_airspeed_;
 	Angle heading_;
 
 	ThreatClassification threat_classification_;

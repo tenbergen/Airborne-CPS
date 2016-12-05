@@ -92,9 +92,9 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 	}
 
-	char debug_buf[256];
+	/*char debug_buf[256];
 	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currentSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
-	XPLMDebugString(debug_buf);
+	XPLMDebugString(debug_buf);*/
 
 	intruder->lock_.lock();
 	intruder->threat_classification_ = threat_class;

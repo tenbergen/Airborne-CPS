@@ -1,7 +1,10 @@
 #pragma once
 
+#include "Velocity.h"
+
 typedef struct RecommendationRange {
-	double min_vertical_speed;
-	double max_vertical_speed;
-	bool recommended;
+	/// Default RecommendationRange to have invalid/not set values
+	Velocity min_vertical_speed = Velocity::ZERO;
+	Velocity max_vertical_speed = Velocity::ZERO;
+	bool valid = false;
 } RecommendationRange;

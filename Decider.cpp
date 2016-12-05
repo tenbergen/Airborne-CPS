@@ -1,5 +1,4 @@
 #include "Decider.h"
-#include "Distance.h"
 
 Distance const Decider::kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUnits::NMI };
 
@@ -95,6 +94,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 Decider::Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, double inVV, double slantRangeTau) {
 	double verticalRateDelta = 1500;
 	double minVertSep = 3000;
+	Decider::Sense sense;
 	double taVertProj = taVV * slantRangeTau;
 	double inVertProj = inVV * slantRangeTau;
 	double taClimbProj = (taVV + verticalRateDelta) * slantRangeTau;
@@ -102,23 +102,24 @@ Decider::Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, 
 
 	if (abs(taClimbProj - inVertProj) >= abs(taDescProj - inVertProj)) {
 		if (taCurrAlt < inVertProj && taClimbProj > inVertProj) {
-			if (inVertProj - taDescProj >= minVertSep) { return DOWNWARD; }
-		} else { return UPWARD; }
+			if (inVertProj - taDescProj >= minVertSep) { sense = DOWNWARD; }
+		} else { sense = UPWARD; }
 	} else if (abs(taClimbProj - inVertProj) < abs(taDescProj - inVertProj)) {
 		if (taCurrAlt > inVertProj && taDescProj < inVertProj) {
-			if (taClimbProj - inVertProj >= minVertSep) { return UPWARD; }
-		} else { return DOWNWARD; }
-	} else {
-		return MAINTAIN;
-	}
+			if (taClimbProj - inVertProj >= minVertSep) { sense = UPWARD; }
+		} else { sense = DOWNWARD; }
+	} 
+	return sense;
 }
 
-Decider::Strength Decider::DetermineStrength(Sense s) {
-	if (s = UPWARD) {
-		return CLIMB;
-	} else if (s = DOWNWARD) {
-		return CROSSING_CLIMB;
+Decider::Strength Decider::DetermineStrength(Sense sense) {
+	Decider::Strength strength;
+	if (sense = UPWARD) {
+		strength = CLIMB;
+	} else if (sense = DOWNWARD) {
+		strength = DESCEND;
 	}
+	return strength;
 }
 
 double Decider::ToMinutes(std::chrono::milliseconds time) {

@@ -80,12 +80,12 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	} else {
 		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 	}
-
-	/*char debug_buf[256];
-	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currentSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
-	XPLMDebugString(debug_buf);*/
+	char debug_buf[256];
+	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
+	XPLMDebugString(debug_buf);
 
 	Sense sense = Decider::DetermineResolutionSense(taCurrAltitude, taVerticalVelocity, inVerticalVelocity, slantRangeTau);
+	Strength strength = Decider::DetermineStrength(sense, slantRangeTau);
 
 	intruder->lock_.lock();
 	intruder->threat_classification_ = threat_class;
@@ -95,7 +95,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 Decider::Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, double inVV, double slantRangeTau) {
 	double verticalRateDelta = 1500;
 	double minVertSep = 3000;
-	Decider::Sense sense;
+	Sense sense;
 	double taVertProj = taVV * slantRangeTau;
 	double inVertProj = inVV * slantRangeTau;
 	double taClimbProj = (taVV + verticalRateDelta) * slantRangeTau;
@@ -109,23 +109,28 @@ Decider::Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, 
 		if (taCurrAlt > inVertProj && taDescProj < inVertProj) {
 			if (taClimbProj - inVertProj >= minVertSep) { sense = UPWARD; }
 		} else { sense = DOWNWARD; }
-	} 
+	} else {
+		sense = MAINTAIN;
+	}
 	return sense;
 }
 
-Decider::Strength Decider::DetermineStrength(Sense sense) {
-	Decider::Strength strength;
+Decider::Strength Decider::DetermineStrength(Sense sense, double slantRangeTau) {
+	Strength strength;
 	if (sense = UPWARD) {
-		strength = CLIMB;
+		if (slantRangeTau > 30) { strength = MAINTAIN_CLIMB; } //climb+
+		else if (slantRangeTau < 30) { strength = CLIMB; }  //climb++
+
 	} else if (sense = DOWNWARD) {
-		strength = DESCEND;
+		if (slantRangeTau > 30) { strength = MAINTAIN_DESCEND; } //descend-
+		else if (slantRangeTau < 30) { strength = DESCEND; } //descend--	
 	}
 	return strength;
 }
 
 double Decider::ToMinutes(std::chrono::milliseconds time) {
 	long long result1 = time.count();
-	double result2 = result1 / 60000;
+	double result2 = (double)(result1 / 60000);
 	return result2;
 }
 
@@ -137,7 +142,7 @@ double Decider::CalculateVerticalSeparation(double thisAircraftsAltitude, double
 	return abs(thisAircraftsAltitude - intrudersAltitude);
 }
 
-double Decider::CalculateRate(double separation1, double separation2, time_t elapsedTime) {
+double Decider::CalculateRate(double separation1, double separation2, double elapsedTime) {
 	return ((separation2 - separation1) / elapsedTime);
 }
 
@@ -149,6 +154,6 @@ double Decider::CalculateSlantRange(double horizontalSeparation, double vertical
 	return sqrt((pow(horizontalSeparation, 2) + pow(verticalSeparation, 2)));
 }
 
-double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t elapsedTime) {
+double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, double elapsedTime) {
 	return sqrt((pow(horizontalRate, 2) + pow(verticalRate, 2))) / elapsedTime;
 }

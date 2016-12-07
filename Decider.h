@@ -5,6 +5,7 @@
 #include <map>
 #include <concurrent_unordered_map.h>
 #include "Distance.h"
+#include "RecommendationRange.h"
 
 class Decider {
 public:
@@ -15,6 +16,10 @@ public:
 		CLIMB, MAINTAIN_CLIMB, DO_NOT_DESCEND_500, DO_NOT_DESCEND_1000, DO_NOT_DESCEND_2000,
 		DESCEND, MAINTAIN_DESCEND, DO_NOT_CLIMB_500, DO_NOT_CLIMB_1000, DO_NOT_CLIMB_2000
 	};
+
+	std::mutex recommendation_range_lock_;
+	RecommendationRange positive_recommendation_range_;
+	RecommendationRange negative_recommendation_range_;
 
 private:
 	static Distance const kProtectionVolumeRadius_;

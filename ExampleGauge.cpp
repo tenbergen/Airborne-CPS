@@ -73,13 +73,13 @@ LLA intr_ac_pos_n = {43.2, -76.0, 10000.0, Angle::AngleUnits::DEGREES, Distance:
 
 Velocity test_vvel = {1000.0, Velocity::VelocityUnits::FEET_PER_MIN};
 
-Aircraft user_aircraft = {"user", user_ac_pos, Angle::ZERO, test_vvel};
+Aircraft user_aircraft = {"user", "127.0.0.1", user_ac_pos, Angle::ZERO, test_vvel};
 
-Aircraft test_intr_ne = { "intruder_ne", intr_ac_pos_ne, Angle::ZERO, test_vvel };
-Aircraft test_intr_nw = { "intruder_nw", intr_ac_pos_nw, Angle::ZERO, test_vvel };
-Aircraft test_intr_se = { "intruder_se", intr_ac_pos_se, Angle::ZERO, test_vvel };
-Aircraft test_intr_sw = { "intruder_sw", intr_ac_pos_sw, Angle::ZERO, test_vvel };
-Aircraft test_intr_n = {"intruder_n", intr_ac_pos_n, Angle::ZERO, test_vvel};
+Aircraft test_intr_ne = { "intruder_ne", "192.168.1.1", intr_ac_pos_ne, Angle::ZERO, test_vvel };
+Aircraft test_intr_nw = { "intruder_nw", "192.168.1.1", intr_ac_pos_nw, Angle::ZERO, test_vvel };
+Aircraft test_intr_se = { "intruder_se", "192.168.1.1", intr_ac_pos_se, Angle::ZERO, test_vvel };
+Aircraft test_intr_sw = { "intruder_sw", "192.168.1.1", intr_ac_pos_sw, Angle::ZERO, test_vvel };
+Aircraft test_intr_n = {"intruder_n", "192.168.1.1", intr_ac_pos_n, Angle::ZERO, test_vvel};
 
 GaugeRenderer* gauge_renderer;
 

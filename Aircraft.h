@@ -22,12 +22,13 @@ public:
 	*/
 	enum class ThreatClassification { NON_THREAT_TRAFFIC, PROXIMITY_INTRUDER_TRAFFIC, TRAFFIC_ADVISORY, RESOLUTION_ADVISORY };
 
-	Aircraft(std::string const id);
-	Aircraft(std::string const id, LLA position, Angle heading, Velocity vertical_velocity);
+	Aircraft(std::string const id, std::string const ip);
+	Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity vertical_velocity);
 
 	std::mutex lock_;
 
 	std::string const id_;
+	std::string const ip_;
 
 	/// Values that are updated via datarefs from xplane
 	std::chrono::milliseconds position_current_time_;

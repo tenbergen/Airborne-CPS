@@ -30,6 +30,8 @@ private:
 	static double const kGaugeInnerCircleRadiusPxls_;
 	static Distance const kGaugeInnerCircleRadius_;
 
+	static double const kMillisecondsPerSecond_;
+
 	/* Parameters for drawing the recommendation rings using GluPartialDisk */
 	static double const kDiskInnerRadius_;
 	static double const kDiskOuterRadius_;
@@ -80,7 +82,7 @@ private:
 	/* Draws the vertical speed indicator needle on the gauge from the supplied vertical velocity.*/
 	void DrawGaugeNeedle(Velocity const user_aircraft_vert_vel) const;
 	/*  */
-	void DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const;
+	void DrawIntrudingAircraft(LLA const * const intruder_pos, Velocity const * const intruder_vvel, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const;
 
 	/* Draws the supplied recommendation range. */
 	void DrawRecommendationRange(RecommendationRange* rec_range, bool recommended) const;

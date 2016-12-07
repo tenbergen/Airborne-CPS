@@ -137,7 +137,7 @@ double Decider::CalculateVerticalSeparation(double thisAircraftsAltitude, double
 	return abs(thisAircraftsAltitude - intrudersAltitude);
 }
 
-double Decider::CalculateRate(double separation1, double separation2, time_t elapsedTime) {
+double Decider::CalculateRate(double separation1, double separation2, double elapsedTime) {
 	return ((separation2 - separation1) / elapsedTime);
 }
 
@@ -149,6 +149,6 @@ double Decider::CalculateSlantRange(double horizontalSeparation, double vertical
 	return sqrt((pow(horizontalSeparation, 2) + pow(verticalSeparation, 2)));
 }
 
-double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t elapsedTime) {
+double Decider::CalculateSlantRangeRate(double horizontalRate, double verticalRate, double elapsedTime) {
 	return sqrt((pow(horizontalRate, 2) + pow(verticalRate, 2))) / elapsedTime;
 }

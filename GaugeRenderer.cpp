@@ -1,5 +1,7 @@
 #include "GaugeRenderer.h"
 
+const double GaugeRenderer::kMillisecondsPerSecond_ = 60000.0;
+
 const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 75.0;
 Distance const GaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::DistanceUnits::NMI };
 Distance const GaugeRenderer::kAircraftToGaugeCenterOffset_ { (28.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.to_feet() * 2.0, Distance::DistanceUnits::FEET};
@@ -144,13 +146,16 @@ void GaugeRenderer::Render(texture_constants::GlRgb8Color cockpit_lighting) {
 
 			intruder->lock_.lock();
 			LLA const intruder_pos = intruder->position_current_;
+			Distance const alt_diff = intruder_pos.altitude_ - intruder->position_old_.altitude_;
+			std::chrono::milliseconds const alt_time_diff = intruder->position_current_time_- intruder->position_old_time_;
 			Aircraft::ThreatClassification threat_class = intruder->threat_classification_;
 			intruder->lock_.unlock();
 
 			Distance range = gauge_center_pos.Range(&intruder_pos);
 
 			if (range.to_feet() < kGaugeInnerCircleRadius_.to_feet()) {
-				DrawIntrudingAircraft(&intruder_pos, &user_heading, &gauge_center_pos, &range, threat_class);
+				Velocity const intr_vvel = { (alt_diff.to_feet() / alt_time_diff.count()) * kMillisecondsPerSecond_, Velocity::VelocityUnits::FEET_PER_MIN };
+				DrawIntrudingAircraft(&intruder_pos, &intr_vvel, &user_heading, &gauge_center_pos, &range, threat_class);
 			}
 		}
 	}
@@ -166,7 +171,7 @@ void GaugeRenderer::Render(texture_constants::GlRgb8Color cockpit_lighting) {
 	glFlush();
 }
 
-void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const {
+void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Velocity const * const intruder_vvel, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const {
 	Angle bearing = gauge_center_pos->Bearing(intruder_pos);
 	double init_bearing = bearing.to_degrees();
 	bearing = bearing - *user_heading;
@@ -219,6 +224,10 @@ void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Angle 
 		alt_string_left = alt_string_right;
 		alt_string_right += 6.0;
 	}
+
+	texture_constants::TexCoords const * vvel_arrow_coords = intruder_vvel->to_feet_per_min() < 0.0 ? &texture_constants::kVertArrowDown : &texture_constants::kVertArrowUp;
+	// The vertical arrow is 5 px wide by 13 px tall; the arrow is usually? centered vertically wrt to the symbol so the arrow should be drawn some amount lower than the top of the symbol
+	DrawTextureRegion(vvel_arrow_coords, symbol_right, symbol_right + 5.0, symbol_top - 4.0, symbol_top - 17.0);
 
 	glColor3f(1.0f, 1.0f, 1.0f);
 }

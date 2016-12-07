@@ -26,10 +26,10 @@ private:
 	double raThreshold = 30.0; //seconds
 	void DetermineActionRequired(Aircraft* intruder);
 	double CalculateVerticalSeparation(double thisAircraftsAltitude, double intrudersAltitude);
-	double CalculateRate(double separation, double temp, time_t elapsedTime);
+	double CalculateRate(double separation, double temp, double elapsedTime);
 	double CalculateTau(double a, double b);
 	double CalculateSlantRange(double horizontalSeparation, double verticalSeparation);
-	double CalculateSlantRangeRate(double horizontalRate, double verticalRate, time_t elapsedTime);
+	double CalculateSlantRangeRate(double horizontalRate, double verticalRate, double elapsedTime);
 	double ToMinutes(std::chrono::milliseconds time);
 	double CalculateElapsedTime(double t1, double t2);
 	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,

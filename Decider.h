@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ResolutionConnection.h"
+
 #include "XPLMUtilities.h"
 #include "Aircraft.h"
 #include <map>
@@ -11,7 +13,6 @@ class Decider {
 public:
 	Decider(Aircraft* thisAircraft);
 	void Analyze(Aircraft* intruder);
-	enum Sense { UPWARD, DOWNWARD, MAINTAIN };
 	enum Strength {
 		CLIMB, MAINTAIN_CLIMB, DO_NOT_DESCEND_500, DO_NOT_DESCEND_1000, DO_NOT_DESCEND_2000,
 		DESCEND, MAINTAIN_DESCEND, DO_NOT_CLIMB_500, DO_NOT_CLIMB_1000, DO_NOT_CLIMB_2000
@@ -20,6 +21,7 @@ public:
 	std::mutex recommendation_range_lock_;
 	RecommendationRange positive_recommendation_range_;
 	RecommendationRange negative_recommendation_range_;
+	void testStart();
 
 private:
 	static Distance const kProtectionVolumeRadius_;
@@ -37,4 +39,5 @@ private:
 	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,
 		double intruderVerticalVelocity, double slantRangeTau);
 	Strength DetermineStrength(Sense s, double slantRangeTau);
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> active_connections;
 };

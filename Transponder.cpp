@@ -10,23 +10,45 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	decider_ = decider;
 	aircraft = ac;
 	intrudersMap = intruders;
-	myLocation.set_id(getHardwareAddress());
-	
-	sinlen = sizeof(struct sockaddr_in);
-	memset(&incoming, 0, sinlen);
-	inSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	incoming.sin_addr.s_addr = htonl(INADDR_ANY);
-	incoming.sin_port = htons(PORT);
-	incoming.sin_family = PF_INET;
-	bind(inSocket, (struct sockaddr *)&incoming, sinlen);
 
+	mac = getHardwareAddress();
+	myLocation.set_id(mac);
+	ip = getIpAddr();
+	myLocation.set_ip(ip.c_str());
+
+	sinlen = sizeof(struct sockaddr_in);
+	inSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (inSocket < 0) {
+		XPLMDebugString("failed to open socket to listen for locations\n");
+	} else {
+		createSocket(&inSocket, &incoming, INADDR_ANY, BROADCAST_PORT);
+	}
 	outSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	BOOL bOptVal = TRUE;
-	setsockopt(outSocket, SOL_SOCKET, SO_BROADCAST, (char *)&bOptVal, sizeof(int));
-	outgoing.sin_addr.s_addr = htonl(-1);
-	outgoing.sin_port = htons(PORT);
-	outgoing.sin_family = PF_INET;
-	bind(outSocket, (struct sockaddr *)&outgoing, sinlen);
+	if (outSocket < 0) {
+		XPLMDebugString("failed to open socket to broadcast location\n");
+	} else {
+		BOOL bOptVal = TRUE;
+		setsockopt(outSocket, SOL_SOCKET, SO_BROADCAST, (char *)&bOptVal, sizeof(int));
+		//createSocket(&outSocket, &outgoing, -1, BROADCAST_PORT);
+		outgoing.sin_addr.s_addr = htonl(-1);
+		outgoing.sin_port = htons(BROADCAST_PORT);
+		outgoing.sin_family = PF_INET;
+		bind(outSocket, (struct sockaddr*)&outgoing, sinlen);
+	}
+	
+}
+
+void Transponder::createSocket(SOCKET* s, struct sockaddr_in* socket_addr, int addr, int port)
+{
+	socket_addr->sin_addr.s_addr = htonl(addr);
+	socket_addr->sin_port = htons(port);
+	socket_addr->sin_family = AF_INET;
+	int bind_success = bind(*s, (struct sockaddr *)socket_addr, sinlen);
+	if (bind_success < 0) {
+		char the_error[32];
+		sprintf(the_error, "Transponder::Failed to bind: %d\n", GetLastError());
+		XPLMDebugString(the_error);
+	}
 }
 
 Transponder::~Transponder()
@@ -45,7 +67,7 @@ Transponder::~Transponder()
 	XPLMDebugString("Transponder::~Transponder - deleted");
 }
 
-DWORD Transponder::receive()
+DWORD Transponder::receiveLocation()
 {
 	char const * intruderID;
 	char const * myID;
@@ -53,7 +75,7 @@ DWORD Transponder::receive()
 	while (communication)
 	{
 		int size = myLocation.ByteSize();
-		char * buffer = (char *)malloc(size);
+		char* buffer = (char*)malloc(size);
 		myID = myLocation.id().c_str();
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
 
@@ -75,7 +97,7 @@ DWORD Transponder::receive()
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
 
 			if (!intruder) {
-				intruder = new Aircraft(intruderLocation.id());
+				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
 				allocated_aircraft.push_back(intruder);
 				
 				// Fill in the current values so that the aircraft will not have to wildly different position values
@@ -101,7 +123,7 @@ DWORD Transponder::receive()
 	return 0;
 }
 
-DWORD Transponder::send()
+DWORD Transponder::sendLocation()
 {
 	while (communication)
 	{
@@ -143,38 +165,109 @@ DWORD Transponder::keepalive()
 	return 0;
 }
 
-static DWORD WINAPI startBroadcasting(void* param)
+int Transponder::establishResolutionConnection(Aircraft& intruding_aircraft, char* port)
 {
-	Transponder* t = (Transponder*)param;
-	return t->send();
-}
+	int error;
+	//int size = open_connections.count(intruding_aircraft.id_);
+	//if (size == 0) {
+		SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		struct hostent* intruder_name= (struct hostent*)malloc(sizeof(struct hostent));
+		intruder_name = gethostbyname(intruding_aircraft.ip_.c_str());
+		if (intruder_name == NULL) {
+			XPLMDebugString("Error finding intruder's address while trying to establish a resolution connection\n");
+			return -1;
+		}
 
-static DWORD WINAPI startListening(void* param)
-{
-	Transponder* t = (Transponder*)param;
-	return t->receive();
-}
+		//struct addrinfo hints;
+		//struct addrinfo* result;
+		//struct addrinfo* ptr;
+		//memset(&hints, 0, sizeof(struct addrinfo));
+		//memset(&sock, 0, sizeof(SOCKET));
+		//hints.ai_family = AF_INET;
+		//hints.ai_socktype = SOCK_DGRAM;
+		//hints.ai_protocol = IPPROTO_UDP;
+		//
+		//getaddrinfo(intruding_aircraft.ip_.c_str(), NULL, &hints, &result);
+		//struct sockaddr_in  *sockaddr_ipv4;
+		//sockaddr_ipv4 = (struct sockaddr_in *) result->ai_addr;
+		//char something[256];
+		//sprintf(something, "\tIPv4 address %s\n", inet_ntoa(sockaddr_ipv4->sin_addr));
+		//XPLMDebugString(something);
+		//sockaddr_ipv4->sin_family = AF_INET;
+		//sockaddr_ipv4->sin_port = htons(CONTROLLER_PORT);
 
-static DWORD WINAPI startKeepAliveTimer(void* param)
-{
-	Transponder* t = (Transponder*)param;
-	return t->keepalive();
-}
 
-void Transponder::start()
-{
-	communication = 1;
-	DWORD ThreadID;
-	CreateThread(NULL, 0, startListening, (void*) this, 0, &ThreadID);
-	CreateThread(NULL, 0, startBroadcasting, (void*) this, 0, &ThreadID);
-	CreateThread(NULL, 0, startKeepAliveTimer, (void*) this, 0, &ThreadID);
+		struct sockaddr_in intruder_addr;
+		memset(&intruder_addr, 0, sizeof(struct sockaddr_in));
+		intruder_addr.sin_family = AF_INET;
+		memcpy((char*)&intruder_addr.sin_addr.s_addr, (char*)intruder_name->h_addr, intruder_name->h_length);
+
+		intruder_addr.sin_port = htons(CONTROLLER_PORT);
+		error = bind(sock, (struct sockaddr*)&intruder_addr, sizeof(intruder_addr));
+		//error = bind(sock, (struct sockaddr*)sockaddr_ipv4, sizeof(struct sockaddr_in));
+		if (error < 0) {
+			char the_error[256];
+			sprintf(the_error, "RC::bind error: %d\n", GetLastError());
+			XPLMDebugString(the_error);
+			closesocket(sock);
+			return -1;
+		}
+		int intruderlen = sizeof(intruder_addr);
+		//char host[NI_MAXHOST];
+		//unsigned char buf[sizeof(struct in6_addr)];
+		//if (getnameinfo((struct sockaddr*)&intruder_addr, intruderlen, host, 32, NULL, 0, 0) != 0) {
+		//	char the_error[256];
+		//	sprintf(the_error, "RC::getnameinfo error: %d\n", GetLastError());
+		//	XPLMDebugString(the_error);
+		//	closesocket(sock);
+		//	return -1;
+		//}
+		//if (InetPton(AF_INET, intruding_aircraft.ip_.c_str(), buf) < 0) {
+		//	char the_error[256];
+		//	sprintf(the_error, "RC::IP translation error: %d\n", GetLastError());
+		//	XPLMDebugString(the_error);
+		//	closesocket(sock);
+		//	return -1;
+		//}
+		//if (InetNtop(AF_INET, buf, host, NI_MAXHOST) < 0) {
+		//	char the_error[256];
+		//	sprintf(the_error, "RC::IP error: %d\n", GetLastError());
+		//	XPLMDebugString(the_error);
+		//	closesocket(sock);
+		//	return -1;
+		//}
+		//XPLMDebugString(host);
+
+		error = sendto(sock, mac.c_str(), MAC_LENGTH, 0, (struct sockaddr*)&intruder_addr, sizeof(struct sockaddr_in));
+		if (error < 0) {
+			char the_error[256];
+			sprintf(the_error, "RC::sendto error: %d\n", GetLastError());
+			XPLMDebugString(the_error);
+			closesocket(sock);
+			return -1;
+		}
+		char connection_port[PORT_LENGTH];
+		error = recvfrom(sock, connection_port, PORT_LENGTH, 0, (struct sockaddr*)&intruder_addr, &intruderlen);
+		if (error < 0) {
+			char the_error[256];
+			sprintf(the_error, "RC::recvfrom error: %d\n", GetLastError());
+			XPLMDebugString(the_error);
+			closesocket(sock);
+			return -1;
+		}
+		port = connection_port;
+		closesocket(sock);
+		return 0;
+	//} else {
+	//	return size;
+	//}
 }
 
 std::string Transponder::getHardwareAddress()
 {
 	std::string hardware_address{};
 	IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
-	char mac_addr[18];
+	char mac_addr[MAC_LENGTH];
 
 	DWORD dwRetVal;
 	ULONG outBufLen = sizeof(IP_ADAPTER_INFO);
@@ -202,4 +295,66 @@ std::string Transponder::getHardwareAddress()
 
 	free(pAdapterInfo);
 	return hardware_address;
+}
+
+std::string Transponder::getIpAddr()
+{
+	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+	std::string googleDnsIp = "8.8.8.8";
+	uint16_t dnsPort = 53;
+	struct sockaddr_in server;
+	memset(&server, 0, sizeof(server));
+	server.sin_family = AF_INET;
+	InetPton(AF_INET, googleDnsIp.c_str(), &server.sin_addr.s_addr);
+	server.sin_port = htons(dnsPort);
+	
+	int result;
+	result = connect(sock, (const sockaddr*)&server, sizeof(server));
+	if (result == SOCKET_ERROR) {
+		XPLMDebugString("unable to connect to \"8.8.8.8\"\n");
+		closesocket(sock);
+		return "error";
+	}
+	
+	sockaddr_in name;
+	int namelen = sizeof(name);
+	char addr[16];
+	result = getsockname(sock, (sockaddr*)&name, (int*)&namelen);
+	if (result == SOCKET_ERROR) {
+		XPLMDebugString("count not get socket info\n");
+		closesocket(sock);
+		return "error";
+	}
+	InetNtop(AF_INET, &name.sin_addr.s_addr, addr, 16);
+	closesocket(sock);
+	std::string ip(addr);
+	return ip;
+}
+
+static DWORD WINAPI startBroadcasting(void* param)
+{
+	Transponder* t = (Transponder*)param;
+	return t->sendLocation();
+}
+
+static DWORD WINAPI startListening(void* param)
+{
+	Transponder* t = (Transponder*)param;
+	return t->receiveLocation();
+}
+
+static DWORD WINAPI startKeepAliveTimer(void* param)
+{
+	Transponder* t = (Transponder*)param;
+	return t->keepalive();
+}
+
+void Transponder::start()
+{
+	communication = 1;
+	DWORD ThreadID;
+	CreateThread(NULL, 0, startListening, (void*) this, 0, &ThreadID);
+	CreateThread(NULL, 0, startBroadcasting, (void*) this, 0, &ThreadID);
+	CreateThread(NULL, 0, startKeepAliveTimer, (void*) this, 0, &ThreadID);
+	decider_->testStart();
 }

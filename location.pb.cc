@@ -36,8 +36,9 @@ void protobuf_AssignDesc_location_2eproto() {
       "location.proto");
   GOOGLE_CHECK(file != NULL);
   Location_descriptor_ = file->message_type(0);
-  static const int Location_offsets_[4] = {
+  static const int Location_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Location, id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Location, ip_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Location, lat_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Location, lon_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Location, alt_),
@@ -94,9 +95,9 @@ void protobuf_AddDesc_location_2eproto_impl() {
 
   protobuf_InitDefaults_location_2eproto();
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\016location.proto\022\006xplane\"=\n\010Location\022\n\n\002"
-    "id\030\001 \001(\t\022\013\n\003lat\030\002 \001(\001\022\013\n\003lon\030\003 \001(\001\022\013\n\003al"
-    "t\030\004 \001(\001b\006proto3", 95);
+    "\n\016location.proto\022\006xplane\"I\n\010Location\022\n\n\002"
+    "id\030\001 \001(\t\022\n\n\002ip\030\002 \001(\t\022\013\n\003lat\030\003 \001(\001\022\013\n\003lon"
+    "\030\004 \001(\001\022\013\n\003alt\030\005 \001(\001b\006proto3", 107);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "location.proto", &protobuf_RegisterTypes);
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_location_2eproto);
@@ -128,6 +129,7 @@ static void MergeFromFail(int line) {
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
 const int Location::kIdFieldNumber;
+const int Location::kIpFieldNumber;
 const int Location::kLatFieldNumber;
 const int Location::kLonFieldNumber;
 const int Location::kAltFieldNumber;
@@ -153,6 +155,7 @@ Location::Location(const Location& from)
 
 void Location::SharedCtor() {
   id_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  ip_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   ::memset(&lat_, 0, reinterpret_cast<char*>(&alt_) -
     reinterpret_cast<char*>(&lat_) + sizeof(alt_));
   _cached_size_ = 0;
@@ -165,6 +168,7 @@ Location::~Location() {
 
 void Location::SharedDtor() {
   id_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  ip_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
 
 void Location::SetCachedSize(int size) const {
@@ -212,6 +216,7 @@ void Location::Clear() {
 
   ZR_(lat_, alt_);
   id_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  ip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 
 #undef ZR_HELPER_
 #undef ZR_
@@ -240,13 +245,30 @@ bool Location::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(17)) goto parse_lat;
+        if (input->ExpectTag(18)) goto parse_ip;
         break;
       }
 
-      // optional double lat = 2;
+      // optional string ip = 2;
       case 2: {
-        if (tag == 17) {
+        if (tag == 18) {
+         parse_ip:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_ip()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->ip().data(), this->ip().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "xplane.Location.ip"));
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(25)) goto parse_lat;
+        break;
+      }
+
+      // optional double lat = 3;
+      case 3: {
+        if (tag == 25) {
          parse_lat:
 
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
@@ -255,13 +277,13 @@ bool Location::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(25)) goto parse_lon;
+        if (input->ExpectTag(33)) goto parse_lon;
         break;
       }
 
-      // optional double lon = 3;
-      case 3: {
-        if (tag == 25) {
+      // optional double lon = 4;
+      case 4: {
+        if (tag == 33) {
          parse_lon:
 
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
@@ -270,13 +292,13 @@ bool Location::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(33)) goto parse_alt;
+        if (input->ExpectTag(41)) goto parse_alt;
         break;
       }
 
-      // optional double alt = 4;
-      case 4: {
-        if (tag == 33) {
+      // optional double alt = 5;
+      case 5: {
+        if (tag == 41) {
          parse_alt:
 
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
@@ -323,19 +345,29 @@ void Location::SerializeWithCachedSizes(
       1, this->id(), output);
   }
 
-  // optional double lat = 2;
+  // optional string ip = 2;
+  if (this->ip().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->ip().data(), this->ip().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "xplane.Location.ip");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      2, this->ip(), output);
+  }
+
+  // optional double lat = 3;
   if (this->lat() != 0) {
-    ::google::protobuf::internal::WireFormatLite::WriteDouble(2, this->lat(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(3, this->lat(), output);
   }
 
-  // optional double lon = 3;
+  // optional double lon = 4;
   if (this->lon() != 0) {
-    ::google::protobuf::internal::WireFormatLite::WriteDouble(3, this->lon(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(4, this->lon(), output);
   }
 
-  // optional double alt = 4;
+  // optional double alt = 5;
   if (this->alt() != 0) {
-    ::google::protobuf::internal::WireFormatLite::WriteDouble(4, this->alt(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(5, this->alt(), output);
   }
 
   // @@protoc_insertion_point(serialize_end:xplane.Location)
@@ -356,19 +388,30 @@ void Location::SerializeWithCachedSizes(
         1, this->id(), target);
   }
 
-  // optional double lat = 2;
+  // optional string ip = 2;
+  if (this->ip().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->ip().data(), this->ip().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "xplane.Location.ip");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        2, this->ip(), target);
+  }
+
+  // optional double lat = 3;
   if (this->lat() != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(2, this->lat(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(3, this->lat(), target);
   }
 
-  // optional double lon = 3;
+  // optional double lon = 4;
   if (this->lon() != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(3, this->lon(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(4, this->lon(), target);
   }
 
-  // optional double alt = 4;
+  // optional double alt = 5;
   if (this->alt() != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(4, this->alt(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(5, this->alt(), target);
   }
 
   // @@protoc_insertion_point(serialize_to_array_end:xplane.Location)
@@ -386,17 +429,24 @@ size_t Location::ByteSizeLong() const {
         this->id());
   }
 
-  // optional double lat = 2;
+  // optional string ip = 2;
+  if (this->ip().size() > 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::StringSize(
+        this->ip());
+  }
+
+  // optional double lat = 3;
   if (this->lat() != 0) {
     total_size += 1 + 8;
   }
 
-  // optional double lon = 3;
+  // optional double lon = 4;
   if (this->lon() != 0) {
     total_size += 1 + 8;
   }
 
-  // optional double alt = 4;
+  // optional double alt = 5;
   if (this->alt() != 0) {
     total_size += 1 + 8;
   }
@@ -438,6 +488,10 @@ void Location::UnsafeMergeFrom(const Location& from) {
 
     id_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.id_);
   }
+  if (from.ip().size() > 0) {
+
+    ip_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.ip_);
+  }
   if (from.lat() != 0) {
     set_lat(from.lat());
   }
@@ -474,6 +528,7 @@ void Location::Swap(Location* other) {
 }
 void Location::InternalSwap(Location* other) {
   id_.Swap(&other->id_);
+  ip_.Swap(&other->ip_);
   std::swap(lat_, other->lat_);
   std::swap(lon_, other->lon_);
   std::swap(alt_, other->alt_);
@@ -536,7 +591,51 @@ void Location::set_allocated_id(::std::string* id) {
   // @@protoc_insertion_point(field_set_allocated:xplane.Location.id)
 }
 
-// optional double lat = 2;
+// optional string ip = 2;
+void Location::clear_ip() {
+  ip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+const ::std::string& Location::ip() const {
+  // @@protoc_insertion_point(field_get:xplane.Location.ip)
+  return ip_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void Location::set_ip(const ::std::string& value) {
+  
+  ip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:xplane.Location.ip)
+}
+void Location::set_ip(const char* value) {
+  
+  ip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:xplane.Location.ip)
+}
+void Location::set_ip(const char* value, size_t size) {
+  
+  ip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:xplane.Location.ip)
+}
+::std::string* Location::mutable_ip() {
+  
+  // @@protoc_insertion_point(field_mutable:xplane.Location.ip)
+  return ip_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* Location::release_ip() {
+  // @@protoc_insertion_point(field_release:xplane.Location.ip)
+  
+  return ip_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void Location::set_allocated_ip(::std::string* ip) {
+  if (ip != NULL) {
+    
+  } else {
+    
+  }
+  ip_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ip);
+  // @@protoc_insertion_point(field_set_allocated:xplane.Location.ip)
+}
+
+// optional double lat = 3;
 void Location::clear_lat() {
   lat_ = 0;
 }
@@ -550,7 +649,7 @@ void Location::set_lat(double value) {
   // @@protoc_insertion_point(field_set:xplane.Location.lat)
 }
 
-// optional double lon = 3;
+// optional double lon = 4;
 void Location::clear_lon() {
   lon_ = 0;
 }
@@ -564,7 +663,7 @@ void Location::set_lon(double value) {
   // @@protoc_insertion_point(field_set:xplane.Location.lon)
 }
 
-// optional double alt = 4;
+// optional double alt = 5;
 void Location::clear_alt() {
   alt_ = 0;
 }

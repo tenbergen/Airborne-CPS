@@ -115,21 +115,32 @@ class Location : public ::google::protobuf::Message /* @@protoc_insertion_point(
   ::std::string* release_id();
   void set_allocated_id(::std::string* id);
 
-  // optional double lat = 2;
+  // optional string ip = 2;
+  void clear_ip();
+  static const int kIpFieldNumber = 2;
+  const ::std::string& ip() const;
+  void set_ip(const ::std::string& value);
+  void set_ip(const char* value);
+  void set_ip(const char* value, size_t size);
+  ::std::string* mutable_ip();
+  ::std::string* release_ip();
+  void set_allocated_ip(::std::string* ip);
+
+  // optional double lat = 3;
   void clear_lat();
-  static const int kLatFieldNumber = 2;
+  static const int kLatFieldNumber = 3;
   double lat() const;
   void set_lat(double value);
 
-  // optional double lon = 3;
+  // optional double lon = 4;
   void clear_lon();
-  static const int kLonFieldNumber = 3;
+  static const int kLonFieldNumber = 4;
   double lon() const;
   void set_lon(double value);
 
-  // optional double alt = 4;
+  // optional double alt = 5;
   void clear_alt();
-  static const int kAltFieldNumber = 4;
+  static const int kAltFieldNumber = 5;
   double alt() const;
   void set_alt(double value);
 
@@ -138,6 +149,7 @@ class Location : public ::google::protobuf::Message /* @@protoc_insertion_point(
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   ::google::protobuf::internal::ArenaStringPtr id_;
+  ::google::protobuf::internal::ArenaStringPtr ip_;
   double lat_;
   double lon_;
   double alt_;
@@ -203,7 +215,51 @@ inline void Location::set_allocated_id(::std::string* id) {
   // @@protoc_insertion_point(field_set_allocated:xplane.Location.id)
 }
 
-// optional double lat = 2;
+// optional string ip = 2;
+inline void Location::clear_ip() {
+  ip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& Location::ip() const {
+  // @@protoc_insertion_point(field_get:xplane.Location.ip)
+  return ip_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void Location::set_ip(const ::std::string& value) {
+  
+  ip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:xplane.Location.ip)
+}
+inline void Location::set_ip(const char* value) {
+  
+  ip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:xplane.Location.ip)
+}
+inline void Location::set_ip(const char* value, size_t size) {
+  
+  ip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:xplane.Location.ip)
+}
+inline ::std::string* Location::mutable_ip() {
+  
+  // @@protoc_insertion_point(field_mutable:xplane.Location.ip)
+  return ip_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* Location::release_ip() {
+  // @@protoc_insertion_point(field_release:xplane.Location.ip)
+  
+  return ip_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void Location::set_allocated_ip(::std::string* ip) {
+  if (ip != NULL) {
+    
+  } else {
+    
+  }
+  ip_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ip);
+  // @@protoc_insertion_point(field_set_allocated:xplane.Location.ip)
+}
+
+// optional double lat = 3;
 inline void Location::clear_lat() {
   lat_ = 0;
 }
@@ -217,7 +273,7 @@ inline void Location::set_lat(double value) {
   // @@protoc_insertion_point(field_set:xplane.Location.lat)
 }
 
-// optional double lon = 3;
+// optional double lon = 4;
 inline void Location::clear_lon() {
   lon_ = 0;
 }
@@ -231,7 +287,7 @@ inline void Location::set_lon(double value) {
   // @@protoc_insertion_point(field_set:xplane.Location.lon)
 }
 
-// optional double alt = 4;
+// optional double alt = 5;
 inline void Location::clear_alt() {
   alt_ = 0;
 }

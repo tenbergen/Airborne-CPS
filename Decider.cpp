@@ -4,6 +4,12 @@ Distance const Decider::kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUni
 
 Decider::Decider(Aircraft* this_Aircraft) : thisAircraft_(this_Aircraft) {}
 
+void Decider::testStart()
+{
+	ResolutionConnection* rc = new ResolutionConnection(thisAircraft_->id_);
+	rc->start();
+}
+
 void Decider::Analyze(Aircraft* intruder) {
 	/*char debug_buf[128];
 	snprintf(debug_buf, 128, "Decider::Analyze - intruder_id: %s\n", intruder->id_.c_str());
@@ -70,6 +76,21 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	Aircraft::ThreatClassification threat_class;
 
 	if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
+		ResolutionConnection* connection = active_connections[intruder->id_];
+		Sense s = Sense::UPWARD;
+		if (connection) {
+			connection->sendSense(s);
+		} else {
+			connection = new ResolutionConnection(intruder->id_);
+			active_connections[intruder->id_] = connection;
+			int port = connection->connectToIntruder(intruder->ip_);
+			int error = connection->establishConnection(intruder->ip_, port);
+			if (error < 0) {
+				char the_error[32];
+				sprintf(the_error, "DECIDER::unable to establish tcp connection: %d\n", error * -1);
+				XPLMDebugString(the_error);
+			}
+		}
 		if (horizontalTau <= raThreshold && verticalTau <= raThreshold) {
 			threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 		} else if (horizontalTau <= taThreshold && verticalTau <= taThreshold) {
@@ -92,7 +113,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	intruder->lock_.unlock();
 }
 
-Decider::Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, double inVV, double slantRangeTau) {
+Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, double inVV, double slantRangeTau) {
 	double verticalRateDelta = 1500;
 	double minVertSep = 3000;
 	Sense sense;
@@ -103,25 +124,25 @@ Decider::Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, 
 
 	if (abs(taClimbProj - inVertProj) >= abs(taDescProj - inVertProj)) {
 		if (taCurrAlt < inVertProj && taClimbProj > inVertProj) {
-			if (inVertProj - taDescProj >= minVertSep) { sense = DOWNWARD; }
-		} else { sense = UPWARD; }
+			if (inVertProj - taDescProj >= minVertSep) { sense = Sense::DOWNWARD; }
+		} else { sense = Sense::UPWARD; }
 	} else if (abs(taClimbProj - inVertProj) < abs(taDescProj - inVertProj)) {
 		if (taCurrAlt > inVertProj && taDescProj < inVertProj) {
-			if (taClimbProj - inVertProj >= minVertSep) { sense = UPWARD; }
-		} else { sense = DOWNWARD; }
+			if (taClimbProj - inVertProj >= minVertSep) { sense = Sense::UPWARD; }
+		} else { sense = Sense::DOWNWARD; }
 	} else {
-		sense = MAINTAIN;
+		sense = Sense::MAINTAIN;
 	}
 	return sense;
 }
 
 Decider::Strength Decider::DetermineStrength(Sense sense, double slantRangeTau) {
 	Strength strength;
-	if (sense = UPWARD) {
+	if (sense == Sense::UPWARD) {
 		if (slantRangeTau > 30) { strength = MAINTAIN_CLIMB; } //climb+
 		else if (slantRangeTau < 30) { strength = CLIMB; }  //climb++
 
-	} else if (sense = DOWNWARD) {
+	} else if (sense == Sense::DOWNWARD) {
 		if (slantRangeTau > 30) { strength = MAINTAIN_DESCEND; } //descend-
 		else if (slantRangeTau < 30) { strength = DESCEND; } //descend--	
 	}

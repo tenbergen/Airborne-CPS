@@ -56,7 +56,7 @@ void ResolutionConnection::openNewConnectionReceiver(int port)
 	}
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_addr.s_addr = INADDR_ANY;
-	my_addr.sin_port = htons(21218);
+	my_addr.sin_port = htons(21217);
 	int bind_success = bind(listenSocket, (struct sockaddr*)&my_addr, sizeof(my_addr));
 	if (bind_success < 0) {
 		char the_error[32];
@@ -73,7 +73,7 @@ int ResolutionConnection::establishConnection(std::string ip, int port)
 	struct sockaddr_in dest;
 	memset(&dest, 0, sizeof dest);
 	dest.sin_family = AF_INET;
-	dest.sin_port = htons(21218);
+	dest.sin_port = htons(21217);
 	dest.sin_addr.s_addr = inet_addr(ip.c_str());
 
 	memset(&sendSocket, 0, sizeof sendSocket);
@@ -82,7 +82,9 @@ int ResolutionConnection::establishConnection(std::string ip, int port)
 	int result;
 	result = connect(sendSocket, (SOCKADDR*)&dest, sizeof(dest));
 	if (result == SOCKET_ERROR) {
-		XPLMDebugString("ResolutionConnection::establishConnection - unable to establish tcp connection\n");
+		char debug_buf[128];
+		snprintf(debug_buf, 128, "ResolutionConnection::establishConnection - unable to establish tcp connection - error: %d\n", GetLastError());
+		XPLMDebugString(debug_buf);
 		closesocket(sendSocket);
 		return GetLastError() * -1;
 	}
@@ -161,6 +163,7 @@ DWORD ResolutionConnection::senseSender()
 			closesocket(sendSocket);
 			return 0;
 		}
+		XPLMDebugString("ResolutionConnection::senseSender - received message: ");
 		XPLMDebugString(msg);
 		XPLMDebugString("\n");
 		if (strcmp(msg, "0") == 0) {

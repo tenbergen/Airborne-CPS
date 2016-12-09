@@ -75,7 +75,7 @@ DWORD ResolutionController::listenForRequests()
 			connection->openNewConnectionReceiver(TCP_PORT);
 		}
 
-		char* replyPort = "21218\0";
+		char* replyPort = "21217\0";
 		error = sendto(controllerSocket, replyPort, strlen(replyPort), 0, (struct sockaddr*)&controller_addr, sizeof controller_addr);
 		if (error < 0) {
 			char the_error[256];

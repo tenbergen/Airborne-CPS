@@ -14,7 +14,7 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	mac = getHardwareAddress();
 	myLocation.set_id(mac);
 	ip = getIpAddr();
-	myLocation.set_ip(ip.c_str());
+	myLocation.set_ip(ip);
 
 	sinlen = sizeof(struct sockaddr_in);
 	inSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -165,104 +165,6 @@ DWORD Transponder::keepalive()
 	return 0;
 }
 
-int Transponder::establishResolutionConnection(Aircraft& intruding_aircraft, char* port)
-{
-	int error;
-	//int size = open_connections.count(intruding_aircraft.id_);
-	//if (size == 0) {
-		SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-		struct hostent* intruder_name= (struct hostent*)malloc(sizeof(struct hostent));
-		intruder_name = gethostbyname(intruding_aircraft.ip_.c_str());
-		if (intruder_name == NULL) {
-			XPLMDebugString("Error finding intruder's address while trying to establish a resolution connection\n");
-			return -1;
-		}
-
-		//struct addrinfo hints;
-		//struct addrinfo* result;
-		//struct addrinfo* ptr;
-		//memset(&hints, 0, sizeof(struct addrinfo));
-		//memset(&sock, 0, sizeof(SOCKET));
-		//hints.ai_family = AF_INET;
-		//hints.ai_socktype = SOCK_DGRAM;
-		//hints.ai_protocol = IPPROTO_UDP;
-		//
-		//getaddrinfo(intruding_aircraft.ip_.c_str(), NULL, &hints, &result);
-		//struct sockaddr_in  *sockaddr_ipv4;
-		//sockaddr_ipv4 = (struct sockaddr_in *) result->ai_addr;
-		//char something[256];
-		//sprintf(something, "\tIPv4 address %s\n", inet_ntoa(sockaddr_ipv4->sin_addr));
-		//XPLMDebugString(something);
-		//sockaddr_ipv4->sin_family = AF_INET;
-		//sockaddr_ipv4->sin_port = htons(CONTROLLER_PORT);
-
-
-		struct sockaddr_in intruder_addr;
-		memset(&intruder_addr, 0, sizeof(struct sockaddr_in));
-		intruder_addr.sin_family = AF_INET;
-		memcpy((char*)&intruder_addr.sin_addr.s_addr, (char*)intruder_name->h_addr, intruder_name->h_length);
-
-		intruder_addr.sin_port = htons(CONTROLLER_PORT);
-		error = bind(sock, (struct sockaddr*)&intruder_addr, sizeof(intruder_addr));
-		//error = bind(sock, (struct sockaddr*)sockaddr_ipv4, sizeof(struct sockaddr_in));
-		if (error < 0) {
-			char the_error[256];
-			sprintf(the_error, "RC::bind error: %d\n", GetLastError());
-			XPLMDebugString(the_error);
-			closesocket(sock);
-			return -1;
-		}
-		int intruderlen = sizeof(intruder_addr);
-		//char host[NI_MAXHOST];
-		//unsigned char buf[sizeof(struct in6_addr)];
-		//if (getnameinfo((struct sockaddr*)&intruder_addr, intruderlen, host, 32, NULL, 0, 0) != 0) {
-		//	char the_error[256];
-		//	sprintf(the_error, "RC::getnameinfo error: %d\n", GetLastError());
-		//	XPLMDebugString(the_error);
-		//	closesocket(sock);
-		//	return -1;
-		//}
-		//if (InetPton(AF_INET, intruding_aircraft.ip_.c_str(), buf) < 0) {
-		//	char the_error[256];
-		//	sprintf(the_error, "RC::IP translation error: %d\n", GetLastError());
-		//	XPLMDebugString(the_error);
-		//	closesocket(sock);
-		//	return -1;
-		//}
-		//if (InetNtop(AF_INET, buf, host, NI_MAXHOST) < 0) {
-		//	char the_error[256];
-		//	sprintf(the_error, "RC::IP error: %d\n", GetLastError());
-		//	XPLMDebugString(the_error);
-		//	closesocket(sock);
-		//	return -1;
-		//}
-		//XPLMDebugString(host);
-
-		error = sendto(sock, mac.c_str(), MAC_LENGTH, 0, (struct sockaddr*)&intruder_addr, sizeof(struct sockaddr_in));
-		if (error < 0) {
-			char the_error[256];
-			sprintf(the_error, "RC::sendto error: %d\n", GetLastError());
-			XPLMDebugString(the_error);
-			closesocket(sock);
-			return -1;
-		}
-		char connection_port[PORT_LENGTH];
-		error = recvfrom(sock, connection_port, PORT_LENGTH, 0, (struct sockaddr*)&intruder_addr, &intruderlen);
-		if (error < 0) {
-			char the_error[256];
-			sprintf(the_error, "RC::recvfrom error: %d\n", GetLastError());
-			XPLMDebugString(the_error);
-			closesocket(sock);
-			return -1;
-		}
-		port = connection_port;
-		closesocket(sock);
-		return 0;
-	//} else {
-	//	return size;
-	//}
-}
-
 std::string Transponder::getHardwareAddress()
 {
 	std::string hardware_address{};
@@ -328,6 +230,7 @@ std::string Transponder::getIpAddr()
 	InetNtop(AF_INET, &name.sin_addr.s_addr, addr, 16);
 	closesocket(sock);
 	std::string ip(addr);
+	XPLMDebugString(ip.c_str());
 	return ip;
 }
 

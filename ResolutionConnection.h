@@ -6,7 +6,6 @@
 #endif
 
 #include <string>
-#include <atomic>
 #include "XPLMUtilities.h"
 #include "Sense.h"
 
@@ -20,17 +19,19 @@ public:
 	void sendSense(Sense);
 	ResolutionConnection(std::string);
 	~ResolutionConnection();
-	void start();
 	void openNewConnection(int);
 	int connectToIntruder(std::string);
-	DWORD senseListener(), resolutionController, listenForRequests();
+	DWORD senseListener();
 	int establishConnection(std::string,int);
 protected:
-	std::atomic<int> communication;
 	int isConnected;
 private:
 	std::string mac;
-	SOCKET listenSocket, sendSocket, controllerSocket;
-	struct sockaddr_in my_addr, intruder_addr, controller_addr;
+
+	SOCKET listenSocket;
+	SOCKET sendSocket;
+
+	struct sockaddr_in my_addr;
+	struct sockaddr_in intruder_addr;
 };
 

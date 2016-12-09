@@ -6,7 +6,7 @@ Decider::Decider(Aircraft* this_Aircraft) : thisAircraft_(this_Aircraft) {}
 
 void Decider::testStart()
 {
-	ResolutionConnection* rc = new ResolutionConnection(thisAircraft_->id_);
+	ResolutionController* rc = new ResolutionController(thisAircraft_->id_);
 	rc->start();
 }
 
@@ -74,9 +74,8 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double taVerticalVelocity = thisAircraft_->vertical_velocity_.to_feet_per_min();
 
 	Aircraft::ThreatClassification threat_class;
-
+	ResolutionConnection* connection = active_connections[intruder->id_];
 	if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
-		ResolutionConnection* connection = active_connections[intruder->id_];
 		Sense s = Sense::UPWARD;
 		if (connection) {
 			connection->sendSense(s);
@@ -100,6 +99,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		}
 	} else {
 		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
+		// TODO close something
 	}
 	char debug_buf[256];
 	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());

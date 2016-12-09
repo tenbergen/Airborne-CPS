@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ResolutionConnection.h"
+#include "ResolutionController.h"
 
 #include "XPLMUtilities.h"
 #include "Aircraft.h"

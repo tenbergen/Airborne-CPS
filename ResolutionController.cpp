@@ -60,14 +60,17 @@ DWORD ResolutionController::listenForRequests()
 		ResolutionConnection* existing_connection = (*active_connections)[mac_addr];
 		if (existing_connection) {
 			if (strcmp(mac.c_str(), mac_addr) > 0) {
-				existing_connection->openNewConnection(TCP_PORT);
+				XPLMDebugString("opening existing connection\n");
+				existing_connection->openNewConnectionSender(existing_connection->ip, TCP_PORT);
 			} else {
+				XPLMDebugString("continue\n");
 				continue;
 			}
 		} else {
+			XPLMDebugString("spawn new TCP Thread\n");
 			ResolutionConnection* connection = new ResolutionConnection(mac_addr);
 			(*active_connections)[mac_addr] = connection;
-			connection->openNewConnection(TCP_PORT);
+			connection->openNewConnectionReceiver(TCP_PORT);
 		}
 
 		char* replyPort = "21218\0";

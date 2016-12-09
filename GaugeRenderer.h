@@ -10,6 +10,7 @@
 #include "TextureConstants.hpp"
 #include "StringUtil.h"
 
+// @author nstemmle
 class GaugeRenderer
 {
 public:

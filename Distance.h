@@ -1,5 +1,6 @@
 #pragma once
 
+// @author nstemmle
 class Distance
 {
 public:

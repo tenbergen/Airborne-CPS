@@ -1,6 +1,8 @@
 #include "XPLMGraphics.h"
 
-/// Handle cross platform differences
+// @author nstemmle
+// This should be included in any file that needs to use opengl or XPlane drawing functions
+// handle cross platform differences
 #if IBM
 #include <gl\gl.h>
 #include <gl\glu.h>

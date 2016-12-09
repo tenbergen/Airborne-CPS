@@ -12,6 +12,11 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	intrudersMap = intruders;
 
 	mac = getHardwareAddress();
+
+	char debug_buf[64];
+	snprintf(debug_buf, 64, "Transponder::Transponder - mac_addr: %s\n", mac.c_str());
+	XPLMDebugString(debug_buf);
+
 	myLocation.set_id(mac);
 	ip = getIpAddr();
 	myLocation.set_ip(ip);
@@ -100,7 +105,7 @@ DWORD Transponder::receiveLocation()
 				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
 				allocated_aircraft.push_back(intruder);
 				
-				// Fill in the current values so that the aircraft will not have to wildly different position values
+				// Fill in the current values so that the aircraft will not have two wildly different position values
 				// If the position current is not set, position old will get set to LLA::ZERO while position current will
 				// be some real value, so setting the position current here prevents the LLAs from being radically different
 				intruder->position_current_ = updated_position;

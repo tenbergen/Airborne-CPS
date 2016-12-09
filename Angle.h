@@ -3,6 +3,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+// @author nstemmle
 class Angle
 {
 public:

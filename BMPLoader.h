@@ -7,10 +7,12 @@
 
 #include "XPLMUtilities.h"
 
+// @author nstemmle - original code was not written by me but modifications (added alpha channel support)
+// and refactoring changes were made by me
 class BmpLoader {
 
 public:
-/// These need to be aligned
+// These need to be aligned
 #pragma pack(push, ident, 2)
 	typedef struct tagBMPFILEHEADER
 	{

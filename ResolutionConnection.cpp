@@ -15,8 +15,10 @@ ResolutionConnection::~ResolutionConnection()
 	//	closesocket(s);
 	//	return;
 	//}
+	XPLMDebugString("ResolutionConnection::~ResolutionConnection called.\n");
 	closesocket(listenSocket);
 	closesocket(sendSocket);
+	XPLMDebugString("ResolutionConnection::~ResolutionConnection - sockets closed.\n");
 }
 
 
@@ -171,7 +173,7 @@ void ResolutionConnection::sendSense(Sense sense)
 {
 	if (isSender) {
 		int result;
-		char* sens = "GO_UP";
+		char* sens = "GO_DOWN";
 		result = send(sendSocket, sens, strlen(sens), 0);
 		if (result == SOCKET_ERROR) {
 			XPLMDebugString("SendSense::send failed\n");

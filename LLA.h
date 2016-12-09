@@ -7,6 +7,7 @@
 /* Representation of a latitude, longitude, and altitude triplet with latitude between [-90,90], with +90 corresponding to north,
 longitude between [-180, 180], with +180 corresponding to east, and altitude measured relative to mean sea level. */
 
+// @author nstemmle
 class LLA
 {
 public:

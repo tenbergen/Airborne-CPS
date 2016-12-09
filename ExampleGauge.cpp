@@ -41,16 +41,17 @@ NOTES:
 
 static XPLMDataRef verticalSpeed = NULL;
 XPLMDataRef latitude_ref, longitude_ref, altitude_ref;
-XPLMDataRef heading_ahars_deg_ref, heading_true_north_deg_ref, heading_true_mag_deg_ref;
+XPLMDataRef heading_true_north_deg_ref, heading_true_mag_deg_ref;
 XPLMDataRef true_airspeed_ref, ind_airspeed_ref;
-static XPLMDataRef	RED = NULL, GREEN = NULL, BLUE = NULL;
+
+// These datarefs are used
+static XPLMDataRef	cockpit_lighting_red = NULL, cockpit_lighting_green = NULL, cockpit_lighting_blue = NULL;
 
 static XPLMWindowID	gExampleGaugePanelDisplayWindow = NULL;
 static int ExampleGaugeDisplayPanelWindow = 1;
 static XPLMHotKeyID gExampleGaugeHotKey = NULL;
 
 static char gPluginDataFile[255];
-static float verticalSpeed1;
 
 Vec2 user_ac_vel = { 0.0, 1.0 };
 Vec2 intr_ac_vel = { -30.0, 30.0 };
@@ -87,8 +88,6 @@ concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft
 Transponder* transponder;
 
 Decider* decider;
-
-static void UpdateFromDataRefs();
 
 /// Used for dragging plugin panel window.
 static	int	CoordInRect(int x, int y, int l, int t, int r, int b);
@@ -169,8 +168,6 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	
 	//test();
 
-	UpdateFromDataRefs();
-
 	/* Now we create a window.  We pass in a rectangle in left, top, right, bottom screen coordinates.  We pass in three callbacks. */
 	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, MyDrawWindowCallback, MyHandleKeyCallback, MyHandleMouseClickCallback, NULL);
 
@@ -186,16 +183,15 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	longitude_ref = XPLMFindDataRef("sim/flightmodel/position/longitude");
 	altitude_ref = XPLMFindDataRef("sim/flightmodel/position/elevation");
 
-	heading_ahars_deg_ref = XPLMFindDataRef("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot");
 	heading_true_mag_deg_ref = XPLMFindDataRef("sim/flightmodel/position/mag_psi");
 	heading_true_north_deg_ref = XPLMFindDataRef("sim/flightmodel/position/true_psi");
 
 	true_airspeed_ref = XPLMFindDataRef("sim/flightmodel/position/airspeed_true");
 	ind_airspeed_ref = XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed");
 
-	RED = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_r");
-	GREEN = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
-	BLUE = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
+	cockpit_lighting_red = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_r");
+	cockpit_lighting_green = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
+	cockpit_lighting_blue = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag,   "F8",   ExampleGaugeHotKey, NULL);
 
@@ -216,8 +212,6 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 			intruding_aircraft.insert(where, std::make_pair(test_intruder.id_, &test_intruder));
 		}
 	*/
-
-	//UpdateFromDataRefs();
 
 	decider = new Decider(&user_aircraft);// , &intruding_aircraft);
 
@@ -341,7 +335,7 @@ void ExampleGaugeHotKey(void * refCon) {
 
 /// Draws the textures that make up the gauge
 void DrawGLScene() {
-	texture_constants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(RED), XPLMGetDataf(GREEN), XPLMGetDataf(BLUE) };
+	texture_constants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpit_lighting_red), XPLMGetDataf(cockpit_lighting_green), XPLMGetDataf(cockpit_lighting_blue) };
 	gauge_renderer->Render(cockpit_lighting);
 }
 
@@ -349,10 +343,10 @@ void DrawGLScene() {
 * it is needed.  It dynamically changes the text depending on the saved mouse
 * status.  Note that we don't have to tell X-Plane to redraw us when our text
 * changes; we are redrawn by the sim continuously. */
+// This function draws the window that is currently being used for debug text rendering
 void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int		left, top, right, bottom;
 	float	color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
-	UpdateFromDataRefs();
 
 	/* Getting the altitude from the dataref in X-Plane. This is just testing
 	* local initialization vs the global way.
@@ -413,36 +407,4 @@ int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseS
 	* out of our window's box as long as the click started in our window's
 	* box. */
 	return 1;
-}
-
-void UpdateFromDataRefs() {
-	/*The ground speed of the aircraft: float, meters/sec*/
-	groundSpeed = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/groundspeed"));
-
-	/*Relative bearing of each other plane in degrees for TCAS: float[20], degrees*/
-	tcasBearing = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_bearing_degs"));
-
-	/*Distance to each other plane in meters for TCAS: float[20], meters*/
-	tcasDistance = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_distance_mtrs"));
-
-	/*Relative altitude (positive means above us) for TCAS: float[20], meters*/
-	tcasAltitude = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/tcas/indicators/relative_altitude_mtrs"));
-
-	//Air speed indicated - this takes into account air density and wind direction.
-	indAirspeed = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed"));
-
-	//Air speed indicated - this takes into account air density and wind direction.
-	indAirspeed2 = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed2"));
-
-	//Air speed true - this does not take into account air density at altitude!
-	trueAirspeed = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/true_airspeed"));
-
-	/*Indicated vertical speed in feet per minute, pilot system: float, feet/minute*/
-	verticalSpeedData = XPLMGetDataf(XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot"));
-
-	/*The latitude of this aircraft: double, degrees*/
-	latREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
-
-	/*The longitude of this aircraft: double, degrees*/
-	lonREF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 }

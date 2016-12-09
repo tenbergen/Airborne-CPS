@@ -1,5 +1,6 @@
 #pragma once
 
+// @author nstemmle
 /* Constants that are specific to textures and their attributes.*/
 namespace texture_constants {
 	typedef struct TexCoords {

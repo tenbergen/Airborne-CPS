@@ -8,6 +8,7 @@
 #include "LLA.h"
 #include "Vec2.h"
 
+// @author nstemmle
 class Aircraft
 {
 public:
@@ -25,12 +26,14 @@ public:
 	Aircraft(std::string const id, std::string const ip);
 	Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity vertical_velocity);
 
-	std::mutex lock_;
-
 	std::string const id_;
 	std::string const ip_;
 
-	/// Values that are updated via datarefs from xplane
+	// Aircraft must be locked before getting or setting any values. Copies should be made of any relevant data and no pointers
+	// to fields should be used.
+	std::mutex lock_;
+
+	// Values that are updated via datarefs from xplane
 	std::chrono::milliseconds position_current_time_;
 	LLA position_current_;
 
@@ -39,6 +42,11 @@ public:
 
 	// The rate of change of the altitude
 	Velocity vertical_velocity_;
+	/* The true airspeed of the aircraft relative to the air mass around the craft
+	   This is only populated for the user's aircraft and is currently not used but might need to be used in decider calculations
+	   since the user's aircraft position is updated every time the plugins render method is called, which means the elapsed time
+	   will be extremely small.
+	*/
 	Velocity true_airspeed_;
 	Angle heading_;
 

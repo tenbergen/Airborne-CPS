@@ -3,6 +3,7 @@
 #include <atomic>
 #include <math.h>
 
+// @author nstemmle
 class Vec2
 {
 public:

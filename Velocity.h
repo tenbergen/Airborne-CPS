@@ -1,5 +1,6 @@
 #pragma once
 
+// @author nstemmle
 class Velocity
 {
 public:
@@ -17,6 +18,7 @@ public:
 	double to_feet_per_min() const;
 	double to_mph() const;
 	double to_meters_per_s() const;
+	// one knot equals 1 nmi/hr
 	double to_knots() const;
 
 	void operator = (Velocity const & that);

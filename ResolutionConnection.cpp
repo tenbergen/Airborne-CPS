@@ -3,6 +3,7 @@
 ResolutionConnection::ResolutionConnection(std::string mac_addr)
 {
 	mac = mac_addr;
+	isSender = 0;
 }
 
 ResolutionConnection::~ResolutionConnection()
@@ -14,7 +15,8 @@ ResolutionConnection::~ResolutionConnection()
 	//	closesocket(s);
 	//	return;
 	//}
-	//closesocket(s);
+	closesocket(listenSocket);
+	closesocket(sendSocket);
 }
 
 
@@ -34,7 +36,7 @@ void ResolutionConnection::openNewConnection(int port)
 	}
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_addr.s_addr = INADDR_ANY;
-	my_addr.sin_port = htons(port);
+	my_addr.sin_port = htons(21218);
 	int bind_success = bind(listenSocket, (struct sockaddr*)&my_addr, sizeof(my_addr));
 	if (bind_success < 0) {
 		char the_error[32];
@@ -82,8 +84,11 @@ DWORD ResolutionConnection::senseListener()
 	return 0;
 }
 
-int ResolutionConnection::connectToIntruder(std::string ip)
+int ResolutionConnection::contactIntruder(std::string ip)
 {
+	XPLMDebugString("attempting to connect to ");
+	XPLMDebugString(ip.c_str());
+
 	int error, port;
 	char replyPort[32];
 	SOCKET sock;
@@ -94,7 +99,7 @@ int ResolutionConnection::connectToIntruder(std::string ip)
 	memset(&dest, 0, sizeof dest);
 
 	local.sin_family = AF_INET;
-	local.sin_port = htons(CONTROLLER_PORT);
+	local.sin_port = htons(21299);
 	local.sin_addr.s_addr = INADDR_ANY;
 
 	dest.sin_family = AF_INET;
@@ -129,11 +134,13 @@ int ResolutionConnection::connectToIntruder(std::string ip)
 		XPLMDebugString(the_error);
 		return -1;
 	}
-	//local.sin_port = htons(CONTROLLER_PORT);
 
 	closesocket(sock);
 	
-	port = atoi(replyPort);	
+	port = atoi(replyPort);
+	char debug_info[128];
+	sprintf(debug_info, "recv port#%d\n", port);
+	XPLMDebugString(debug_info);
 	return port;
 }
 
@@ -143,7 +150,7 @@ int ResolutionConnection::establishConnection(std::string ip, int port)
 	struct sockaddr_in dest;
 	memset(&dest, 0, sizeof dest);
 	dest.sin_family = AF_INET;
-	dest.sin_port = htons(CONTROLLER_PORT);
+	dest.sin_port = htons(21218);
 	dest.sin_addr.s_addr = inet_addr(ip.c_str());
 
 	memset(&sendSocket, 0, sizeof sendSocket);
@@ -156,12 +163,13 @@ int ResolutionConnection::establishConnection(std::string ip, int port)
 		closesocket(sendSocket);
 		return GetLastError() * -1;
 	}
-	isConnected = 1;
+	isSender = 1;
+	return 0;
 }
 
 void ResolutionConnection::sendSense(Sense sense)
 {
-	if (isConnected) {
+	if (isSender) {
 		int result;
 		char* sens = "GO_UP";
 		result = send(sendSocket, sens, strlen(sens), 0);
@@ -171,6 +179,6 @@ void ResolutionConnection::sendSense(Sense sense)
 			return;
 		}
 	} else {
-		XPLMDebugString("ResolutionConnection::Trying to send sense without establishing connection");
+		XPLMDebugString("ResolutionConnection::Trying to send sense without establishing connection (or you're the receiver)\n");
 	}
 }

@@ -1,8 +1,9 @@
 #include "ResolutionController.h"
 
-ResolutionController::ResolutionController(std::string mac_addr)
+ResolutionController::ResolutionController(std::string mac_addr, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* map)
 {
 	mac = mac_addr;
+	active_connections = map;
 	controllerSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (controllerSocket < 0) {
 		XPLMDebugString("failed to open socket for resolution connections");
@@ -54,10 +55,22 @@ DWORD ResolutionController::listenForRequests()
 			XPLMDebugString(the_error);
 			break;
 		}
-		ResolutionConnection connection = { mac_addr };
-		connection.openNewConnection(TCP_PORT);
+		XPLMDebugString("recieved connection from ");
+		XPLMDebugString(mac_addr);
+		ResolutionConnection* existing_connection = (*active_connections)[mac_addr];
+		if (existing_connection) {
+			if (strcmp(mac.c_str(), mac_addr) > 0) {
+				existing_connection->openNewConnection(TCP_PORT);
+			} else {
+				continue;
+			}
+		} else {
+			ResolutionConnection* connection = new ResolutionConnection(mac_addr);
+			(*active_connections)[mac_addr] = connection;
+			connection->openNewConnection(TCP_PORT);
+		}
 
-		char* replyPort = "21218";
+		char* replyPort = "21218\0";
 		error = sendto(controllerSocket, replyPort, strlen(replyPort), 0, (struct sockaddr*)&controller_addr, sizeof controller_addr);
 		if (error < 0) {
 			char the_error[256];

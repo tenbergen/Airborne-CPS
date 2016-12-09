@@ -1,12 +1,13 @@
 #pragma once
 
 #include "ResolutionConnection.h"
+#include <concurrent_unordered_map.h>
 #include <atomic>
 
 class ResolutionController
 {
 public:
-	ResolutionController(std::string);
+	ResolutionController(std::string, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>*);
 	~ResolutionController();
 	void start();
 	DWORD listenForRequests();
@@ -16,5 +17,6 @@ private:
 	std::string mac;
 	SOCKET controllerSocket;
 	struct sockaddr_in controller_addr;
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* active_connections;
 };
 

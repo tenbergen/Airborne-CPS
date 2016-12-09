@@ -6,7 +6,7 @@ Decider::Decider(Aircraft* this_Aircraft) : thisAircraft_(this_Aircraft) {}
 
 void Decider::testStart()
 {
-	ResolutionController* rc = new ResolutionController(thisAircraft_->id_);
+	ResolutionController* rc = new ResolutionController(thisAircraft_->id_, &active_connections);
 	rc->start();
 }
 
@@ -82,7 +82,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		} else {
 			connection = new ResolutionConnection(intruder->id_);
 			active_connections[intruder->id_] = connection;
-			int port = connection->connectToIntruder(intruder->ip_);
+			int port = connection->contactIntruder(intruder->ip_);
 			int error = connection->establishConnection(intruder->ip_, port);
 			if (error < 0) {
 				char the_error[32];
@@ -99,7 +99,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		}
 	} else {
 		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
-		// TODO close something
+		delete connection;
 	}
 	char debug_buf[256];
 	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());

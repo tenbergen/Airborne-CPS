@@ -20,11 +20,11 @@ public:
 	ResolutionConnection(std::string);
 	~ResolutionConnection();
 	void openNewConnection(int);
-	int connectToIntruder(std::string);
+	int contactIntruder(std::string);
 	DWORD senseListener();
 	int establishConnection(std::string,int);
 protected:
-	int isConnected;
+	int isSender;
 private:
 	std::string mac;
 

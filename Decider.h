@@ -5,7 +5,6 @@
 #include "XPLMUtilities.h"
 #include "Aircraft.h"
 #include <map>
-#include <concurrent_unordered_map.h>
 #include "Distance.h"
 #include "RecommendationRange.h"
 

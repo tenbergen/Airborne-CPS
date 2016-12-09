@@ -24,6 +24,7 @@ public:
 	int contactIntruder(std::string);
 	DWORD senseListener();
 	int establishConnection(std::string,int);
+	bool isSender;
 private:
 	std::string mac;
 	std::atomic<bool> running;

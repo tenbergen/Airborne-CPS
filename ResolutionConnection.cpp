@@ -15,6 +15,7 @@ ResolutionConnection::~ResolutionConnection()
 	//	return;
 	//}
 	running = false;
+	isSender = false;
 	while (!thread_stopped)
 	{
 		Sleep(100);

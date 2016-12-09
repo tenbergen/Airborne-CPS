@@ -47,7 +47,6 @@ private:
 	
 	std::string getIpAddr();
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);
-	int establishResolutionConnection(Aircraft& intruding_aircraft, char* port);
 	static std::atomic<bool> initialized;
 	static std::string mac_address;
 };

@@ -78,9 +78,14 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
 		Sense s = Sense::UPWARD;
 		if (connection) {
-			connection->sendSense(s);
+			if (connection->isSender) {
+				connection->sendSense(s);
+			} else {
+				;
+			}
 		} else {
 			connection = new ResolutionConnection(thisAircraft_->id_);
+			connection->isSender = true;
 			active_connections[intruder->id_] = connection;
 			int port = connection->contactIntruder(intruder->ip_);
 			int error = connection->establishConnection(intruder->ip_, port);
@@ -99,7 +104,10 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		}
 	} else {
 		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
-		delete connection;
+		if (connection) {
+			delete connection;
+			active_connections[intruder->id_] = NULL;
+		}
 	}
 	char debug_buf[256];
 	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());

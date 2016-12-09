@@ -78,22 +78,12 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
 		Sense s = Sense::UPWARD;
 		if (connection) {
-			if (connection->isSender) {
-				connection->sendSense(s);
-			} else {
-				;
-			}
+			
 		} else {
 			connection = new ResolutionConnection(thisAircraft_->id_);
-			connection->isSender = true;
 			active_connections[intruder->id_] = connection;
 			int port = connection->contactIntruder(intruder->ip_);
-			int error = connection->establishConnection(intruder->ip_, port);
-			if (error < 0) {
-				char the_error[32];
-				sprintf(the_error, "DECIDER::unable to establish tcp connection: %d\n", error * -1);
-				XPLMDebugString(the_error);
-			}
+			connection->openNewConnectionSender(intruder->ip_, port);
 		}
 		if (horizontalTau <= raThreshold && verticalTau <= raThreshold) {
 			threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;

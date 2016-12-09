@@ -17,16 +17,20 @@
 class ResolutionConnection
 {
 public:
+	std::string ip;
 	void sendSense(Sense);
 	ResolutionConnection(std::string);
+	ResolutionConnection(std::string, int);
 	~ResolutionConnection();
-	void openNewConnection(int);
+	void openNewConnectionReceiver(int);
+	void openNewConnectionSender(std::string, int);
 	int contactIntruder(std::string);
-	DWORD senseListener();
+	DWORD senseReceiver();
+	DWORD senseSender();
 	int establishConnection(std::string,int);
-	bool isSender;
 private:
 	std::string mac;
+	int port;
 	std::atomic<bool> running;
 	std::atomic<bool> thread_stopped;
 

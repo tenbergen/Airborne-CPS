@@ -1,3 +1,3 @@
 #pragma once
 
-enum class Sense { UPWARD, DOWNWARD, MAINTAIN };
+enum class Sense { UPWARD, DOWNWARD, MAINTAIN, UNKNOWN };

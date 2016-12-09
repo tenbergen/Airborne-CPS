@@ -2,7 +2,6 @@
 
 #include "ResolutionConnection.h"
 #include <concurrent_unordered_map.h>
-#include <atomic>
 
 class ResolutionController
 {

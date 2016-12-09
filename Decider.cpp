@@ -80,7 +80,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		if (connection) {
 			connection->sendSense(s);
 		} else {
-			connection = new ResolutionConnection(intruder->id_);
+			connection = new ResolutionConnection(thisAircraft_->id_);
 			active_connections[intruder->id_] = connection;
 			int port = connection->contactIntruder(intruder->ip_);
 			int error = connection->establishConnection(intruder->ip_, port);

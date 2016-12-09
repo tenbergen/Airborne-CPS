@@ -74,7 +74,7 @@ LLA intr_ac_pos_n = {43.2, -76.0, 10000.0, Angle::AngleUnits::DEGREES, Distance:
 
 Velocity test_vvel = {1000.0, Velocity::VelocityUnits::FEET_PER_MIN};
 
-Aircraft user_aircraft = {"user", "127.0.0.1", user_ac_pos, Angle::ZERO, test_vvel};
+Aircraft* user_aircraft;
 
 Aircraft test_intr_ne = { "intruder_ne", "192.168.1.1", intr_ac_pos_ne, Angle::ZERO, test_vvel };
 Aircraft test_intr_nw = { "intruder_nw", "192.168.1.1", intr_ac_pos_nw, Angle::ZERO, test_vvel };
@@ -133,15 +133,15 @@ void test() {
 	intruding_aircraft[test_intr_se.id_] = &test_intr_se;
 	//intruding_aircraft[test_intr_n.id_] = &test_intr_n;
 
-	user_aircraft.lock_.lock();
-
-	user_aircraft.heading_ = Angle::k0Degrees_;
-	user_aircraft.position_current_ = user_ac_pos;
-	user_aircraft.position_old_ = user_ac_pos;
-	user_aircraft.position_old_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-	user_aircraft.position_current_time_ = user_aircraft.position_old_time_;
-
-	user_aircraft.lock_.unlock();
+	user_aircraft->lock_.lock();
+				 
+	user_aircraft->heading_ = Angle::k0Degrees_;
+	user_aircraft->position_current_ = user_ac_pos;
+	user_aircraft->position_old_ = user_ac_pos;
+	user_aircraft->position_old_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+	user_aircraft->position_current_time_ = user_aircraft->position_old_time_;
+				 
+	user_aircraft->lock_.unlock();
 
 	test_intr_ne.threat_classification_ = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 	test_intr_nw.threat_classification_ = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
@@ -213,14 +213,19 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 		}
 	*/
 
-	decider = new Decider(&user_aircraft);// , &intruding_aircraft);
+	Transponder::initNetworking();
+	std::string my_mac = Transponder::getHardwareAddress();
+
+	user_aircraft = new Aircraft(my_mac, "127.0.0.1", user_ac_pos, Angle::ZERO, test_vvel);
+
+	decider = new Decider(user_aircraft);
 
 	// Load the textures and bind them etc.
-	gauge_renderer = new GaugeRenderer(gPluginDataFile, decider, &user_aircraft, &intruding_aircraft);
+	gauge_renderer = new GaugeRenderer(gPluginDataFile, decider, user_aircraft, &intruding_aircraft);
 	gauge_renderer->LoadTextures();
 
 	// start broadcasting location, and listening for aircraft
-	transponder = new Transponder(&user_aircraft, &intruding_aircraft, decider);
+	transponder = new Transponder(user_aircraft, &intruding_aircraft, decider);
 	transponder->start();
 
 	return 1;
@@ -256,19 +261,15 @@ int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRe
 		Velocity updated_vvel = Velocity(XPLMGetDataf(verticalSpeed), Velocity::VelocityUnits::FEET_PER_MIN);
 		std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
-		user_aircraft.lock_.lock();
-
-		user_aircraft.position_old_ = user_aircraft.position_current_;
-		user_aircraft.position_old_time_ = user_aircraft.position_current_time_;
-
-		user_aircraft.position_current_ = updated;
-		user_aircraft.position_current_time_ = ms_since_epoch;
-
-		user_aircraft.vertical_velocity_ = updated_vvel;
-		user_aircraft.heading_ = Angle(XPLMGetDataf(heading_true_mag_deg_ref), Angle::AngleUnits::DEGREES);
-		user_aircraft.true_airspeed_ = Velocity(XPLMGetDataf(true_airspeed_ref), Velocity::VelocityUnits::METERS_PER_S);
-
-		user_aircraft.lock_.unlock();
+		user_aircraft->lock_.lock();
+		user_aircraft->position_old_ = user_aircraft->position_current_;
+		user_aircraft->position_old_time_ = user_aircraft->position_current_time_;
+		user_aircraft->position_current_ = updated;
+		user_aircraft->position_current_time_ = ms_since_epoch;
+		user_aircraft->vertical_velocity_ = updated_vvel;
+		user_aircraft->heading_ = Angle(XPLMGetDataf(heading_true_mag_deg_ref), Angle::AngleUnits::DEGREES);
+		user_aircraft->true_airspeed_ = Velocity(XPLMGetDataf(true_airspeed_ref), Velocity::VelocityUnits::METERS_PER_S);
+		user_aircraft->lock_.unlock();
 
 		DrawGLScene();
 	}

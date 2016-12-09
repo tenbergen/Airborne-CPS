@@ -3,7 +3,6 @@
 ResolutionConnection::ResolutionConnection(std::string mac_addr)
 {
 	mac = mac_addr;
-	isSender = 0;
 }
 
 ResolutionConnection::~ResolutionConnection()
@@ -15,10 +14,15 @@ ResolutionConnection::~ResolutionConnection()
 	//	closesocket(s);
 	//	return;
 	//}
-	XPLMDebugString("ResolutionConnection::~ResolutionConnection called.\n");
+	running = false;
+	while (!thread_stopped)
+	{
+		Sleep(100);
+	}
+	XPLMDebugString("attempting to close socket\n");
 	closesocket(listenSocket);
 	closesocket(sendSocket);
-	XPLMDebugString("ResolutionConnection::~ResolutionConnection - sockets closed.\n");
+	XPLMDebugString("closed sockets\n");
 }
 
 
@@ -62,7 +66,7 @@ DWORD ResolutionConnection::senseListener()
 		closesocket(listenSocket);
 		return 0;
 	}
-	for (;;)
+	while(running)
 	{
 		int err = recv(accept_socket, msg, 255, 0);
 		if (err < 0) {
@@ -83,6 +87,7 @@ DWORD ResolutionConnection::senseListener()
 			Sleep(1000);
 		}
 	}
+	thread_stopped = true;
 	return 0;
 }
 
@@ -165,22 +170,17 @@ int ResolutionConnection::establishConnection(std::string ip, int port)
 		closesocket(sendSocket);
 		return GetLastError() * -1;
 	}
-	isSender = 1;
 	return 0;
 }
 
 void ResolutionConnection::sendSense(Sense sense)
 {
-	if (isSender) {
-		int result;
-		char* sens = "GO_DOWN";
-		result = send(sendSocket, sens, strlen(sens), 0);
-		if (result == SOCKET_ERROR) {
-			XPLMDebugString("SendSense::send failed\n");
-			closesocket(sendSocket);
-			return;
-		}
-	} else {
-		XPLMDebugString("ResolutionConnection::Trying to send sense without establishing connection (or you're the receiver)\n");
+	int result;
+	char* sens = "GO_DOWN";
+	result = send(sendSocket, sens, strlen(sens), 0);
+	if (result == SOCKET_ERROR) {
+		XPLMDebugString("SendSense::send failed\n");
+		closesocket(sendSocket);
+		return;
 	}
 }

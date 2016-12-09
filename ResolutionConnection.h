@@ -8,6 +8,7 @@
 #include <string>
 #include "XPLMUtilities.h"
 #include "Sense.h"
+#include <atomic>
 
 #define CONTROLLER_PORT 21219
 #define MAC_LENGTH 18
@@ -23,10 +24,10 @@ public:
 	int contactIntruder(std::string);
 	DWORD senseListener();
 	int establishConnection(std::string,int);
-protected:
-	int isSender;
 private:
 	std::string mac;
+	std::atomic<bool> running;
+	std::atomic<bool> thread_stopped;
 
 	SOCKET listenSocket;
 	SOCKET sendSocket;

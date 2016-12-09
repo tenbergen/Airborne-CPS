@@ -28,9 +28,11 @@ public:
 	DWORD receiveLocation(), sendLocation(), keepalive();
 	void start();
 
+	static void initNetworking();
+	static std::string getHardwareAddress();
+
 protected:
 	std::string ip, mac;
-	WSADATA w;
 	SOCKET outSocket, inSocket;
 	struct sockaddr_in incoming, outgoing;
 	unsigned sinlen;
@@ -43,8 +45,10 @@ private:
 	Aircraft* aircraft;
 	std::vector<Aircraft*> allocated_aircraft;
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap;
-	static std::string getHardwareAddress();
+	
 	std::string getIpAddr();
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);
-	int establishResolutionConnection(Aircraft& intruding_aircraft, char* port);
+
+	static std::atomic<bool> initialized;
+	static std::string mac_address;
 };

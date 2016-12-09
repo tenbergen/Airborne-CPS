@@ -2,11 +2,11 @@
 
 #pragma comment(lib,"WS2_32")
 
+std::string Transponder::mac_address = "";
+std::atomic<bool> Transponder::initialized = false;
+
 Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruders, Decider* decider)
 {
-	if (WSAStartup(0x0101, &w) != 0) {
-		exit(0);
-	}
 	decider_ = decider;
 	aircraft = ac;
 	intrudersMap = intruders;
@@ -172,36 +172,39 @@ DWORD Transponder::keepalive()
 
 std::string Transponder::getHardwareAddress()
 {
-	std::string hardware_address{};
-	IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
-	char mac_addr[MAC_LENGTH];
+	if (mac_address.empty()) {
+		std::string hardware_address{};
+		IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
+		char mac_addr[MAC_LENGTH];
 
-	DWORD dwRetVal;
-	ULONG outBufLen = sizeof(IP_ADAPTER_INFO);
+		DWORD dwRetVal;
+		ULONG outBufLen = sizeof(IP_ADAPTER_INFO);
 
-	if (GetAdaptersInfo(pAdapterInfo, &outBufLen) != ERROR_SUCCESS) {
-		free(pAdapterInfo);
-		pAdapterInfo = (IP_ADAPTER_INFO *)malloc(outBufLen);
-	}
-
-	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &outBufLen)) == NO_ERROR) {
-		PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
-		while (pAdapter && hardware_address.empty()) {
-			sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X",
-				pAdapterInfo->Address[0], pAdapterInfo->Address[1],
-				pAdapterInfo->Address[2], pAdapterInfo->Address[3],
-				pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
-
-			hardware_address = mac_addr;
-			pAdapter = pAdapter->Next;
+		if (GetAdaptersInfo(pAdapterInfo, &outBufLen) != ERROR_SUCCESS) {
+			free(pAdapterInfo);
+			pAdapterInfo = (IP_ADAPTER_INFO *)malloc(outBufLen);
 		}
-	}
-	else {
-		XPLMDebugString("Transponder::getHardwareAddress - Failed to retrieve network adapter information.\n");
-	}
 
-	free(pAdapterInfo);
-	return hardware_address;
+		if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &outBufLen)) == NO_ERROR) {
+			PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+			while (pAdapter && hardware_address.empty()) {
+				sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X",
+					pAdapterInfo->Address[0], pAdapterInfo->Address[1],
+					pAdapterInfo->Address[2], pAdapterInfo->Address[3],
+					pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
+
+				hardware_address = mac_addr;
+				pAdapter = pAdapter->Next;
+			}
+		}
+		else {
+			XPLMDebugString("Transponder::getHardwareAddress - Failed to retrieve network adapter information.\n");
+		}
+
+		free(pAdapterInfo);
+		mac_address = hardware_address;
+	}
+	return mac_address;
 }
 
 std::string Transponder::getIpAddr()
@@ -266,3 +269,15 @@ void Transponder::start()
 	CreateThread(NULL, 0, startKeepAliveTimer, (void*) this, 0, &ThreadID);
 	decider_->testStart();
 }
+
+void Transponder::initNetworking()
+{
+	if (!initialized) {
+		initialized = true;
+		WSADATA w;
+		if (WSAStartup(0x0101, &w) != 0) {
+			exit(0);
+		}
+	}
+}
+

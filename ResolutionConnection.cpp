@@ -3,12 +3,14 @@
 ResolutionConnection::ResolutionConnection(std::string mac_addr)
 {
 	mac = mac_addr;
+	running = true;
 }
 
 ResolutionConnection::ResolutionConnection(std::string ip_addr, int port_num)
 {
 	ip = ip_addr;
 	port = port_num;
+	running = true;
 }
 
 ResolutionConnection::~ResolutionConnection()
@@ -25,10 +27,10 @@ ResolutionConnection::~ResolutionConnection()
 	{
 		Sleep(100);
 	}
-	XPLMDebugString("attempting to close socket\n");
+	XPLMDebugString("ResolutionConnection::~ResolutionConnection - attempting to close socket\n");
 	closesocket(listenSocket);
 	closesocket(sendSocket);
-	XPLMDebugString("closed sockets\n");
+	XPLMDebugString("ResolutionConnection::~ResolutionConnection - closed sockets\n");
 }
 
 
@@ -50,7 +52,7 @@ void ResolutionConnection::openNewConnectionReceiver(int port)
 	memset(&my_addr, 0, sizeof my_addr);
 	listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (listenSocket == INVALID_SOCKET) {
-		XPLMDebugString("ResolutionConnection::Socket failed to open\n");
+		XPLMDebugString("ResolutionConnection::openNewConnectionReceiver - socket failed to open\n");
 	}
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_addr.s_addr = INADDR_ANY;
@@ -58,7 +60,7 @@ void ResolutionConnection::openNewConnectionReceiver(int port)
 	int bind_success = bind(listenSocket, (struct sockaddr*)&my_addr, sizeof(my_addr));
 	if (bind_success < 0) {
 		char the_error[32];
-		sprintf(the_error, "ResolutionConnection::Failed to bind: %d\n", GetLastError());
+		sprintf(the_error, "ResolutionConnection::openNewConnectionReceiver - failed to bind: %d\n", GetLastError());
 		XPLMDebugString(the_error);
 	}
 	DWORD ThreadID;
@@ -67,7 +69,7 @@ void ResolutionConnection::openNewConnectionReceiver(int port)
 
 int ResolutionConnection::establishConnection(std::string ip, int port)
 {
-	XPLMDebugString("attempting to establish a connection");
+	XPLMDebugString("ResolutionConnection::establishConnection - attempting to establish a connection\n");
 	struct sockaddr_in dest;
 	memset(&dest, 0, sizeof dest);
 	dest.sin_family = AF_INET;
@@ -80,7 +82,7 @@ int ResolutionConnection::establishConnection(std::string ip, int port)
 	int result;
 	result = connect(sendSocket, (SOCKADDR*)&dest, sizeof(dest));
 	if (result == SOCKET_ERROR) {
-		XPLMDebugString("unable to establish tcp connection\n");
+		XPLMDebugString("ResolutionConnection::establishConnection - unable to establish tcp connection\n");
 		closesocket(sendSocket);
 		return GetLastError() * -1;
 	}
@@ -102,7 +104,7 @@ DWORD ResolutionConnection::senseReceiver()
 	SOCKET accept_socket = accept(listenSocket, (struct sockaddr *)&intruder_addr, &addr_len);
 	if (accept_socket == INVALID_SOCKET) {
 		char the_error[32];
-		sprintf(the_error, "ResolutionConnection::Failed to accept: %d\n", GetLastError());
+		sprintf(the_error, "ResolutionConnection::senseReceiver - to accept error: %d\n", GetLastError());
 		XPLMDebugString(the_error);
 		closesocket(listenSocket);
 		return 0;
@@ -113,21 +115,22 @@ DWORD ResolutionConnection::senseReceiver()
 		int err = recv(accept_socket, msg, 255, 0);
 		if (err < 0) {
 			char the_error[32];
-			sprintf(the_error, "ResolutionConnection::Failed to receive: %d\n", GetLastError());
+			sprintf(the_error, "ResolutionConnection::senseReceiver -  to receive error: %d\n", GetLastError());
 			XPLMDebugString(the_error);
 			closesocket(listenSocket);
 			return 0;
 		}
+		XPLMDebugString("ResolutionConnection::senseReceiver - received message: ");
 		XPLMDebugString(msg);
 		XPLMDebugString("\n");
 		if (strcmp(msg, "0") == 0) {
-			XPLMDebugString("closing connection\n");
+			XPLMDebugString("ResolutionConnection::senseReceiver - received 0 - closing connection\n");
 			closesocket(listenSocket);
 			break;
 		}
 		err = send(sendSocket, sens, strlen(sens), 0);
 		if (err == SOCKET_ERROR) {
-			XPLMDebugString("SendSense::send failed\n");
+			XPLMDebugString("ResolutionConnection::senseReceiver - send failed\n");
 			closesocket(sendSocket);
 			return 0;
 		}
@@ -146,14 +149,14 @@ DWORD ResolutionConnection::senseSender()
 		char* sens = "GO_UP_SENDER";
 		result = send(sendSocket, sens, strlen(sens), 0);
 		if (result == SOCKET_ERROR) {
-			XPLMDebugString("SendSense::send failed\n");
+			XPLMDebugString("ResolutionConnection::senseSender - send failed\n");
 			closesocket(sendSocket);
 			return 0;
 		}
 		int err = recv(sendSocket, msg, 255, 0);
 		if (err < 0) {
 			char the_error[32];
-			sprintf(the_error, "ResolutionConnection::Failed to receive: %d\n", GetLastError());
+			sprintf(the_error, "ResolutionConnection::senseSender - Failed to receive: %d\n", GetLastError());
 			XPLMDebugString(the_error);
 			closesocket(sendSocket);
 			return 0;
@@ -161,7 +164,7 @@ DWORD ResolutionConnection::senseSender()
 		XPLMDebugString(msg);
 		XPLMDebugString("\n");
 		if (strcmp(msg, "0") == 0) {
-			XPLMDebugString("closing connection\n");
+			XPLMDebugString("ResolutionConnection::senseSender - closing connection\n");
 			closesocket(sendSocket);
 			break;
 		}
@@ -172,8 +175,9 @@ DWORD ResolutionConnection::senseSender()
 
 int ResolutionConnection::contactIntruder(std::string ip)
 {
-	XPLMDebugString("attempting to connect to ");
+	XPLMDebugString("ResolutionConnection::contactIntruder - attempting to connect to ");
 	XPLMDebugString(ip.c_str());
+	XPLMDebugString("\n");
 
 	int error, port;
 	char replyPort[32];
@@ -197,7 +201,7 @@ int ResolutionConnection::contactIntruder(std::string ip)
 	error = bind(sock, (sockaddr *)&local, sizeof(struct sockaddr));
 	if (error < 0) {
 		char the_error[256];
-		sprintf(the_error, "RC::bind error: %d\n", GetLastError());
+		sprintf(the_error, "ResolutionConnection::contactIntruder - bind error: %d\n", GetLastError());
 		XPLMDebugString(the_error);
 		closesocket(sock);
 		return -1;
@@ -206,7 +210,7 @@ int ResolutionConnection::contactIntruder(std::string ip)
 	error = sendto(sock, mac.c_str(), MAC_LENGTH, 0, (struct sockaddr *) &dest, sizeof(struct sockaddr));
 	if (error < 0) {
 		char the_error[256];
-		sprintf(the_error, "RC::sendto error: %d\n", GetLastError());
+		sprintf(the_error, "ResolutionConnection::contactIntruder - sendto error: %d\n", GetLastError());
 		XPLMDebugString(the_error);
 		closesocket(sock);
 		return -1;
@@ -216,7 +220,7 @@ int ResolutionConnection::contactIntruder(std::string ip)
 	error = recvfrom(sock, replyPort, MAC_LENGTH, 0, (struct sockaddr *)&local, (int*)&locallen);
 	if (error == SOCKET_ERROR) {
 		char the_error[256];
-		sprintf(the_error, "RC:: recvfrom error: %d\n", GetLastError());
+		sprintf(the_error, "ResolutionConnection::contactIntruder - recvfrom error: %d\n", GetLastError());
 		XPLMDebugString(the_error);
 		return -1;
 	}
@@ -225,7 +229,7 @@ int ResolutionConnection::contactIntruder(std::string ip)
 	
 	port = atoi(replyPort);
 	char debug_info[128];
-	sprintf(debug_info, "recv port#%d\n", port);
+	sprintf(debug_info, "ResolutionConnection::contactIntruder - recv port#%d\n", port);
 	XPLMDebugString(debug_info);
 	return port;
 }
@@ -236,7 +240,7 @@ void ResolutionConnection::sendSense(Sense sense)
 	char* sens = "GO_DOWN";
 	result = send(sendSocket, sens, strlen(sens), 0);
 	if (result == SOCKET_ERROR) {
-		XPLMDebugString("SendSense::send failed\n");
+		XPLMDebugString("ResolutionConnection::sendSense - send failed\n");
 		closesocket(sendSocket);
 		return;
 	}

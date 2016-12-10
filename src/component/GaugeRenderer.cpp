@@ -180,7 +180,7 @@ void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Veloci
 	double range_over_max_range_ratio = range->to_feet() / kGaugeInnerCircleRadius_.to_feet();
 	double pixel_offset = range_over_max_range_ratio * kGaugeInnerCircleRadiusPxls_;
 
-	Angle cartesian_angle = math_util::BearingToCartesianAngle(&bearing);
+	Angle cartesian_angle = Angle::BearingToCartesianAngle(&bearing);
 	double pixel_offset_x = cos(cartesian_angle.to_radians()) * pixel_offset;
 	double pixel_offset_y = sin(cartesian_angle.to_radians()) * pixel_offset;
 

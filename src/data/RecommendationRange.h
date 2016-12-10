@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Velocity.h"
+#include "units/Velocity.h"
 
 // @author nstemmle
 typedef struct RecommendationRange {

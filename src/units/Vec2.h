@@ -1,7 +1,6 @@
 #pragma once
 
-#include <atomic>
-#include <math.h>
+#include "util/MathUtil.h"
 
 // @author nstemmle
 class Vec2

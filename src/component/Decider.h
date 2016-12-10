@@ -1,13 +1,11 @@
 #pragma once
 
-#include "ResolutionConnection.h"
 #include <concurrent_unordered_map.h>
 
-#include "XPLMUtilities.h"
-#include "Aircraft.h"
-#include <map>
-#include "Distance.h"
-#include "RecommendationRange.h"
+#include "component/ResolutionConnection.h"
+#include "data/RecommendationRange.h"
+#include "data/Aircraft.h"
+#include "units/Distance.h"
 
 class Decider {
 public:
@@ -21,7 +19,6 @@ public:
 	std::mutex recommendation_range_lock_;
 	RecommendationRange positive_recommendation_range_;
 	RecommendationRange negative_recommendation_range_;
-	void testStart();
 
 private:
 	static Distance const kProtectionVolumeRadius_;

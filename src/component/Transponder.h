@@ -1,8 +1,10 @@
 #ifndef WINVER
+// Define windows xp version
 #define WINVER 0x0501
 #endif
 
-#include "Decider.h"
+// This include statement must be before IPHLpapi include
+#include "component/Decider.h"
 
 #pragma comment(lib, "IPHLPAPI.lib")
 #include <iphlpapi.h>
@@ -12,9 +14,10 @@
 #include <stdio.h>
 #include <sstream>
 #include <unordered_map>
-#include "location.pb.h"
-#include "Aircraft.h"
-#include "GaugeRenderer.h"
+
+#include "component/GaugeRenderer.h"
+#include "data/location.pb.h"
+#include "data/Aircraft.h"
 
 #define BROADCAST_PORT 21221
 #define MAC_LENGTH 18

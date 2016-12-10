@@ -4,9 +4,9 @@
 #include <string>
 #include <mutex>
 
-#include "Velocity.h"
-#include "LLA.h"
-#include "Vec2.h"
+#include "units/Velocity.h"
+#include "units/LLA.h"
+#include "units/Vec2.h"
 
 // @author nstemmle
 class Aircraft
@@ -19,17 +19,18 @@ public:
 	Non-threat traffic - outside of protected distance and altitude range
 	Proximity intruder traffic - Within protected distance and altitude range, but not considered a threat
 	Traffic Advisory - Within protected range and considered a threat (User should be notified of existence)
-	Resolution Advisory - Within protected range and considered an immediate threat. Issue avoidance recommendation.
-	*/
+	Resolution Advisory - Within protected range and considered an immediate threat. Issue avoidance recommendation.*/
 	enum class ThreatClassification { NON_THREAT_TRAFFIC, PROXIMITY_INTRUDER_TRAFFIC, TRAFFIC_ADVISORY, RESOLUTION_ADVISORY };
 
 	Aircraft(std::string const id, std::string const ip);
 	Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity vertical_velocity);
 
+	// The ID of each aircraft is the MAC Address of the network adapter of the machine for the x-plane instance that runs that aircraft
 	std::string const id_;
+	// The IPv4 address that should be used for communicating with the aircraft
 	std::string const ip_;
 
-	// Aircraft must be locked before getting or setting any values. Copies should be made of any relevant data and no pointers
+	// Aircraft must be locked before getting or setting any non-const values. Copies should be made of any relevant data and no pointers
 	// to fields should be used.
 	std::mutex lock_;
 

@@ -48,24 +48,6 @@ Angle LLA::Bearing(LLA const * const other) const {
 	return Angle(atan2(x, y), Angle::AngleUnits::RADIANS);
 }
 
-LLA LLA::Translate(Distance const *const delta_lat, Distance const *const delta_lon, Distance const *const delta_alt) const {
-	double delta_lat_deg = 0.0;
-	double delta_lon_deg = 0.0;
-	double d_alt = delta_alt ? delta_alt->to_feet() : 0.0;
-
-	if (delta_lat) {
-		double m_per_deg_lat = DistPerDegreeLat().to_meters();
-		delta_lat_deg = delta_lat->to_meters() / m_per_deg_lat;
-	}
-
-	if (delta_lon) {
-		double m_per_deg_lon = DistPerDegreeLon().to_meters();
-		delta_lon_deg = delta_lon->to_meters() / m_per_deg_lon;
-	}
-
-	return LLA(latitude_.to_degrees() + delta_lat_deg, longitude_.to_degrees() + delta_lon_deg, altitude_.to_feet() + d_alt, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET);
-}
-
 LLA LLA::Translate(Angle const *const bearing, Distance const *const distance) const {
 	double dist_ratio = distance->to_feet() / kRadiusEarth_.to_feet();
 	double sin_dist_ratio = sin(dist_ratio);

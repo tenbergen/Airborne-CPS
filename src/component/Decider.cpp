@@ -5,9 +5,6 @@ Distance const Decider::kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUni
 Decider::Decider(Aircraft* this_Aircraft) : thisAircraft_(this_Aircraft) {}
 
 void Decider::Analyze(Aircraft* intruder) {
-	/*char debug_buf[128];
-	snprintf(debug_buf, 128, "Decider::Analyze - intruder_id: %s\n", intruder->id_.c_str());
-	XPLMDebugString(debug_buf);*/
 	Decider::DetermineActionRequired(intruder);
 }
 

@@ -5,10 +5,11 @@
 #include <windows.h>
 #endif
 
+#include <atomic>
 #include <string>
 #include "XPLMUtilities.h"
-#include "Sense.h"
-#include <atomic>
+
+#include "data/Sense.h"
 
 #define MAC_LENGTH 18
 #define TCP_PORT 21218

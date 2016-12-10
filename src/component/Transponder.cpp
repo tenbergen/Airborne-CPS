@@ -221,7 +221,7 @@ std::string Transponder::getIpAddr()
 	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
 	std::string googleDnsIp = "8.8.8.8";
 	uint16_t dnsPort = 53;
-	struct sockaddr_in server;
+	struct sockaddr_in server = {0};
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET;
 	InetPton(AF_INET, googleDnsIp.c_str(), &server.sin_addr.s_addr);

@@ -1,7 +1,6 @@
 #pragma once
 
-#define _USE_MATH_DEFINES
-#include <math.h>
+#include "util/MathUtil.h"
 
 // @author nstemmle
 class Angle
@@ -21,6 +20,9 @@ public:
 
 	static double const kMinDegrees_;
 	static double const kMaxDegrees_;
+
+	// Converts an azimuth (north-referenced bearing) to its equivalent unit circle-referenced angle (cartesian angle?)
+	static Angle BearingToCartesianAngle(Angle const * const bearing);
 	
 	Angle(double value, AngleUnits units);
 	

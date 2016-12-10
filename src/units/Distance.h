@@ -23,7 +23,7 @@ public:
 	Distance operator + (Distance const & that) const;
 	Distance operator - (Distance const & that) const;
 	Distance operator * (Distance const & that) const;
-	/*Division by zero will return the ZERO distance.*/
+	/*Division by zero will return Distance::ZERO.*/
 	Distance operator / (Distance const & that) const;
 	void operator = (Distance const & that);
 

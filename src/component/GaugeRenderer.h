@@ -2,13 +2,12 @@
 
 #include <algorithm>
 
-#include "Decider.h"
-#include "BMPLoader.h"
-#include "Renderer.inc"
-
-#include "MathUtil.h"
-#include "TextureConstants.hpp"
-#include "StringUtil.h"
+#include "component/Decider.h"
+#include "rendering/Renderer.inc"
+#include "rendering/TextureConstants.hpp"
+#include "util/BMPLoader.h"
+#include "util/MathUtil.h"
+#include "util/StringUtil.h"
 
 // @author nstemmle
 class GaugeRenderer

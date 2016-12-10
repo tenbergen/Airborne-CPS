@@ -89,7 +89,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	XPLMDebugString(debug_buf);
 
 	Sense sense = Decider::DetermineResolutionSense(taCurrAltitude, taVerticalVelocity, inVerticalVelocity, slantRangeTau);
-	Strength strength = Decider::DetermineStrength(sense, slantRangeTau);
+	Strength strength = Decider::DetermineStrength(taVerticalVelocity, inVerticalVelocity, sense, slantRangeTau);
 
 	intruder->lock_.lock();
 	intruder->threat_classification_ = threat_class;
@@ -119,18 +119,37 @@ Sense Decider::DetermineResolutionSense(double taCurrAlt, double taVV, double in
 	return sense;
 }
 
-Decider::Strength Decider::DetermineStrength(Sense sense, double slantRangeTau) {
-	Strength strength;
-	if (sense == Sense::UPWARD) {
-		if (slantRangeTau > 30) { strength = MAINTAIN_CLIMB; } //climb+
-		else if (slantRangeTau < 30) { strength = CLIMB; }  //climb++
+Decider::Strength Decider::DetermineStrength(double taVV, double inVV, Sense sense, double slantRangeTau) {
+	double taVertProj = taVV * slantRangeTau;
+	double inVertProj = inVV * slantRangeTau;
 
+	if (sense == Sense::UPWARD) {
+		if (taVertProj >= inVertProj + 3000) { return Strength::MAINTAIN_CLIMB;}
+		else {
+			double minReqVelocity_CLIMB = inVertProj + 3000 / slantRangeTau;
+			if (minReqVelocity_CLIMB > 0 && minReqVelocity_CLIMB <= 1000) { return Strength::CLIMB_500;} 
+			else if (minReqVelocity_CLIMB > 1000 && minReqVelocity_CLIMB <= 1500) { return  Strength::CLIMB_1000; }
+			else if (minReqVelocity_CLIMB > 1500 && minReqVelocity_CLIMB <= 2000) { return Strength::CLIMB_1500; }
+			else if (minReqVelocity_CLIMB > 2000 && minReqVelocity_CLIMB <= 2500) { return Strength::CLIMB_2000; }
+			else if (minReqVelocity_CLIMB > 2500 && minReqVelocity_CLIMB <= 3000) { return Strength::CLIMB_2500; }
+			else if (minReqVelocity_CLIMB > 3000 && minReqVelocity_CLIMB <= 3500) { return Strength::CLIMB_3000; }
+			else if (minReqVelocity_CLIMB > 3500) { return Strength::CLIMB_3500; }
+		}
 	} else if (sense == Sense::DOWNWARD) {
-		if (slantRangeTau > 30) { strength = MAINTAIN_DESCEND; } //descend-
-		else if (slantRangeTau < 30) { strength = DESCEND; } //descend--	
-	}
-	return strength;
+		if (taVertProj <= inVertProj - 3000) { return Strength::MAINTAIN_DESCEND; }
+		else {
+			double minReqVelocity_DESCEND = inVertProj - 3000 / slantRangeTau;
+			if (minReqVelocity_DESCEND < 0 && minReqVelocity_DESCEND >= -1000) { return Strength::DESCEND_500; }
+			else if (minReqVelocity_DESCEND < -1000 && minReqVelocity_DESCEND >= -1500) { return Strength::DESCEND_1000; }
+			else if (minReqVelocity_DESCEND < -1500 && minReqVelocity_DESCEND >= -2000) { return Strength::DESCEND_1500; }
+			else if (minReqVelocity_DESCEND < -2000 && minReqVelocity_DESCEND >= -2500) { return Strength::DESCEND_2000; }
+			else if (minReqVelocity_DESCEND < -2500 && minReqVelocity_DESCEND >= -3000) { return Strength::DESCEND_2500; }
+			else if (minReqVelocity_DESCEND < -3000 && minReqVelocity_DESCEND >= -3500) { return Strength::DESCEND_3000; }
+			else if (minReqVelocity_DESCEND < -3500) { return Strength::DESCEND_3500; }
+		}
+	} else { return Strength::UNKNOWN_STRENGTH; }
 }
+
 
 double Decider::ToMinutes(std::chrono::milliseconds time) {
 	long long result1 = time.count();

@@ -203,7 +203,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 		XPLMGetDatad(altitude_ref), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 	user_aircraft = new Aircraft(my_mac, "127.0.0.1", current_pos, Angle::ZERO, Velocity::ZERO);
 
-	decider = new Decider(user_aircraft);
+	decider = new Decider(user_aircraft, &open_connections);
 
 	gauge_renderer = new GaugeRenderer(gPluginDataFile, decider, user_aircraft, &intruding_aircraft);
 	gauge_renderer->LoadTextures();

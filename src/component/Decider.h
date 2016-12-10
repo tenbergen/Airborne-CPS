@@ -9,7 +9,7 @@
 
 class Decider {
 public:
-	Decider(Aircraft* thisAircraft);
+	Decider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>*);
 	void Analyze(Aircraft* intruder);
 	std::mutex recommendation_range_lock_;
 	RecommendationRange positive_recommendation_range_;
@@ -31,5 +31,5 @@ private:
 	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,
 		double intruderVerticalVelocity, double slantRangeTau);
 	double DetermineStrength(double taVerticalVelocity, double inVerticalVelocity, Sense s, double slantRangeTau);
-	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> active_connections;
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* active_connections;
 };

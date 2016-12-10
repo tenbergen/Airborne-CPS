@@ -2,7 +2,7 @@
 
 Distance const Decider::kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUnits::NMI };
 
-Decider::Decider(Aircraft* this_Aircraft) : thisAircraft_(this_Aircraft) {}
+Decider::Decider(Aircraft* this_Aircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* map) : thisAircraft_(this_Aircraft), active_connections(map) {}
 
 void Decider::Analyze(Aircraft* intruder) {
 	/*char debug_buf[128];
@@ -68,8 +68,17 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double taVerticalVelocity = thisAircraft_->vertical_velocity_.to_feet_per_min();
 
 	Aircraft::ThreatClassification threat_class;
-	ResolutionConnection* connection = active_connections[intruder->id_];
+	ResolutionConnection* connection = (*active_connections)[intruder->id_];
+	Sense sense = Decider::DetermineResolutionSense(taCurrAltitude, taVerticalVelocity, inVerticalVelocity, slantRangeTau);
 	if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
+		if (connection) {
+			if (connection->current_sense == Sense::UNKNOWN) {
+				connection->current_sense = sense;
+				connection->sendSense();
+			} else if (connection->consensusAchieved) {
+				XPLMDebugString("\n\nPARTY!\n\n");
+			}
+		}
 		if (horizontalTau <= raThreshold && verticalTau <= raThreshold) {
 			threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 		} else if (horizontalTau <= taThreshold && verticalTau <= taThreshold) {
@@ -81,14 +90,13 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 		if (connection) {
 			delete connection;
-			active_connections[intruder->id_] = NULL;
+			(*active_connections)[intruder->id_] = NULL;
 		}
 	}
 	char debug_buf[256];
 	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
 	XPLMDebugString(debug_buf);
 
-	Sense sense = Decider::DetermineResolutionSense(taCurrAltitude, taVerticalVelocity, inVerticalVelocity, slantRangeTau);
 	Strength strength = Decider::DetermineStrength(sense, slantRangeTau);
 
 	intruder->lock_.lock();

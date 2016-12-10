@@ -11,7 +11,7 @@
 
 class Decider {
 public:
-	Decider(Aircraft* thisAircraft);
+	Decider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>*);
 	void Analyze(Aircraft* intruder);
 	enum Strength {
 		CLIMB, MAINTAIN_CLIMB, DO_NOT_DESCEND_500, DO_NOT_DESCEND_1000, DO_NOT_DESCEND_2000,
@@ -21,7 +21,6 @@ public:
 	std::mutex recommendation_range_lock_;
 	RecommendationRange positive_recommendation_range_;
 	RecommendationRange negative_recommendation_range_;
-	void testStart();
 
 private:
 	static Distance const kProtectionVolumeRadius_;
@@ -39,5 +38,5 @@ private:
 	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,
 		double intruderVerticalVelocity, double slantRangeTau);
 	Strength DetermineStrength(Sense s, double slantRangeTau);
-	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> active_connections;
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* active_connections;
 };

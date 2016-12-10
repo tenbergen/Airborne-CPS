@@ -219,7 +219,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 
 	user_aircraft = new Aircraft(my_mac, "127.0.0.1", user_ac_pos, Angle::ZERO, test_vvel);
 
-	decider = new Decider(user_aircraft);
+	decider = new Decider(user_aircraft, &open_connections);
 
 	// Load the textures and bind them etc.
 	gauge_renderer = new GaugeRenderer(gPluginDataFile, decider, user_aircraft, &intruding_aircraft);

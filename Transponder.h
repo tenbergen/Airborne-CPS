@@ -23,7 +23,7 @@
 class Transponder
 {
 public:
-	Transponder(Aircraft*, concurrency::concurrent_unordered_map<std::string, Aircraft*>*, Decider*);
+	Transponder(Aircraft*, concurrency::concurrent_unordered_map<std::string, Aircraft*>*, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>*, Decider*);
 	~Transponder();
 	DWORD receiveLocation(), sendLocation(), keepalive();
 	void start();
@@ -38,6 +38,7 @@ protected:
 	unsigned sinlen;
 	std::atomic<int> communication;
 	xplane::Location intruderLocation, myLocation;
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* open_connections;
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
 
 private:
@@ -45,7 +46,6 @@ private:
 	Aircraft* aircraft;
 	std::vector<Aircraft*> allocated_aircraft;
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap;
-	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> open_connections;
 	
 	std::string getIpAddr();
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);

@@ -4,12 +4,6 @@ Distance const Decider::kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUni
 
 Decider::Decider(Aircraft* this_Aircraft) : thisAircraft_(this_Aircraft) {}
 
-void Decider::testStart()
-{
-	ResolutionController* rc = new ResolutionController(thisAircraft_->id_, &active_connections);
-	rc->start();
-}
-
 void Decider::Analyze(Aircraft* intruder) {
 	/*char debug_buf[128];
 	snprintf(debug_buf, 128, "Decider::Analyze - intruder_id: %s\n", intruder->id_.c_str());
@@ -76,15 +70,6 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	Aircraft::ThreatClassification threat_class;
 	ResolutionConnection* connection = active_connections[intruder->id_];
 	if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
-		Sense s = Sense::UPWARD;
-		if (connection) {
-			
-		} else {
-			connection = new ResolutionConnection(thisAircraft_->id_);
-			active_connections[intruder->id_] = connection;
-			int port = connection->contactIntruder(intruder->ip_);
-			connection->openNewConnectionSender(intruder->ip_, port);
-		}
 		if (horizontalTau <= raThreshold && verticalTau <= raThreshold) {
 			threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 		} else if (horizontalTau <= taThreshold && verticalTau <= taThreshold) {

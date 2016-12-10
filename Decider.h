@@ -1,6 +1,7 @@
 #pragma once
 
-#include "ResolutionController.h"
+#include "ResolutionConnection.h"
+#include <concurrent_unordered_map.h>
 
 #include "XPLMUtilities.h"
 #include "Aircraft.h"

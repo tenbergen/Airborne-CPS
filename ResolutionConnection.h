@@ -17,27 +17,25 @@
 class ResolutionConnection
 {
 public:
-	std::string ip;
-	void sendSense(Sense);
-	ResolutionConnection(std::string);
-	ResolutionConnection(std::string, int);
+	std::string intruder_mac, ip;
+	ResolutionConnection(std::string my_mac, std::string intruder_mac, std::string ip, int port);
 	~ResolutionConnection();
-	void openNewConnectionReceiver(int);
-	void openNewConnectionSender(std::string, int);
-	int contactIntruder(std::string);
-	DWORD senseReceiver();
+	int connectToIntruder(std::string, int);
+	SOCKET* acceptIncomingIntruder(int);
 	DWORD senseSender();
-	int establishConnection(std::string,int);
+	DWORD senseReceiver();
+
 private:
 	std::string mac;
 	int port;
 	std::atomic<bool> running;
 	std::atomic<bool> thread_stopped;
 
-	SOCKET listenSocket;
-	SOCKET sendSocket;
-
+	SOCKET sock;
 	struct sockaddr_in my_addr;
 	struct sockaddr_in intruder_addr;
+
+	void socketDebug(char*, bool);
+	void socketCloseWithError(char*, int);
 };
 

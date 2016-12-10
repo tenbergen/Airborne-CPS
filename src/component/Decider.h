@@ -11,11 +11,6 @@ class Decider {
 public:
 	Decider(Aircraft* thisAircraft);
 	void Analyze(Aircraft* intruder);
-	enum Strength {
-		CLIMB, MAINTAIN_CLIMB, DO_NOT_DESCEND_500, DO_NOT_DESCEND_1000, DO_NOT_DESCEND_2000,
-		DESCEND, MAINTAIN_DESCEND, DO_NOT_CLIMB_500, DO_NOT_CLIMB_1000, DO_NOT_CLIMB_2000
-	};
-
 	std::mutex recommendation_range_lock_;
 	RecommendationRange positive_recommendation_range_;
 	RecommendationRange negative_recommendation_range_;
@@ -35,6 +30,6 @@ private:
 	double CalculateElapsedTime(double t1, double t2);
 	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,
 		double intruderVerticalVelocity, double slantRangeTau);
-	Strength DetermineStrength(Sense s, double slantRangeTau);
+	double DetermineStrength(double taVerticalVelocity, double inVerticalVelocity, Sense s, double slantRangeTau);
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> active_connections;
 };

@@ -118,7 +118,7 @@ DWORD Transponder::receiveLocation()
 
 				ResolutionConnection* connection = new ResolutionConnection(mac, intruder->id_, intruder->ip_, TCP_PORT);
 				XPLMDebugString("new Resolution Connection\n");
-				(*open_connections)[intruder->id_] = connection;
+				open_connections[intruder->id_] = connection;
 				XPLMDebugString("Resolution Connection placed in map\n");
 			}
 				

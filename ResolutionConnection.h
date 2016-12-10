@@ -10,7 +10,6 @@
 #include "Sense.h"
 #include <atomic>
 
-#define CONTROLLER_PORT 21219
 #define MAC_LENGTH 18
 #define TCP_PORT 21218
 
@@ -21,7 +20,7 @@ public:
 	ResolutionConnection(std::string my_mac, std::string intruder_mac, std::string ip, int port);
 	~ResolutionConnection();
 	int connectToIntruder(std::string, int);
-	SOCKET* acceptIncomingIntruder(int);
+	SOCKET acceptIncomingIntruder(int);
 	DWORD senseSender();
 	DWORD senseReceiver();
 

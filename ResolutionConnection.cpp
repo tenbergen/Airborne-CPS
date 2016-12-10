@@ -43,10 +43,11 @@ ResolutionConnection::~ResolutionConnection()
 	XPLMDebugString("ResolutionConnection::~ResolutionConnection - closed socket\n");
 }
 
-SOCKET* ResolutionConnection::acceptIncomingIntruder(int port)
+SOCKET ResolutionConnection::acceptIncomingIntruder(int port)
 {
 	memset(&sock, 0, sizeof sock);
 	memset(&my_addr, 0, sizeof my_addr);
+	memset(&intruder_addr, 0, sizeof intruder_addr);
 	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock == INVALID_SOCKET) {
 		socketDebug("ResolutionConnection::openNewConnectionReceiver - socket failed to open\n", false);
@@ -64,27 +65,27 @@ SOCKET* ResolutionConnection::acceptIncomingIntruder(int port)
 	}
 	SOCKET accept_socket;
 	bool waiting = true;
-	ULONG NonBlock = 1;
-	if (ioctlsocket(sock, FIONBIO, &NonBlock) == SOCKET_ERROR) {
-		socketCloseWithError("ioctlsocket failed on sock with error: %d\n", GetLastError());
-		return NULL;
-	}
-	FD_SET read_set;
-	listen(sock, 1);
+	//ULONG non_blocking = 1;
+	//if (ioctlsocket(sock, FIONBIO, &non_blocking) == SOCKET_ERROR) {
+	//	socketCloseWithError("ioctlsocket failed on sock with error: %d\n", GetLastError());
+	//	return NULL;
+	//}
+	//FD_SET read_set;
 	XPLMDebugString("waiting for connect\n");
 	while (waiting) {
-		FD_ZERO(&read_set);
-		FD_SET(sock, &read_set);
-		timeval timeout;
-		timeout.tv_sec = 0;  // Zero timeout (poll)
-		timeout.tv_usec = 0;
-		if (select(0, &read_set, NULL, NULL, &timeout) == SOCKET_ERROR) {
-			socketCloseWithError("select returned with error: %d\n", GetLastError());
-			return NULL;
-		}
-		if (FD_ISSET(sock, &read_set)) {
+		//FD_ZERO(&read_set);
+		//FD_SET(sock, &read_set);
+		//timeval timeout;
+		//timeout.tv_sec = 0;  // Zero timeout (poll)
+		//timeout.tv_usec = 0;
+		//if (select(0, &read_set, NULL, NULL, &timeout) == SOCKET_ERROR) {
+		//	socketCloseWithError("select returned with error: %d\n", GetLastError());
+		//	return NULL;
+		//}
+		//if (FD_ISSET(sock, &read_set)) {
 			XPLMDebugString("FD_ISSET true\n");
-			int addr_len = sizeof(intruder_addr);
+			socklen_t addr_len = sizeof(intruder_addr);
+			listen(sock, 1);
 			XPLMDebugString("...\n");
 			accept_socket = accept(sock, (struct sockaddr *)&intruder_addr, &addr_len);
 			XPLMDebugString("...\n");
@@ -92,23 +93,24 @@ SOCKET* ResolutionConnection::acceptIncomingIntruder(int port)
 				socketCloseWithError("ResolutionConnection::senseReceiver - to accept error: %d\n", GetLastError());
 				return NULL;
 			}
-			if (ioctlsocket(accept_socket, FIONBIO, &NonBlock) == SOCKET_ERROR) {
-				socketCloseWithError("ioctlsocket failed on accept_socket with error: %d\n", GetLastError());
-				return NULL;
-			}
+			//if (ioctlsocket(accept_socket, FIONBIO, &non_blocking) == SOCKET_ERROR) {
+			//	socketCloseWithError("ioctlsocket failed on accept_socket with error: %d\n", GetLastError());
+			//	return NULL;
+			//}
 			waiting = false;
-		}
+		//}
 	}
-	SOCKET* accepted_sock = (SOCKET*)malloc(sizeof(SOCKET));
-	accepted_sock = &accept_socket;
-	return accepted_sock;
+	//SOCKET* accepted_sock = (SOCKET*)malloc(sizeof(SOCKET));
+	//accepted_sock = &accept_socket;
+	//return accepted_sock;
+	return accept_socket;
 }
 
 DWORD ResolutionConnection::senseReceiver()
 {
 	XPLMDebugString("accept\n");
 	char msg[256];
-	SOCKET* accept_socket = acceptIncomingIntruder(TCP_PORT);
+	SOCKET accept_socket = acceptIncomingIntruder(TCP_PORT);
 	XPLMDebugString("accepted\n");
 	if (accept_socket == NULL) {
 		return 0;
@@ -116,7 +118,7 @@ DWORD ResolutionConnection::senseReceiver()
 	while (running)
 	{
 		char* sens = "GO_UP_RECEIVER";
-		if (recv(*accept_socket, msg, 255, 0) < 0) {
+		if (recv(accept_socket, msg, 255, 0) < 0) {
 			socketCloseWithError("ResolutionConnection::senseReceiver -  to receive error: %d\n", GetLastError());
 			return 0;
 		}
@@ -132,7 +134,7 @@ DWORD ResolutionConnection::senseReceiver()
 			return 0;
 		}
 	}
-	free(accept_socket);
+	//free(accept_socket);
 	thread_stopped = true;
 	return 0;
 }

@@ -5,11 +5,12 @@
 std::string Transponder::mac_address = "";
 std::atomic<bool> Transponder::initialized = false;
 
-Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruders, Decider* decider)
+Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruders, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* connections, Decider* decider)
 {
 	decider_ = decider;
 	aircraft = ac;
 	intrudersMap = intruders;
+	open_connections = connections;
 
 	mac = getHardwareAddress();
 
@@ -118,7 +119,7 @@ DWORD Transponder::receiveLocation()
 
 				ResolutionConnection* connection = new ResolutionConnection(mac, intruder->id_, intruder->ip_, TCP_PORT);
 				XPLMDebugString("new Resolution Connection\n");
-				open_connections[intruder->id_] = connection;
+				(*open_connections)[intruder->id_] = connection;
 				XPLMDebugString("Resolution Connection placed in map\n");
 			}
 				

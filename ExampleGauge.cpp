@@ -85,6 +85,7 @@ Aircraft test_intr_n = {"intruder_n", "192.168.1.1", intr_ac_pos_n, Angle::ZERO,
 GaugeRenderer* gauge_renderer;
 
 concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft;
+concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> open_connections;
 Transponder* transponder;
 
 Decider* decider;
@@ -225,7 +226,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	gauge_renderer->LoadTextures();
 
 	// start broadcasting location, and listening for aircraft
-	transponder = new Transponder(user_aircraft, &intruding_aircraft, decider);
+	transponder = new Transponder(user_aircraft, &intruding_aircraft, &open_connections, decider);
 	transponder->start();
 
 	return 1;

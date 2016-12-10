@@ -16,17 +16,23 @@
 class ResolutionConnection
 {
 public:
-	std::string intruder_mac, ip;
 	ResolutionConnection(std::string my_mac, std::string intruder_mac, std::string ip, int port);
 	~ResolutionConnection();
+
+	std::string intruder_mac;
+	std::string ip;
+	
 	int connectToIntruder(std::string, int);
 	SOCKET acceptIncomingIntruder(int);
+
 	DWORD senseSender();
 	DWORD senseReceiver();
-
 private:
+	static unsigned short const kTcpPort_ = 21217;
+
 	std::string mac;
 	int port;
+
 	std::atomic<bool> running;
 	std::atomic<bool> thread_stopped;
 
@@ -37,4 +43,3 @@ private:
 	void socketDebug(char*, bool);
 	void socketCloseWithError(char*, int);
 };
-

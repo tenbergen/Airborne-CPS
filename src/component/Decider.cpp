@@ -90,12 +90,13 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		double strength = Decider::DetermineStrength(taVerticalVelocity, inVerticalVelocity, sense, slantRangeTau);
 
 		recommendation_range_lock_.lock();
+
 		if (sense == Sense::UPWARD) {
-			positive_recommendation_range_.min_vertical_speed.to_feet_per_min = strength;
-			negative_recommendation_range_.max_vertical_speed.to_feet_per_min = 4000;
+			positive_recommendation_range_.min_vertical_speed = Velocity(strength, Velocity::VelocityUnits::FEET_PER_MIN);
+			negative_recommendation_range_.max_vertical_speed = Velocity(-4000.0, Velocity::VelocityUnits::FEET_PER_MIN);
 		} else if (sense == Sense::DOWNWARD) {
-			positive_recommendation_range_.min_vertical_speed.to_feet_per_min = strength;
-			negative_recommendation_range_.max_vertical_speed.to_feet_per_min = -4000;
+			positive_recommendation_range_.min_vertical_speed = Velocity(strength, Velocity::VelocityUnits::FEET_PER_MIN);
+			negative_recommendation_range_.max_vertical_speed = Velocity(-4000.0, Velocity::VelocityUnits::FEET_PER_MIN);
 		}
 		recommendation_range_lock_.unlock();
 

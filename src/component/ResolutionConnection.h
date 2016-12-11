@@ -6,6 +6,7 @@
 #endif
 
 #include <atomic>
+#include <mutex>
 #include <string>
 #include "XPLMUtilities.h"
 
@@ -26,15 +27,16 @@ public:
 	std::string const my_mac;
 	int const port;
 
-	std::atomic<bool> consensusAchieved;
-	std::atomic<Sense> current_sense;
+	bool consensusAchieved;
+	Sense current_sense;
+	std::mutex lock;
 	
 	int connectToIntruder(std::string, int);
 	SOCKET acceptIncomingIntruder(int);
 
 	DWORD senseSender();
 	DWORD senseReceiver();
-	int sendSense();
+	int sendSense(Sense);
 private:
 	std::atomic<bool> running;
 	std::atomic<bool> thread_stopped;

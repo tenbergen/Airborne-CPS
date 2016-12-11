@@ -28,7 +28,7 @@ float const GaugeRenderer::kGlAngleOffset_ = 90.0f;
 float const GaugeRenderer::kNeedleTranslationX = kNeedlePosLeft + ((kNeedlePosRight - kNeedlePosLeft) / 2.0f);
 float const GaugeRenderer::kNeedleTranslationY = kNeedlePosBot + 5.0f;
 
-double const GaugeRenderer::kDiskInnerRadius_ = 50.0;
+double const GaugeRenderer::kDiskInnerRadius_ = 75.0;
 double const GaugeRenderer::kDiskOuterRadius_ = 105.0;
 int const GaugeRenderer::kDiskSlices_ = 32;
 int const GaugeRenderer::kDiskLoops_ = 2;

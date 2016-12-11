@@ -204,6 +204,13 @@ void ResolutionConnection::resolveSense()
 
 int ResolutionConnection::sendSense(Sense s)
 {
+	if (s == Sense::UPWARD) {
+		s = Sense::DOWNWARD;
+	} else if (s == Sense::DOWNWARD) {
+		s = Sense::UPWARD;
+	} else {
+		XPLMDebugString("ResolutionConnection::sendSense - Sense is UNKNOWN or MAINTAINED\n");
+	}
 	if (connected) {
 		char* msg = senseToString(s);
 		if (send(open_socket, msg, strlen(msg) + 1, 0) == SOCKET_ERROR) {

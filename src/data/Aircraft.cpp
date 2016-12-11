@@ -6,3 +6,8 @@ Aircraft::Aircraft(std::string const id, std::string const ip) : id_(id), ip_(ip
 Aircraft::Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity vert_vel) : 
 	id_(id), ip_(ip), position_current_(position), position_old_(position), heading_(heading), vertical_velocity_(vert_vel), 
 	true_airspeed_(Velocity::ZERO) {}
+
+Aircraft::Aircraft(Aircraft const & that) : id_(that.id_), ip_(that.ip_), position_current_time_(that.position_current_time_), 
+position_current_(that.position_current_), position_old_time_(that.position_old_time_), position_old_(that.position_old_),
+vertical_velocity_(that.vertical_velocity_), true_airspeed_(that.true_airspeed_), heading_(that.heading_), threat_classification_(that.threat_classification_)
+{}

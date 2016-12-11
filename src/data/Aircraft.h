@@ -19,6 +19,7 @@ public:
 	Resolution Advisory - Within protected range and considered an immediate threat. Issue avoidance recommendation.*/
 	enum class ThreatClassification { NON_THREAT_TRAFFIC, PROXIMITY_INTRUDER_TRAFFIC, TRAFFIC_ADVISORY, RESOLUTION_ADVISORY };
 
+	Aircraft(Aircraft const & that);
 	Aircraft(std::string const id, std::string const ip);
 	Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity vertical_velocity);
 

@@ -127,6 +127,22 @@ static void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlag
 
 static int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
+void SetTestAircraftPosition(Aircraft& intruder, Velocity vvel) {
+	intruder.position_old_ = intruder.position_current_;
+	intruder.position_old_time_ = intruder.position_current_time_;
+
+	Distance new_altitude = { intruder.position_current_.altitude_.to_feet() + vvel.to_feet_per_min(), Distance::DistanceUnits::FEET };
+	intruder.position_current_time_ = intruder.position_old_time_ + std::chrono::milliseconds(60000);
+	intruder.position_current_ = {intruder.position_old_.latitude_, intruder.position_old_.longitude_, new_altitude};
+
+	LLA cur_pos = intruder.position_current_;
+	LLA old_pos = intruder.position_old_;
+	/*char debug_buf[256];
+	snprintf(debug_buf, 256, "ExampleGauge::SetTestAircraftPosition - intruder - id: %s, pos_old: (%.3f, %.3f, %.3f), pos_cur: (%.3f, %.3f, %.3f), old_time: %lld, cur_time: %lld\n", intruder.id_, 
+		old_pos.latitude_.to_degrees(), old_pos.longitude_.to_degrees(), old_pos.altitude_.to_feet(), cur_pos.latitude_.to_degrees(), cur_pos.longitude_.to_degrees(),
+		intruder.position_old_time_.count(), intruder.position_current_time_.count());*/
+}
+
 void test() {
 	intruding_aircraft[test_intr_ne.id_] = &test_intr_ne;
 	intruding_aircraft[test_intr_nw.id_] = &test_intr_nw;
@@ -148,6 +164,11 @@ void test() {
 	test_intr_nw.threat_classification_ = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
 	test_intr_se.threat_classification_ = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
 	test_intr_sw.threat_classification_ = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
+
+	SetTestAircraftPosition(test_intr_ne, { 1000.0, Velocity::VelocityUnits::FEET_PER_MIN});
+	SetTestAircraftPosition(test_intr_nw, { 500.0, Velocity::VelocityUnits::FEET_PER_MIN });
+	SetTestAircraftPosition(test_intr_se, { -500.0, Velocity::VelocityUnits::FEET_PER_MIN });
+	SetTestAircraftPosition(test_intr_sw, { -1000.0, Velocity::VelocityUnits::FEET_PER_MIN });
 }
 
 PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {

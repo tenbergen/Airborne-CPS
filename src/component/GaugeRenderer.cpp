@@ -154,7 +154,7 @@ void GaugeRenderer::Render(texture_constants::GlRgb8Color cockpit_lighting) {
 			Distance range = gauge_center_pos.Range(&intruder_pos);
 
 			if (range.to_feet() < kGaugeInnerCircleRadius_.to_feet()) {
-				Velocity const intr_vvel = { (alt_diff.to_feet() / alt_time_diff.count()) * kMillisecondsPerSecond_, Velocity::VelocityUnits::FEET_PER_MIN };
+				Velocity const intr_vvel = Velocity( (alt_diff.to_feet() / (double) alt_time_diff.count()) * kMillisecondsPerSecond_, Velocity::VelocityUnits::FEET_PER_MIN );
 				DrawIntrudingAircraft(&intruder_pos, &intr_vvel, &user_heading, &gauge_center_pos, &range, threat_class);
 			}
 		}
@@ -195,7 +195,6 @@ void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Veloci
 	double symbol_top = symbol_center_y + 8.0;
 
 	texture_constants::TexCoords const * symbol_coords = AircraftSymbolFromThreatClassification(threat_class);
-
 	DrawTextureRegion(symbol_coords, symbol_left, symbol_right, symbol_top, symbol_bot);
 
 	Distance altitude_difference = intruder_pos->altitude_ - gauge_center_pos->altitude_;

@@ -57,7 +57,6 @@ static inline char* const senseToString(Sense s)
 	{
 		case Sense::UPWARD: return "UPWARD";
 		case Sense::DOWNWARD: return "DOWNWARD";
-		case Sense::MAINTAIN: return "MAINTAIN";
 		default: return "UNKNOWN";
 	}
 }
@@ -68,8 +67,6 @@ static inline Sense const stringToSense(char* str)
 		return Sense::UPWARD;
 	} else if (strcmp(str, "DOWNWARD") == 0) {
 		return Sense::DOWNWARD;
-	} else if (strcmp(str, "MAINTAIN") == 0) {
-		return Sense::MAINTAIN;
 	} else {
 		return Sense::UNKNOWN;
 	}

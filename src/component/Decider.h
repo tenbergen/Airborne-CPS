@@ -26,16 +26,13 @@ private:
 
 	void DetermineActionRequired(Aircraft* intruder);
 
-	double CalculateVerticalSeparation(double thisAircraftsAltitude, double intrudersAltitude);
-	double CalculateRate(double separation, double temp, double elapsedTime);
-	double CalculateTau(double a, double b);
-	double CalculateSlantRange(double horizontalSeparation, double verticalSeparation);
-	double CalculateSlantRangeRate(double horizontalRate, double verticalRate, double elapsedTime);
+	Distance CalculateSlantRange(Distance horizontalSeparation, Distance verticalSeparation);
+	Velocity CalculateSlantRangeRate(Velocity horizontalRate, Velocity verticalRate, double elapsed_time_minutes);
+	
 	double ToMinutes(std::chrono::milliseconds time);
-	double CalculateElapsedTime(double t1, double t2);
 
-	Sense DetermineResolutionSense(double thisAircraftCurrentAltitude, double thisAircraftsVerticalVelocity,
-		double intruderVerticalVelocity, double slantRangeTau);
+	Sense DetermineResolutionSense(Distance user_current_altitude, Distance intr_current_altitude, Velocity user_vvel,
+		Velocity intr_vvel, double vertical_tau);
 
 	double DetermineStrength(double taVerticalVelocity, double inVerticalVelocity, Sense s, double slantRangeTau);
 

@@ -76,14 +76,20 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		Sense sense = Decider::DetermineResolutionSense(taCurrAltitude, taVerticalVelocity, inVerticalVelocity, slantRangeTau);
 
 		if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
-			if (connection) {
-				if (connection->current_sense == Sense::UNKNOWN) {
-					connection->current_sense = sense;
-					connection->sendSense();
-				}
-				else if (connection->consensusAchieved) {
-					XPLMDebugString("\n\nPARTY!\n\n");
-				}
+			bool consensus_copy;
+			Sense sense_copy;
+
+			connection->lock.lock();
+			consensus_copy = connection->consensusAchieved;
+			sense_copy = connection->current_sense;
+
+			if  (consensus_copy) {
+				XPLMDebugString("\n\nPARTY!\n\n");
+				connection->lock.unlock();
+			} else if (sense_copy == Sense::UNKNOWN) {
+				connection->current_sense = sense;
+				connection->lock.unlock();
+				connection->sendSense(sense);
 			}
 
 			threat_class = ReevaluateProximinityIntruderThreatClassification(horizontalTau, verticalTau, current_threat_class);
@@ -111,7 +117,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		intruder->lock_.lock();
 		intruder->threat_classification_ = threat_class;
 		intruder->lock_.unlock();
-	//}
+	}
 }
 
 Aircraft::ThreatClassification Decider::ReevaluateProximinityIntruderThreatClassification(double horizontal_tau, double vertical_tau, Aircraft::ThreatClassification current_threat_class) const {

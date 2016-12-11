@@ -111,7 +111,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		intruder->lock_.lock();
 		intruder->threat_classification_ = threat_class;
 		intruder->lock_.unlock();
-	}
+	//}
 }
 
 Aircraft::ThreatClassification Decider::ReevaluateProximinityIntruderThreatClassification(double horizontal_tau, double vertical_tau, Aircraft::ThreatClassification current_threat_class) const {

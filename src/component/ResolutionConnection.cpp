@@ -114,6 +114,7 @@ int ResolutionConnection::connectToIntruder(std::string ip, int port)
 DWORD ResolutionConnection::senseSender()
 {
 	if (connectToIntruder(ip, port) >= 0) {
+		XPLMDebugString("ResolutionConnection::senseSender - connection established\n");
 		return 0;
 	}
 	else {

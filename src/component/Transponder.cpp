@@ -170,6 +170,7 @@ DWORD Transponder::keepalive()
 			if (--(iter->second) == 0) {
 				intrudersMap->unsafe_erase(iter->first);
 				keepAliveMap.unsafe_erase(iter->first);
+				open_connections->unsafe_erase(iter->first);
 			}
 		}
 		Sleep(1000);

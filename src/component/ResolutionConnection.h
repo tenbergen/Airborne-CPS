@@ -12,16 +12,20 @@
 #include "data/Sense.h"
 
 #define MAC_LENGTH 18
-#define TCP_PORT 21218
 
 class ResolutionConnection
 {
 public:
-	ResolutionConnection(std::string my_mac, std::string intruder_mac, std::string ip, int port);
+	static unsigned short const kTcpPort_ = 21218;
+
+	ResolutionConnection(std::string const user_mac, std::string const intruder_mac, std::string const ip, int const port);
 	~ResolutionConnection();
 
-	std::string intruder_mac;
-	std::string ip;
+	std::string const intruder_mac;
+	std::string const ip;
+	std::string const my_mac;
+	int const port;
+
 	std::atomic<bool> consensusAchieved;
 	std::atomic<Sense> current_sense;
 	
@@ -32,11 +36,6 @@ public:
 	DWORD senseReceiver();
 	int sendSense();
 private:
-	static unsigned short const kTcpPort_ = 21218;
-
-	std::string my_mac;
-	int port;
-
 	std::atomic<bool> running;
 	std::atomic<bool> thread_stopped;
 	std::atomic<bool> connected;

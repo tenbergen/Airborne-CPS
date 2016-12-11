@@ -12,13 +12,11 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	intrudersMap = intruders;
 	open_connections = connections;
 
-	mac = getHardwareAddress();
-
 	char debug_buf[64];
-	snprintf(debug_buf, 64, "Transponder::Transponder - mac_addr: %s\n", mac.c_str());
+	snprintf(debug_buf, 64, "Transponder::Transponder - mac_addr: %s\n", getHardwareAddress().c_str());
 	XPLMDebugString(debug_buf);
 
-	myLocation.set_id(mac);
+	myLocation.set_id(mac_address);
 	ip = getIpAddr();
 	myLocation.set_ip(ip);
 
@@ -97,16 +95,16 @@ DWORD Transponder::receiveLocation()
 			LLA updated_position = { intruderLocation.lat(), intruderLocation.lon(), intruderLocation.alt(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
 			char debug_buf[128];
-			snprintf(debug_buf, 128, "Transponder::receive - intruderID: %s, pos: (%.3f, %.3f, %.3f)\n", intruderID, latitude.to_degrees(), longitude.to_degrees(), altitude.to_feet());
+			snprintf(debug_buf, 128, "Transponder::receiveLocation- intruderID: %s, pos: (%.3f, %.3f, %.3f)\n", intruderID, latitude.to_degrees(), longitude.to_degrees(), altitude.to_feet());
 			XPLMDebugString(debug_buf);
 
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
-			XPLMDebugString("checking the map\n");
+			XPLMDebugString("Transponder::receiveLocation - checking the map\n");
 			if (!intruder) {
-				XPLMDebugString("creating new intruder\n");
+				XPLMDebugString("Transponder::receiveLocation - creating new intruder\n");
 				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
 				allocated_aircraft.push_back(intruder);
-				XPLMDebugString("intruder created\n");
+				XPLMDebugString("Transponder::receiveLocation - intruder created\n");
 				
 				// Fill in the current values so that the aircraft will not have two wildly different position values
 				// If the position current is not set, position old will get set to LLA::ZERO while position current will
@@ -115,12 +113,12 @@ DWORD Transponder::receiveLocation()
 				intruder->position_current_time_ = ms_since_epoch;
 
 				(*intrudersMap)[intruder->id_] = intruder;
-				XPLMDebugString("intruder placed in map\n");
+				XPLMDebugString("Transponder::receiveLocation - intruder placed in map\n");
 
-				ResolutionConnection* connection = new ResolutionConnection(mac, intruder->id_, intruder->ip_, TCP_PORT);
-				XPLMDebugString("new Resolution Connection\n");
+				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id_, intruder->ip_, ResolutionConnection::kTcpPort_);
+				XPLMDebugString("Transponder::receiveLocation - new Resolution Connection\n");
 				(*open_connections)[intruder->id_] = connection;
-				XPLMDebugString("Resolution Connection placed in map\n");
+				XPLMDebugString("Transponder::receiveLocation - Resolution Connection placed in map\n");
 			}
 				
 			keepAliveMap[intruder->id_] = 10;
@@ -230,7 +228,7 @@ std::string Transponder::getIpAddr()
 	int result;
 	result = connect(sock, (const sockaddr*)&server, sizeof(server));
 	if (result == SOCKET_ERROR) {
-		XPLMDebugString("unable to connect to \"8.8.8.8\"\n");
+		XPLMDebugString("Transponder::getIpAddr - unable to connect to \"8.8.8.8\"\n");
 		closesocket(sock);
 		return "error";
 	}
@@ -240,7 +238,7 @@ std::string Transponder::getIpAddr()
 	char addr[16];
 	result = getsockname(sock, (sockaddr*)&name, (int*)&namelen);
 	if (result == SOCKET_ERROR) {
-		XPLMDebugString("count not get socket info\n");
+		XPLMDebugString("Transponder::getIpAddr - could not get socket info\n");
 		closesocket(sock);
 		return "error";
 	}

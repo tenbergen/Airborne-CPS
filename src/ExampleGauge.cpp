@@ -44,7 +44,7 @@ XPLMDataRef heading_true_north_deg_ref, heading_true_mag_deg_ref;
 XPLMDataRef vert_speed_ref, true_airspeed_ref, ind_airspeed_ref;
 
 // These datarefs represent the RGB color of the lighting inside the cockpit
-XPLMDataRef	cockpit_lighting_red = NULL, cockpit_lighting_green = NULL, cockpit_lighting_blue = NULL;
+XPLMDataRef	cockpit_lighting_red, cockpit_lighting_green, cockpit_lighting_blue;
 
 static XPLMWindowID	gExampleGaugePanelDisplayWindow = NULL;
 static int ExampleGaugeDisplayPanelWindow = 1;

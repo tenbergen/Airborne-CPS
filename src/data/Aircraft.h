@@ -12,9 +12,6 @@
 class Aircraft
 {
 public:
-	static Angle VelocityToBearing(Vec2 const * const velocity);
-	static Angle HeadingToBearing(Vec2 const * const heading);
-
 	/* From the FAA Advanced Avionics Handbook (p. 97)
 	Non-threat traffic - outside of protected distance and altitude range
 	Proximity intruder traffic - Within protected distance and altitude range, but not considered a threat
@@ -51,5 +48,5 @@ public:
 	Velocity true_airspeed_;
 	Angle heading_;
 
-	ThreatClassification threat_classification_;
+	ThreatClassification threat_classification_ = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 };

@@ -12,12 +12,9 @@ static DWORD WINAPI startResolutionSender(void* param)
 	return rc->senseSender();
 }
 
-ResolutionConnection::ResolutionConnection(std::string mmac, std::string imac, std::string ip_addr, int port_num)
+ResolutionConnection::ResolutionConnection(std::string const mmac, std::string const imac, std::string const ip_addr, int const port_num) : 
+	my_mac(mmac), intruder_mac(imac), ip(ip_addr), port(port_num)
 {
-	my_mac = mmac;
-	intruder_mac = imac;
-	ip = ip_addr;
-	port = port_num;
 	running = true;
 	connected = false;
 	current_sense = Sense::UNKNOWN;
@@ -58,7 +55,7 @@ SOCKET ResolutionConnection::acceptIncomingIntruder(int port)
 	}
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_addr.s_addr = INADDR_ANY;
-	my_addr.sin_port = htons(TCP_PORT);
+	my_addr.sin_port = htons(kTcpPort_);
 	int bind_success = bind(sock, (struct sockaddr*)&my_addr, sizeof(my_addr));
 	if (bind_success < 0) {
 		char the_error[32];
@@ -82,19 +79,16 @@ SOCKET ResolutionConnection::acceptIncomingIntruder(int port)
 
 DWORD ResolutionConnection::senseReceiver()
 {
-	char msg[256];
 	char* ack = "ACK";
 	XPLMDebugString("ResolutionConnection::senseReceiver - accept\n");
-	SOCKET accept_socket = acceptIncomingIntruder(TCP_PORT);
+	SOCKET accept_socket = acceptIncomingIntruder(kTcpPort_);
 	XPLMDebugString("ResolutionConnection::senseReceiver - accepted\n");
-
-	if (accept_socket == NULL) {
-		return 0;
-	} else {
+	if (accept_socket) {
 		connected = true;
 		open_socket = accept_socket;
 		resolveSense();
 	}
+
 	return 0;
 }
 
@@ -135,6 +129,7 @@ void ResolutionConnection::resolveSense()
 	char msg[256];
 	char* ack = "ACK";
 	Sense agreed_upon_sense = Sense::UNKNOWN;
+
 	while (running)
 	{
 		if (recv(open_socket, msg, 255, 0) < 0) {

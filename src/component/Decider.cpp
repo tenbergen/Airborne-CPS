@@ -27,6 +27,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	thisAircraft_->lock_.lock();
 	LLA taCurrPosition = thisAircraft_->position_current_;
 	LLA taPrevPosition = thisAircraft_->position_old_;
+	Aircraft::ThreatClassification current_threat_class = intruder->threat_classification_;
 	thisAircraft_->lock_.unlock();
 
 	intruder->lock_.lock();
@@ -51,7 +52,12 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 	double taElapsedTime = Decider::CalculateElapsedTime(Decider::ToMinutes(thisAircraft_->position_old_time_),
 		Decider::ToMinutes(thisAircraft_->position_current_time_));
 
-	if (taElapsedTime != 0 && taCurrAltitude - taPrevAltitude != 0) {
+	char debug_buf[256];
+	double alt_diff = taCurrAltitude - taPrevAltitude;
+	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - ta_elapsed_time: %f, intr_el_time: %f, alt_diff: %f\n", taElapsedTime, inElapsedTime, alt_diff);
+	XPLMDebugString(debug_buf);
+	
+	if (taElapsedTime != 0.0 && inElapsedTime != 0.0 &&  taCurrAltitude - taPrevAltitude != 0.0) {
 		double horizontalRate = Decider::CalculateRate(currHorizontalSeparation, prevHorizontalSeparation, taElapsedTime);
 		double horizontalTau = Decider::CalculateTau(currHorizontalSeparation, horizontalRate);
 		double verticalRate = Decider::CalculateRate(currVerticalSeparation, prevVerticalSeparation, taElapsedTime);
@@ -68,6 +74,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		Aircraft::ThreatClassification threat_class;
 		ResolutionConnection* connection = (*active_connections)[intruder->id_];
 		Sense sense = Decider::DetermineResolutionSense(taCurrAltitude, taVerticalVelocity, inVerticalVelocity, slantRangeTau);
+
 		if (currSlantRange < kProtectionVolumeRadius_.to_feet()) {
 			if (connection) {
 				if (connection->current_sense == Sense::UNKNOWN) {
@@ -78,21 +85,13 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 					XPLMDebugString("\n\nPARTY!\n\n");
 				}
 			}
-			if (horizontalTau <= raThreshold && verticalTau <= raThreshold) {
-				threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
-			} else if (horizontalTau <= taThreshold && verticalTau <= taThreshold) {
-				threat_class = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
-			} else {
-				threat_class = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
-			}
+
+			threat_class = ReevaluateProximinityIntruderThreatClassification(horizontalTau, verticalTau, current_threat_class);
 		} else {
 			threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
-			if (connection) {
-				(*active_connections)[intruder->id_] = NULL;
-				delete connection;
-			}
 		}
-		char debug_buf[256];
+
+		debug_buf[0] = '\0';
 		snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currSlantRange, horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
 		XPLMDebugString(debug_buf);
 
@@ -112,6 +111,23 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		intruder->lock_.lock();
 		intruder->threat_classification_ = threat_class;
 		intruder->lock_.unlock();
+	}
+}
+
+Aircraft::ThreatClassification Decider::ReevaluateProximinityIntruderThreatClassification(double horizontal_tau, double vertical_tau, Aircraft::ThreatClassification current_threat_class) const {
+	char debug_buf[256];
+	snprintf(debug_buf, 256, "Decider::ReevaluateProximityIntruderThreatClassification - horizontal_tau: %f, vert_tau: %f, threat_class: %s\n", horizontal_tau, vertical_tau, get_threat_class_str(current_threat_class).c_str());
+	XPLMDebugString(debug_buf);
+
+	if (current_threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY || 
+		current_threat_class != Aircraft::ThreatClassification::RESOLUTION_ADVISORY && horizontal_tau < raThreshold && vertical_tau < raThreshold) {
+		return Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
+	} else if(current_threat_class == Aircraft::ThreatClassification::TRAFFIC_ADVISORY || 
+		current_threat_class != Aircraft::ThreatClassification::TRAFFIC_ADVISORY && horizontal_tau < taThreshold && vertical_tau < taThreshold) {
+		return Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
+	}
+	else {
+		return Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
 	}
 }
 
@@ -154,8 +170,7 @@ double Decider::DetermineStrength(double taVV, double inVV, Sense sense, double 
 
 double Decider::ToMinutes(std::chrono::milliseconds time) {
 	long long result1 = time.count();
-	double result2 = (double)(result1 / 60000);
-	return result2;
+	return ((double)result1) / 60000.0;
 }
 
 double Decider::CalculateElapsedTime(double t1, double t2) {

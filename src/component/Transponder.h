@@ -26,33 +26,38 @@
 class Transponder
 {
 public:
+	/* Calls WSAStartup, which is required to be succesfully run before any networking calls can be made.*/
+	static void initNetworking();
+	static std::string getHardwareAddress();
+
 	Transponder(Aircraft*, concurrency::concurrent_unordered_map<std::string, Aircraft*>*, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>*, Decider*);
 	~Transponder();
 	DWORD receiveLocation(), sendLocation(), keepalive();
 	void start();
-
-	static void initNetworking();
-	static std::string getHardwareAddress();
-
 protected:
-	std::string ip, mac;
-	SOCKET outSocket, inSocket;
-	struct sockaddr_in incoming, outgoing;
+	std::string ip;
+
+	SOCKET outSocket;
+	SOCKET inSocket;
+	struct sockaddr_in incoming;
+	struct sockaddr_in outgoing;
+
 	unsigned sinlen;
 	std::atomic<int> communication;
 	xplane::Location intruderLocation, myLocation;
+
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* open_connections;
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
-
 private:
+	static std::atomic<bool> initialized;
+	static std::string mac_address;
+
 	Decider * decider_;
 	Aircraft* aircraft;
+
 	std::vector<Aircraft*> allocated_aircraft;
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap;
 	
 	std::string getIpAddr();
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);
-
-	static std::atomic<bool> initialized;
-	static std::string mac_address;
 };

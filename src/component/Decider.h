@@ -16,8 +16,22 @@ public:
 	RecommendationRange negative_recommendation_range_;
 
 private:
+	static Velocity const kMinGaugeVerticalVelocity;
+	static Velocity const kMaxGaugeVerticalVelocity;
+
 	static Distance const kProtectionVolumeRadius_;
+
+	static Distance const kAlim350_;
+	static Distance const kAlim400_;
+	static Distance const kAlim600_;
+	static Distance const kAlim700_;
+
+	static Distance const kAltitudeAlim350Threshold_;
+	static Distance const kAltitudeAlim400Threshold_;
+	static Distance const kAltitudeAlim600Threshold_;
 	
+	static Velocity const kVerticalVelocityClimbDescendDelta_;
+
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* active_connections;
 	Aircraft* thisAircraft_;
 
@@ -34,7 +48,13 @@ private:
 	Sense DetermineResolutionSense(Distance user_current_altitude, Distance intr_current_altitude, Velocity user_vvel,
 		Velocity intr_vvel, double vertical_tau);
 
-	double DetermineStrength(double taVerticalVelocity, double inVerticalVelocity, Sense s, double slantRangeTau);
+	Velocity Decider::DetermineRelativeMinimumVerticalVelocityToAchieveAlim(Distance ALIM, Distance separation_at_cpa, double tau_minutes) const;
 
-	Aircraft::ThreatClassification ReevaluateProximinityIntruderThreatClassification(double horizontal_tau, double vertical_tau, Aircraft::ThreatClassification current_threat_class) const;
+	RecommendationRangePair DetermineStrength(Sense sense, Velocity user_vvel, Velocity intr_vvel,
+		Distance user_altitude, Distance intr_altitude, double tau_minutes) const;
+
+	Aircraft::ThreatClassification ReevaluateProximinityIntruderThreatClassification(double horizontal_tau, double vertical_tau, 
+		Aircraft::ThreatClassification current_threat_class) const;
+
+	Distance DetermineALIM(Distance user_altitude) const;
 };

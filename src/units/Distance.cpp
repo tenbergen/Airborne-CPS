@@ -82,3 +82,11 @@ Distance Distance::operator / (Distance const & d) const {
 void Distance::operator = (Distance const & d) {
 	value_ft_ = d.value_ft_;
 }
+
+bool Distance::operator < (Distance const & that) const {
+	return value_ft_ < that.value_ft_;
+}
+
+bool Distance::operator > (Distance const & that) const {
+	return value_ft_ > that.value_ft_;
+}

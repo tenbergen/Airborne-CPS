@@ -61,3 +61,11 @@ double Velocity::to_knots() const {
 void Velocity::operator = (Velocity const & that) {
 	val_ft_per_min_ = that.val_ft_per_min_;
 }
+
+Velocity Velocity::operator + (Velocity const & that) const {
+	return Velocity(val_ft_per_min_ + that.val_ft_per_min_, Velocity::VelocityUnits::FEET_PER_MIN);
+}
+
+Velocity Velocity::operator - (Velocity const & that) const {
+	return Velocity(val_ft_per_min_ - that.val_ft_per_min_, Velocity::VelocityUnits::FEET_PER_MIN);
+}

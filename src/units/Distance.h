@@ -27,6 +27,9 @@ public:
 	Distance operator / (Distance const & that) const;
 	void operator = (Distance const & that);
 
+	bool operator < (Distance const & that) const;
+	bool operator > (Distance const & that) const;
+
 private:
 	static double const kFtPerMeter_;
 	static double const kFtPerNmi_;

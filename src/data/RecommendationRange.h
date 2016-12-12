@@ -9,3 +9,8 @@ typedef struct RecommendationRange {
 	Velocity max_vertical_speed = Velocity::ZERO;
 	bool valid = false;
 } RecommendationRange;
+
+typedef struct RecommendationRangePair {
+	RecommendationRange positive;
+	RecommendationRange negative;
+} RecommendationRangePair;

@@ -22,6 +22,8 @@ public:
 	double to_knots() const;
 
 	void operator = (Velocity const & that);
+	Velocity operator + (Velocity const & that) const;
+	Velocity operator - (Velocity const & that) const;
 
 private:
 	static double const kMphToFtPerMin_;

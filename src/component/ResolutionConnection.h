@@ -30,6 +30,7 @@ public:
 	bool consensusAchieved;
 	Sense current_sense;
 	std::mutex lock;
+	std::chrono::milliseconds last_analyzed;
 	
 	int connectToIntruder(std::string, int);
 	SOCKET acceptIncomingIntruder(int);

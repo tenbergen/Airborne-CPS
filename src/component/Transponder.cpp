@@ -99,12 +99,9 @@ DWORD Transponder::receiveLocation()
 			XPLMDebugString(debug_buf);
 
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
-			XPLMDebugString("Transponder::receiveLocation - checking the map\n");
 			if (!intruder) {
-				XPLMDebugString("Transponder::receiveLocation - creating new intruder\n");
 				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
 				allocated_aircraft.push_back(intruder);
-				XPLMDebugString("Transponder::receiveLocation - intruder created\n");
 				
 				// Fill in the current values so that the aircraft will not have two wildly different position values
 				// If the position current is not set, position old will get set to LLA::ZERO while position current will
@@ -113,12 +110,10 @@ DWORD Transponder::receiveLocation()
 				intruder->position_current_time_ = ms_since_epoch;
 
 				(*intrudersMap)[intruder->id_] = intruder;
-				XPLMDebugString("Transponder::receiveLocation - intruder placed in map\n");
 
 				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id_, intruder->ip_, ResolutionConnection::kTcpPort_);
 				XPLMDebugString("Transponder::receiveLocation - new Resolution Connection\n");
 				(*open_connections)[intruder->id_] = connection;
-				XPLMDebugString("Transponder::receiveLocation - Resolution Connection placed in map\n");
 			}
 				
 			keepAliveMap[intruder->id_] = 10;

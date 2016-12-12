@@ -75,7 +75,8 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 			sense_copy = connection->current_sense;
 
 			if (consensus_copy) {
-				XPLMDebugString("\n\nPARTY!\n\n");
+				XPLMDebugString("\nPARTY!\n");
+				sense = sense_copy;
 				connection->lock.unlock();
 			} else if (sense_copy == Sense::UNKNOWN) {
 				connection->current_sense = sense;
@@ -92,7 +93,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		}
 
 		debug_buf[0] = '\0';
-		snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s \n", intruder->id_.c_str(), currSlantRange.to_feet(), horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str());
+		snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s, sense: %s\n", intruder->id_.c_str(), currSlantRange.to_feet(), horizontalTau, verticalTau, get_threat_class_str(threat_class).c_str(), SenseUtil::StringFromSense(sense).c_str());
 		XPLMDebugString(debug_buf);
 
 		/*double strength = Decider::DetermineStrength(taVerticalVelocity, inVerticalVelocity, sense, slantRangeTau);

@@ -17,4 +17,14 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
   * To build this library you'll also need [CMake](https://cmake.org/).
   * You'll have to run the CMake on the CMake file, which will result in a Visual Studio project you can build.
   
+  
+### Current Functionality
+
+- Threat detection within a protection volume.
+- Threat classifications:
+  * Traffic Advisory(TA)
+  * Resolution Advisory(RA)
+- RA action consensus and action suggestion.
+- Drawing of recommended action(vertical velocity) to gauge.
+  
 

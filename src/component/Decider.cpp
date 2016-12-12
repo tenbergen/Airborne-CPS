@@ -81,12 +81,15 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		Sense sense = Decider::DetermineResolutionSense(user_copy.position_current_.altitude_, intr_copy.position_current_.altitude_, user_copy.vertical_velocity_, inVerticalVelocity, verticalTau);
 		bool consensus = false;
 
+		std::chrono::milliseconds last_analyzed_copy = connection->last_analyzed;
+
 		if (currSlantRange.to_feet() < kProtectionVolumeRadius_.to_feet()) {
 			Sense sense_copy;
 
 			connection->lock.lock();
 			consensus = connection->consensusAchieved;
 			sense_copy = connection->current_sense;
+			connection->last_analyzed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
 			if (consensus) {
 				sense = sense_copy;
@@ -103,6 +106,12 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 			threat_class = ReevaluateProximinityIntruderThreatClassification(horizontalTau, verticalTau, intr_copy.threat_classification_);
 		} else {
 			threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
+			// if the intruder has left the protection volume for more than ten seconds, we should reset the sense consensus
+			if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch() - last_analyzed_copy).count() > 10000) {
+				connection->lock.lock();
+				connection->consensusAchieved = false;
+				connection->lock.unlock();
+			}
 		}
 
 		debug_buf[0] = '\0';

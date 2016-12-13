@@ -59,7 +59,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 
 	char debug_buf[256];
 	Distance alt_diff = user_copy.position_current_.altitude_ - user_copy.position_old_.altitude_;
-	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - ta_elapsed_time: %f, intr_el_time: %f, alt_diff: %f\n", user_elapsed_time_minutes, intr_elapsed_time_minutes, alt_diff.to_feet());
+	snprintf(debug_buf, 256, "Decider::DetermineActionRequired - ta_elapsed_time: %f, intr_el_time: %f, alt_diff: %f, user_alt: %f\n", user_elapsed_time_minutes, intr_elapsed_time_minutes, alt_diff.to_feet(), user_copy.position_current_.altitude_.to_feet());
 	XPLMDebugString(debug_buf);
 	
 	if (user_elapsed_time_minutes != 0.0 && intr_elapsed_time_minutes != 0.0 &&  alt_diff.to_feet() != 0.0 && user_copy.position_current_.altitude_.to_feet() > 1000.0) {
@@ -84,26 +84,33 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		std::chrono::milliseconds last_analyzed_copy = connection->last_analyzed;
 
 		if (currSlantRange.to_feet() < kProtectionVolumeRadius_.to_feet()) {
-			Sense sense_copy;
-
-			connection->lock.lock();
-			consensus = connection->consensusAchieved;
-			sense_copy = connection->current_sense;
-			connection->last_analyzed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-
-			if (consensus) {
-				sense = sense_copy;
-				connection->lock.unlock();
-			} else if (sense_copy == Sense::UNKNOWN && sense != Sense::UNKNOWN) {
-				connection->current_sense = sense;
-				connection->lock.unlock();
-				connection->sendSense(sense);
-			}
-			else {
-				connection->lock.unlock();
-			}
-
 			threat_class = ReevaluateProximinityIntruderThreatClassification(horizontalTauSeconds, verticalTauSeconds, intr_copy.threat_classification_);
+			
+			if (threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY) {
+				Sense sense_copy;
+
+				connection->lock.lock();
+				consensus = connection->consensusAchieved;
+				sense_copy = connection->current_sense;
+				connection->last_analyzed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+
+				if (consensus) {
+					sense = sense_copy;
+					connection->lock.unlock();
+				}
+				else if (sense_copy == Sense::UNKNOWN && sense != Sense::UNKNOWN) {
+					connection->current_sense = sense;
+					connection->lock.unlock();
+
+					char buf[128];
+					snprintf(buf, 128, "Decider::DetermineActionRequired - in else if (sense_copy...) - calling send sense with sense: %s\n", SenseUtil::StringFromSense(sense).c_str());
+					XPLMDebugString(buf);
+					connection->sendSense(sense);
+				}
+				else {
+					connection->lock.unlock();
+				}
+			}
 		} else {
 			threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 			// if the intruder has left the protection volume for more than ten seconds, we should reset the sense consensus
@@ -118,9 +125,12 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		snprintf(debug_buf, 256, "Decider::DetermineActionRequired - intruderId: %s, currentSlantRange: %.3f, horizontalTau: %.3f, verticalTau: %.3f, threat_class: %s, consensus: %s, sense: %s\n", intruder->id_.c_str(), currSlantRange.to_feet(), horizontalTauSeconds, verticalTauSeconds, get_threat_class_str(threat_class).c_str(), consensus ? "true" : "false", SenseUtil::StringFromSense(sense).c_str());
 		XPLMDebugString(debug_buf);
 
-		double min_tau_minutes = verticalTauSeconds < horizontalTauSeconds ? verticalTauSeconds : horizontalTauSeconds;
+		intruder->lock_.lock();
+		intruder->threat_classification_ = threat_class;
+		intruder->lock_.unlock();
+
 		RecommendationRangePair strength = Decider::DetermineStrength(sense, user_copy.vertical_velocity_, inVerticalVelocity, 
-			user_copy.position_current_.altitude_, intr_copy.position_current_.altitude_, min_tau_minutes);
+			user_copy.position_current_.altitude_, intr_copy.position_current_.altitude_, slantRangeTauSeconds);
 
 		recommendation_range_lock_.lock();
 
@@ -128,10 +138,6 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		negative_recommendation_range_ = strength.negative;
 		
 		recommendation_range_lock_.unlock();
-
-		intruder->lock_.lock();
-		intruder->threat_classification_ = threat_class;
-		intruder->lock_.unlock();
 	}
 }
 
@@ -141,10 +147,10 @@ Aircraft::ThreatClassification Decider::ReevaluateProximinityIntruderThreatClass
 	XPLMDebugString(debug_buf);
 
 	if (current_threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY || 
-		current_threat_class != Aircraft::ThreatClassification::RESOLUTION_ADVISORY && horizontal_tau < raThreshold && vertical_tau < raThreshold) {
+		current_threat_class != Aircraft::ThreatClassification::RESOLUTION_ADVISORY && horizontal_tau < raThresholdSeconds && vertical_tau < raThresholdSeconds) {
 		return Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 	} else if(current_threat_class == Aircraft::ThreatClassification::TRAFFIC_ADVISORY || 
-		current_threat_class != Aircraft::ThreatClassification::TRAFFIC_ADVISORY && horizontal_tau < taThreshold && vertical_tau < taThreshold) {
+		current_threat_class != Aircraft::ThreatClassification::TRAFFIC_ADVISORY && horizontal_tau < taThresholdSeconds && vertical_tau < taThresholdSeconds) {
 		return Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
 	}
 	else {
@@ -158,15 +164,21 @@ Sense Decider::DetermineResolutionSense(Distance user_current_altitude, Distance
 	// The projected altitude of the intruding aircraft at the CPA assuming the intruder maintains its current vertical velocity
 	Distance intr_projected_altitude = Distance(intr_current_altitude.to_feet() + intr_vvel.to_feet_per_min() * slant_tau_seconds, Distance::DistanceUnits::FEET);
 
+	// Used for determining if climb or descend will cross altitude
 	bool user_below_intr_initially = user_current_altitude < intr_current_altitude;
 
 	// Account for user delay in reacting as 5.0 seconds; the acceleration of the aircraft at 0.25g should also be taken into account but is not
 	slant_tau_seconds -= 5.0;
+
 	if (slant_tau_seconds > 0.0) {
+		/* Project the user's final altitude based upon climbining at 1500 fpm greater than the current vertical 
+		 velocity for slant_tau_seconds (which is time to CPA)*/
 		Velocity user_vvel_climb = user_vvel + kVerticalVelocityClimbDescendDelta_;
 		Distance user_projected_altitude_climbing = Distance(user_current_altitude.to_feet() + user_vvel_climb.to_feet_per_min() * (slant_tau_seconds / 60.0), Distance::DistanceUnits::FEET);
 		bool climbing_crosses_altitude = user_below_intr_initially && user_projected_altitude_climbing.to_feet() > intr_projected_altitude.to_feet();
 
+		/* Same thing as above but projecting the user's final altitude when descending at 1500 fpm less than current
+		vertical velocity*/
 		Velocity user_vvel_descend = user_vvel - kVerticalVelocityClimbDescendDelta_;
 		Distance user_projected_altitude_descending = Distance(user_current_altitude.to_feet() + user_vvel_descend.to_feet_per_min() * slant_tau_seconds, Distance::DistanceUnits::FEET);
 		bool descending_crosses_altitude = user_below_intr_initially && user_projected_altitude_descending.to_feet() < intr_projected_altitude.to_feet();
@@ -174,8 +186,11 @@ Sense Decider::DetermineResolutionSense(Distance user_current_altitude, Distance
 		Distance vertical_separation_at_cpa_climbing = user_projected_altitude_climbing - intr_projected_altitude;
 		Distance vertical_separation_at_cpa_descending = user_projected_altitude_descending - intr_projected_altitude;
 
+		/* The sense should be the direction that results in the greatest vertical separation at the CPA  but crossing altitudes 
+		with the intruding aircraft should be avoided if it can be*/
 		if (abs(vertical_separation_at_cpa_climbing.to_feet()) > abs(vertical_separation_at_cpa_descending.to_feet())) {
-			// The sense returned should avoid crossing altitudes unless the desired amount of vertical safe distance, ALIM, can be acheived
+			/* The sense returned should avoid crossing altitudes unless the desired amount of vertical safe distance, ALIM, 
+			 can be acheived */
 			if (!climbing_crosses_altitude || climbing_crosses_altitude && abs(vertical_separation_at_cpa_climbing.to_feet()) > ALIM.to_feet()) {
 				return Sense::UPWARD;
 			}
@@ -197,13 +212,9 @@ Sense Decider::DetermineResolutionSense(Distance user_current_altitude, Distance
 	}
 }
 
-bool TrajectoryAchievesALIM(Distance user_initial_altitude, Distance intr_projected_altitude, Distance ALIM, Velocity velocity, double tau) {
-	return abs((user_initial_altitude.to_feet() + velocity.to_feet_per_min() * tau) - intr_projected_altitude.to_feet()) > ALIM.to_feet();
-}
-
-Velocity Decider::DetermineRelativeMinimumVerticalVelocityToAchieveAlim(Distance ALIM, Distance separation_at_cpa, double tau_minutes) const {
+Velocity Decider::DetermineRelativeMinimumVerticalVelocityToAchieveAlim(Distance ALIM, Distance separation_at_cpa, double tau_seconds) const {
 	double sign = signbit(separation_at_cpa.to_feet()) ? -1.0 : 1.0;
-	return Velocity(sign * (ALIM.to_feet() - abs(separation_at_cpa.to_feet())) / tau_minutes, Velocity::VelocityUnits::FEET_PER_MIN);
+	return Velocity(sign * (ALIM.to_feet() - abs(separation_at_cpa.to_feet())) / (tau_seconds / 60.0), Velocity::VelocityUnits::FEET_PER_MIN);
 }
 
 RecommendationRangePair Decider::DetermineStrength(Sense sense, Velocity user_vvel, Velocity intr_vvel, Distance user_altitude, 
@@ -216,26 +227,42 @@ RecommendationRangePair Decider::DetermineStrength(Sense sense, Velocity user_vv
 		tau_seconds -= 5.0;
 
 		// The projected altitude of the intruding aircraft at the CPA assuming the intruder maintains its current vertical velocity
-		Distance intr_projected_altitude = Distance(intr_altitude.to_feet() + intr_vvel.to_feet_per_min() * tau_seconds, Distance::DistanceUnits::FEET);
-		Distance user_projected_altitude = Distance(user_altitude.to_feet() + user_vvel.to_feet_per_min() * tau_seconds, Distance::DistanceUnits::FEET);
+		Distance intr_projected_altitude_at_cpa = Distance(intr_altitude.to_feet() + intr_vvel.to_feet_per_min() * tau_seconds, Distance::DistanceUnits::FEET);
+		Distance user_projected_altitude_at_cpa = Distance(user_altitude.to_feet() + user_vvel.to_feet_per_min() * tau_seconds, Distance::DistanceUnits::FEET);
 
-		Distance separation_at_cpa = user_projected_altitude - intr_projected_altitude;
+		Distance separation_at_cpa = user_projected_altitude_at_cpa - intr_projected_altitude_at_cpa;
 
 		Velocity relative_min_vvel_to_achieve_alim = DetermineRelativeMinimumVerticalVelocityToAchieveAlim(ALIM, separation_at_cpa, tau_seconds);
+		// Haven't tried this but should probably round the recommended vertical velocity to the nearest 500 fpm multiple once it works
 		/*double rounded_to_nearest_500th = math_util::RoundToNearest(relative_min_vvel_to_achieve_alim.to_feet_per_min(), 500.0);
 		Velocity relative_min_vvel_rounded = Velocity(rounded_to_nearest_500th, Velocity::VelocityUnits::FEET_PER_MIN);*/
+
+		/* The velocity determined above is relative to the user's vertical velocity as it is calculated based upon the projected separation
+		 at the CPA assuming the user and intruder maintain the same trajectory, so to calculate the absolute velocity, the determined 
+		 relative vertical velocity should be added to the user's vertical velocity */
 		Velocity absolute_min_vvel_to_achieve_alim = user_vvel + relative_min_vvel_to_achieve_alim;
 
 		Velocity positive_max_vvel = Velocity::ZERO;
 		Velocity negative_max_vvel = Velocity::ZERO;
 
+		// TODO
+		// This section should probably be reevaluated for correctness
+
+		/* The only values that should differ between the upward and downward senses are the positive ranges maximum vertical velocity 
+		and the negative ranges maximum vertical velocity */
 		if (sense == Sense::UPWARD) {
+			/* If the user is supposed to be climbing and the required vertical velocity to achieve ALIM is negative (signbit returns
+			  true if the value is negative and false is the value is positive), the maximum vertical velocity should be the maximum
+			  allowed vertical velocity (4000 fpm)*/
 			positive_max_vvel = signbit(absolute_min_vvel_to_achieve_alim.to_feet_per_min())
 				? kMaxGaugeVerticalVelocity :
 				Velocity(absolute_min_vvel_to_achieve_alim.to_feet_per_min() + 500.0, Velocity::VelocityUnits::FEET_PER_MIN);
 			negative_max_vvel = kMinGaugeVerticalVelocity;
 		}
 		else {
+			/* If the user is supposed to be descending and the required vertical velocity to achieve ALIM is negative,
+			 the recommended max velocity should be 500 fpm less than the absolute velocity; if the velocity to achieve ALIM is
+			 positive, then the recommended max velocity*/
 			positive_max_vvel = signbit(absolute_min_vvel_to_achieve_alim.to_feet_per_min())
 				? Velocity(absolute_min_vvel_to_achieve_alim.to_feet_per_min() - 500.0, Velocity::VelocityUnits::FEET_PER_MIN)
 				: kMinGaugeVerticalVelocity;

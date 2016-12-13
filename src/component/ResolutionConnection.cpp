@@ -18,6 +18,7 @@ ResolutionConnection::ResolutionConnection(std::string const mmac, std::string c
 	running = true;
 	connected = false;
 	current_sense = Sense::UNKNOWN;
+	consensusAchieved = false;
 	
 	LPTHREAD_START_ROUTINE task;
 	if (strcmp(my_mac.c_str(), intruder_mac.c_str()) > 0) {
@@ -127,6 +128,7 @@ DWORD ResolutionConnection::senseSender()
 
 void ResolutionConnection::resolveSense()
 {
+	XPLMDebugString("ResolutionConnection::resolveSense - started\n");
 	char msg[256];
 	static char* ack = "ACK";
 
@@ -141,6 +143,7 @@ void ResolutionConnection::resolveSense()
 
 			lock.lock();
 			if (strcmp(msg, ack) == 0) {
+				XPLMDebugString("ResolutionConnection::resolveSense - received ack and setting consensus to true\n");
 				consensusAchieved = true;
 				lock.unlock();
 			} else {

@@ -220,9 +220,11 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	Transponder::initNetworking();
 	std::string my_mac = Transponder::getHardwareAddress();
 
-	LLA current_pos = { XPLMGetDatad(latitude_ref), XPLMGetDatad(longitude_ref), 
-		XPLMGetDatad(altitude_ref), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
+	LLA current_pos = LLA::ZERO;
 	user_aircraft = new Aircraft(my_mac, "127.0.0.1", current_pos, Angle::ZERO, Velocity::ZERO);
+	std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+	user_aircraft->position_current_time_ = ms_since_epoch;
+	user_aircraft->position_old_time_ = ms_since_epoch;
 
 	decider = new Decider(user_aircraft, &open_connections);
 

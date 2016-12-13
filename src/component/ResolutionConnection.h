@@ -27,8 +27,8 @@ public:
 	std::string const my_mac;
 	int const port;
 
-	bool consensusAchieved;
-	Sense current_sense;
+	volatile bool consensusAchieved;
+	volatile Sense current_sense;
 	std::mutex lock;
 	std::chrono::milliseconds last_analyzed;
 	

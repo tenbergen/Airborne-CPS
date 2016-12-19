@@ -34,6 +34,9 @@ public:
 	Angle operator + (Angle const & a) const;
 	Angle operator - (Angle const & a) const;
 	void operator = (Angle const & a);
+
+	bool operator < (Angle const & that) const;
+	bool operator > (Angle const & that) const;
 private:
 	double value_degrees_;
 };

@@ -69,3 +69,11 @@ Velocity Velocity::operator + (Velocity const & that) const {
 Velocity Velocity::operator - (Velocity const & that) const {
 	return Velocity(val_ft_per_min_ - that.val_ft_per_min_, Velocity::VelocityUnits::FEET_PER_MIN);
 }
+
+bool Velocity::operator > (Velocity const & that) const {
+	return val_ft_per_min_ > that.val_ft_per_min_;
+}
+
+bool Velocity::operator < (Velocity const & that) const {
+	return val_ft_per_min_ < that.val_ft_per_min_;
+}

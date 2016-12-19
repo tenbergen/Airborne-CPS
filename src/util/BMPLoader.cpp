@@ -1,78 +1,5 @@
 #include "BMPLoader.h"
 
-///// Generic bitmap loader to handle all platforms
-//int BmpLoader::LoadBmp(const char * FilePath, IMAGEDATA * ImageData)
-//{
-//	BMPFILEHEADER   Header;
-//	BMPINFOHEADER	ImageInfo;
-//	int						Padding;
-//	int success = 0;
-//
-//	ImageData->pData = NULL;
-//	FILE * BitmapFile = fopen(FilePath, "rb");
-//
-//	if (BitmapFile != NULL)
-//	{
-//		if (fread(&Header, sizeof(Header), 1, BitmapFile) == 1)
-//		{
-//			if (fread(&ImageInfo, sizeof(ImageInfo), 1, BitmapFile) == 1)
-//			{
-//				/// Handle Header endian.
-//				SwapEndian(&Header.bfSize);
-//				SwapEndian(&Header.bfOffBits);
-//
-//				/// Handle ImageInfo endian.
-//				SwapEndian(&ImageInfo.biWidth);
-//				SwapEndian(&ImageInfo.biHeight);
-//				SwapEndian(&ImageInfo.biBitCount);
-//
-//				short channels = ImageInfo.biBitCount / 8;
-//
-//				/// Make sure that it is a bitmap.
-//#if APL && defined(__POWERPC__)
-//				if (((Header.bfType & 0xff) == 'M') &&
-//					(((Header.bfType >> 8) & 0xff) == 'B') &&
-//#else
-//				if (((Header.bfType & 0xff) == 'B') &&
-//					(((Header.bfType >> 8) & 0xff) == 'M') &&
-//#endif
-//					(ImageInfo.biBitCount == 24 || ImageInfo.biBitCount == 32) &&
-//					(ImageInfo.biWidth > 0) &&
-//					(ImageInfo.biHeight > 0))
-//				{
-//					/// "Header.bfSize" does not always agree
-//					/// with the actual file size and can sometimes be "ImageInfo.biSize"	 smaller.
-//					/// So add it in for good measure
-//					if ((Header.bfSize + ImageInfo.biSize - Header.bfOffBits) >= (ImageInfo.biWidth * ImageInfo.biHeight * channels))
-//					{
-//						Padding = (ImageInfo.biWidth * channels + channels) & ~channels;
-//						Padding -= ImageInfo.biWidth * channels;
-//
-//						ImageData->Width = ImageInfo.biWidth;
-//						ImageData->Height = ImageInfo.biHeight;
-//						ImageData->Padding = Padding;
-//
-//						/// Allocate memory for the actual image.
-//						ImageData->Channels = channels;
-//						unsigned short img_data_size = ImageInfo.biWidth * ImageInfo.biHeight * channels + ImageInfo.biHeight * Padding;
-//						ImageData->pData = (unsigned char *)malloc(img_data_size);
-//
-//						if (ImageData->pData)
-//						{
-//							success = fread(ImageData->pData, img_data_size, 1, BitmapFile) != 0;
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//
-//	if (BitmapFile)
-//		fclose(BitmapFile);
-//
-//	return success;
-//}
-
 int BmpLoader::LoadBmp(const char * FilePath, IMAGEDATA * ImageData)
 {
 	char debugStringBuf[256];
@@ -123,10 +50,6 @@ int BmpLoader::LoadBmp(const char * FilePath, IMAGEDATA * ImageData)
 					{
 						Padding = (ImageInfo.biWidth * channels + channels) & ~channels;
 						Padding -= ImageInfo.biWidth * channels;
-
-						char padInfoBuf[128];
-						snprintf(padInfoBuf, 128, "ImageInfo.biWidth: %d, channels: %d, padding: %d\n", ImageInfo.biWidth, channels, Padding);
-						XPLMDebugString(padInfoBuf);
 
 						ImageData->Width = ImageInfo.biWidth;
 						ImageData->Height = ImageInfo.biHeight;

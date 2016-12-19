@@ -38,14 +38,17 @@ private:
 	static int const kDiskSlices_;
 	static int const kDiskLoops_;
 
-	/* The offset of the aircraft symbol in the inner gauge face relative to the exact center of the gauge.
-	This is based on the proportion of pixels the need aircraft symbol has to be shifted in the y-direction (28)
-	as a percentage of the diameter of the inner gauge ring in pixels (150 px) related to the distance spanned 
-	by the diameter (radius = 30 NMI => diameter = 60 NMI) i.e. Offset = (28 / 150) * 60.
+	/* The offset of the aircraft symbol in the inner gauge face relative to the exact center of the gauge
+	proportioned to a distance. All drawing of intruding aircraft is done relative to the center of the gauge
+	and not the user's position (but the center of the gauge is relative to the user's position and heading).
+
+	This is based on the proportion of pixels the aircraft symbol has to be shifted in the y-direction (28) to
+	be in the center of the gauge as a percentage of the diameter of the inner gauge ring in pixels (150 px) related 
+	to the distance spanned by the diameter of the gauge (radius = 30 NMI => diameter = 60 NMI) i.e. Offset = (28 / 150) * 60.
 	*/
 	static Distance const kAircraftToGaugeCenterOffset_;
 
-	/* The pixel positions of the window the gauge is drawn in since our window is not moved.*/
+	/* The pixel positions of the window the gauge is drawn in since our window is static (does not move)*/
 	static float const kGaugePosLeft, kGaugePosRight, kGaugePosBot, kGaugePosTop;
 	static float const kGaugeCenterX, kGaugeCenterY;
 	
@@ -63,6 +66,7 @@ private:
 	
 	Decider * const decider_;
 	Aircraft * const user_aircraft_;
+	// The map of intruding aircraft
 	concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intruders_;
 
 	// An OpenGL quadric (quadratic) object required for use with the GLUT library's partial disk function.
@@ -78,13 +82,13 @@ private:
 	/* Draws the outer gauge ring.*/
 	void DrawOuterGauge() const;
 	/* Draw the inner vertical speed gauge rings. */
-	void DrawInnerGauge() const;
+	void DrawInnerGaugeVelocityRing() const;
 	/* Draws the vertical speed indicator needle on the gauge from the supplied vertical velocity.*/
-	void DrawGaugeNeedle(Velocity const user_aircraft_vert_vel) const;
+	void DrawVerticalVelocityNeedle(Velocity const user_aircraft_vert_vel) const;
 	/*  */
 	void DrawIntrudingAircraft(LLA const * const intruder_pos, Velocity const * const intruder_vvel, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const;
 
-	/* Draws the supplied recommendation range. */
+	/* Draws the supplied recommendation range  as either recommended (green) or not recommended (red). */
 	void DrawRecommendationRange(RecommendationRange* rec_range, bool recommended) const;
 	/* Draws the supplied vertical speed range as either recommended (green) or not recommended (red). */
 	void DrawRecommendedVerticalSpeedRange(Velocity min_vert_speed, Velocity max_vert_speed, bool recommended) const;
@@ -97,6 +101,7 @@ private:
 
 	texture_constants::TexCoords const * GaugeRenderer::GaugeTexCoordsFromDigitCharacter(char) const;
 
+	// No copy constructor or copy-assignment 
 	GaugeRenderer (const GaugeRenderer& that) = delete;
 	GaugeRenderer& operator=(const GaugeRenderer& that) = delete;
 };

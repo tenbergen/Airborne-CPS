@@ -34,8 +34,8 @@ NOTES:
 
 #include "XPLMDefs.h"
 #include "XPLMDisplay.h"
-#include "XPLMDataAccess.h"
 #include "XPLMNavigation.h"
+#include "XPLMDataAccess.h"
 
 #include "component/Transponder.h"
 
@@ -53,34 +53,7 @@ static XPLMHotKeyID gExampleGaugeHotKey = NULL;
 // The plugin application path
 static char gPluginDataFile[255];
 
-Vec2 user_ac_vel = { 0.0, 1.0 };
-Vec2 intr_ac_vel = { -30.0, 30.0 };
-
-LLA user_ac_pos = { 43.0, -76.0, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET };
-
-/// Relative to test gauge center position
-//LLA intr_ac_pos_ne = { 43.362, -75.757, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 44.072
-//LLA intr_ac_pos_se = { 43.009, -75.758, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 135.515
-//LLA intr_ac_pos_sw = { 43.009, -76.242, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 224.485
-//LLA intr_ac_pos_nw = { 43.362, -76.243, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 315.928
-
-/// Relative to test position
-LLA intr_ac_pos_ne = { 43.153, -75.790, 11200.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 44.072
-LLA intr_ac_pos_nw = { 43.153, -76.210, 12100.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 315.928
-LLA intr_ac_pos_se = { 42.846, -75.791, 8900.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 135.515
-LLA intr_ac_pos_sw = { 42.846, -76.209, 7800.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET }; // Bearing = 224.485
-
-LLA intr_ac_pos_n = {43.2, -76.0, 10000.0, Angle::AngleUnits::DEGREES, Distance::DistanceUnits::FEET};
-
-Velocity test_vvel = {1000.0, Velocity::VelocityUnits::FEET_PER_MIN};
-
 Aircraft* user_aircraft;
-
-Aircraft test_intr_ne = { "intruder_ne", "192.168.1.1", intr_ac_pos_ne, Angle::ZERO, test_vvel };
-Aircraft test_intr_nw = { "intruder_nw", "192.168.1.1", intr_ac_pos_nw, Angle::ZERO, test_vvel };
-Aircraft test_intr_se = { "intruder_se", "192.168.1.1", intr_ac_pos_se, Angle::ZERO, test_vvel };
-Aircraft test_intr_sw = { "intruder_sw", "192.168.1.1", intr_ac_pos_sw, Angle::ZERO, test_vvel };
-Aircraft test_intr_n = {"intruder_n", "192.168.1.1", intr_ac_pos_n, Angle::ZERO, test_vvel};
 
 GaugeRenderer* gauge_renderer;
 
@@ -99,7 +72,7 @@ static int	CoordInRect(int x, int y, int l, int t, int r, int b) {
 /// Prototypes for callbacks etc.
 static void DrawGLScene();
 
-static int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
+static int	GaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
 static void ExampleGaugeHotKey(void * refCon);
 static void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
 static void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
@@ -127,50 +100,6 @@ static void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlag
 
 static int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
-void SetTestAircraftPosition(Aircraft& intruder, Velocity vvel) {
-	intruder.position_old_ = intruder.position_current_;
-	intruder.position_old_time_ = intruder.position_current_time_;
-
-	Distance new_altitude = { intruder.position_current_.altitude_.to_feet() + vvel.to_feet_per_min(), Distance::DistanceUnits::FEET };
-	intruder.position_current_time_ = intruder.position_old_time_ + std::chrono::milliseconds(60000);
-	intruder.position_current_ = {intruder.position_old_.latitude_, intruder.position_old_.longitude_, new_altitude};
-
-	LLA cur_pos = intruder.position_current_;
-	LLA old_pos = intruder.position_old_;
-	/*char debug_buf[256];
-	snprintf(debug_buf, 256, "ExampleGauge::SetTestAircraftPosition - intruder - id: %s, pos_old: (%.3f, %.3f, %.3f), pos_cur: (%.3f, %.3f, %.3f), old_time: %lld, cur_time: %lld\n", intruder.id_, 
-		old_pos.latitude_.to_degrees(), old_pos.longitude_.to_degrees(), old_pos.altitude_.to_feet(), cur_pos.latitude_.to_degrees(), cur_pos.longitude_.to_degrees(),
-		intruder.position_old_time_.count(), intruder.position_current_time_.count());*/
-}
-
-void test() {
-	intruding_aircraft[test_intr_ne.id_] = &test_intr_ne;
-	intruding_aircraft[test_intr_nw.id_] = &test_intr_nw;
-	intruding_aircraft[test_intr_sw.id_] = &test_intr_sw;
-	intruding_aircraft[test_intr_se.id_] = &test_intr_se;
-	//intruding_aircraft[test_intr_n.id_] = &test_intr_n;
-
-	user_aircraft->lock_.lock();
-				 
-	user_aircraft->heading_ = Angle::k0Degrees_;
-	user_aircraft->position_current_ = user_ac_pos;
-	user_aircraft->position_old_ = user_ac_pos;
-	user_aircraft->position_old_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-	user_aircraft->position_current_time_ = user_aircraft->position_old_time_;
-				 
-	user_aircraft->lock_.unlock();
-
-	test_intr_ne.threat_classification_ = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
-	test_intr_nw.threat_classification_ = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
-	test_intr_se.threat_classification_ = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
-	test_intr_sw.threat_classification_ = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
-
-	SetTestAircraftPosition(test_intr_ne, { 1000.0, Velocity::VelocityUnits::FEET_PER_MIN});
-	SetTestAircraftPosition(test_intr_nw, { 500.0, Velocity::VelocityUnits::FEET_PER_MIN });
-	SetTestAircraftPosition(test_intr_se, { -500.0, Velocity::VelocityUnits::FEET_PER_MIN });
-	SetTestAircraftPosition(test_intr_sw, { -1000.0, Velocity::VelocityUnits::FEET_PER_MIN });
-}
-
 PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	/// Handle cross platform differences
 #if IBM
@@ -194,7 +123,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, MyDrawWindowCallback, MyHandleKeyCallback, MyHandleMouseClickCallback, NULL);
 
 	/// Register so that our gauge is drawing during the Xplane gauge phase
-	XPLMRegisterDrawCallback(ExampleGaugeDrawCallback, xplm_Phase_Gauges, 0, NULL);
+	XPLMRegisterDrawCallback(GaugeDrawingCallback, xplm_Phase_Gauges, 0, NULL);
 
 	/// Create our window, setup datarefs and register our hotkey.
 	gExampleGaugePanelDisplayWindow = XPLMCreateWindow(1024, 256, 1280, 0, 1, ExampleGaugePanelWindowCallback, ExampleGaugePanelKeyCallback, ExampleGaugePanelMouseClickCallback, NULL);
@@ -240,16 +169,13 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 
 PLUGIN_API void	XPluginStop(void) {
 	/// Clean up
-	XPLMUnregisterDrawCallback(ExampleGaugeDrawCallback, xplm_Phase_Gauges, 0, NULL);
+	XPLMUnregisterDrawCallback(GaugeDrawingCallback, xplm_Phase_Gauges, 0, NULL);
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
-	XPLMDebugString("ExampleGauge::XPluginStop - destroyed gExampleGaugePanelDisplayWindow\n");
 
 	delete gauge_renderer;
-	XPLMDebugString("ExampleGauge::XPluginStop - destroyed gauge_renderer\n");
 	delete transponder;
-	XPLMDebugString("ExampleGauge::XPluginStop - destroyed transponder\n");
 }
 
 PLUGIN_API void XPluginDisable(void) {}
@@ -258,8 +184,8 @@ PLUGIN_API int XPluginEnable(void) { return 1; }
 
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void * inParam){}
 
-/* This will draw our gauge during the Xplane gauge drawing phase. */
-int	ExampleGaugeDrawCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) {
+/* The callback responsible for drawing the gauge during the X-Plane gauge drawing phase. */
+int	GaugeDrawingCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) {
 	// Do the actual drawing, but only if the window is active
 	if (ExampleGaugeDisplayPanelWindow) {
 		LLA updated ={ Angle {XPLMGetDatad(latitude_ref), Angle::AngleUnits::DEGREES}, 
@@ -354,7 +280,7 @@ void DrawGLScene() {
 * it is needed.  It dynamically changes the text depending on the saved mouse
 * status.  Note that we don't have to tell X-Plane to redraw us when our text
 * changes; we are redrawn by the sim continuously. */
-// This function draws the window that is currently being used for debug text rendering
+/// This function draws the window that is currently being used for debug text rendering
 void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int		left, top, right, bottom;
 	static float color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */

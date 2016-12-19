@@ -160,9 +160,9 @@ void GaugeRenderer::Render(texture_constants::GlRgb8Color cockpit_lighting) {
 		}
 	}
 
-	DrawInnerGauge();
+	DrawInnerGaugeVelocityRing();
 
-	DrawGaugeNeedle(user_aircraft_vert_vel);
+	DrawVerticalVelocityNeedle(user_aircraft_vert_vel);
 
 	// Turn off Alpha Blending and turn on Depth Testing
 	XPLMSetGraphicsState(0/*Fog*/, 1/*TexUnits*/, 0/*Lighting*/, 0/*AlphaTesting*/, 0/*AlphaBlending*/, 1/*DepthTesting*/, 0/*DepthWriting*/);
@@ -173,7 +173,7 @@ void GaugeRenderer::Render(texture_constants::GlRgb8Color cockpit_lighting) {
 
 void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Velocity const * const intruder_vvel, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const {
 	Angle bearing = gauge_center_pos->Bearing(intruder_pos);
-	double init_bearing = bearing.to_degrees();
+	// These two calls line makes the gauge display intruders relative to the user's heading
 	bearing = bearing - *user_heading;
 	bearing.normalize();
 
@@ -306,11 +306,11 @@ void GaugeRenderer::DrawOuterGauge() const {
 	DrawTextureRegion(&texture_constants::kOuterGauge, kGaugePosLeft, kGaugePosRight, kGaugePosTop, kGaugePosBot);
 }
 
-void GaugeRenderer::DrawInnerGauge() const {
+void GaugeRenderer::DrawInnerGaugeVelocityRing() const {
 	DrawTextureRegion(&texture_constants::kInnerGauge, kGaugePosLeft, kGaugePosRight, kGaugePosTop, kGaugePosBot);
 }
 
-void GaugeRenderer::DrawGaugeNeedle(Velocity const user_aircraft_vert_vel) const {
+void GaugeRenderer::DrawVerticalVelocityNeedle(Velocity const user_aircraft_vert_vel) const {
 	// Translate the needle so it's properly rotated in place about the gauge center
 	glTranslatef(kNeedleTranslationX, kNeedleTranslationY, 0.0f);
 
@@ -340,12 +340,6 @@ void GaugeRenderer::DrawRecommendationRange(RecommendationRange* rec_range, bool
 }
 
 void GaugeRenderer::DrawRecommendedVerticalSpeedRange(Velocity min_vertical, Velocity max_vertical, bool recommended) const {
-	if (min_vertical.to_feet_per_min() > max_vertical.to_feet_per_min()) {
-		Velocity min = min_vertical;
-		min_vertical = max_vertical;
-		max_vertical = min;
-	}
-
 	double min_vert = math_util::clampd(min_vertical.to_feet_per_min(), kMinVertSpeed_, kMaxVertSpeed_);
 	double max_vert = math_util::clampd(max_vertical.to_feet_per_min(), kMinVertSpeed_, kMaxVertSpeed_);
 
@@ -356,27 +350,24 @@ void GaugeRenderer::DrawRecommendedVerticalSpeedRange(Velocity min_vertical, Vel
 }
 
 void GaugeRenderer::DrawRecommendationRangeStartStop(Angle start, Angle stop, bool recommended) const {
-	double start_deg = math_util::clampd(start.to_degrees(), Angle::kMinDegrees_, Angle::kMaxDegrees_);
-	double stop_deg = math_util::clampd(stop.to_degrees(), Angle::kMinDegrees_, Angle::kMaxDegrees_);
+	start.normalize();
+	stop.normalize();
 
-	if (start_deg < 0.0f)
-		start_deg += Angle::kMaxDegrees_;
+	/* The start and stop angles are specifying a clockwise arc that winds around the circle centered on the gauge
+	so if the start angle is greater than the stop angle, we will perform the clockwise rotation that would result by swapping 
+	the arguments instead of allowing a counter-clockwise rotation to happen, which is guaranteed to wrap around the entire gauge.*/
+	if (start > stop) {
+		Angle min = stop;
+		stop = start;
+		start = min;
+	}
 
-	if (stop_deg < 0.0f)
-		stop_deg += Angle::kMaxDegrees_;
-
-	DrawRecommendationRangeStartSweep(Angle(start_deg, Angle::AngleUnits::DEGREES), Angle(stop_deg - start_deg, Angle::AngleUnits::DEGREES), recommended);
+	DrawRecommendationRangeStartSweep(start, stop - start, recommended);
 }
 
 void GaugeRenderer::DrawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const {
-	double start_deg = math_util::clampd(start.to_degrees(), Angle::kMinDegrees_, Angle::kMaxDegrees_);
-	double sweep_deg = math_util::clampd(sweep.to_degrees(), Angle::kMinDegrees_, Angle::kMaxDegrees_);
-
-	if (start_deg < 0.0)
-		start_deg += Angle::kMaxDegrees_;
-
-	if (sweep_deg < 0.0)
-		sweep_deg += Angle::kMaxDegrees_;
+	start.normalize();
+	sweep.normalize();
 	
 	glPushMatrix();
 
@@ -390,7 +381,7 @@ void GaugeRenderer::DrawRecommendationRangeStartSweep(Angle start, Angle sweep, 
 
 	glLoadIdentity();
 	glTranslatef(kGaugeCenterX, kGaugeCenterY, 0.0f);
-	gluPartialDisk(quadric_, kDiskInnerRadius_, kDiskOuterRadius_, kDiskSlices_, kDiskLoops_, start_deg, sweep_deg);
+	gluPartialDisk(quadric_, kDiskInnerRadius_, kDiskOuterRadius_, kDiskSlices_, kDiskLoops_, start.to_degrees(), sweep.to_degrees());
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);

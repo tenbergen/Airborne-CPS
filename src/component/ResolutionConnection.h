@@ -10,6 +10,7 @@
 #include <string>
 #include "XPLMUtilities.h"
 
+#include "units/LLA.h"
 #include "data/Sense.h"
 
 #define MAC_LENGTH 18

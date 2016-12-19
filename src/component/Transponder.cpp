@@ -12,10 +12,6 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	intrudersMap = intruders;
 	open_connections = connections;
 
-	char debug_buf[64];
-	snprintf(debug_buf, 64, "Transponder::Transponder - mac_addr: %s\n", getHardwareAddress().c_str());
-	XPLMDebugString(debug_buf);
-
 	myLocation.set_id(mac_address);
 	ip = getIpAddr();
 	myLocation.set_ip(ip);
@@ -39,7 +35,6 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 		outgoing.sin_family = PF_INET;
 		bind(outSocket, (struct sockaddr*)&outgoing, sinlen);
 	}
-	
 }
 
 void Transponder::createSocket(SOCKET* s, struct sockaddr_in* socket_addr, int addr, int port)
@@ -61,14 +56,12 @@ Transponder::~Transponder()
 	closesocket(outSocket);
 	closesocket(inSocket);
 	WSACleanup();
-	XPLMDebugString("Transponder::~Transponder - performed WSACleanup()\n");
 
+	// Delete all of the aircraft that the transponder created
 	for (std::vector<Aircraft*>::iterator iter = allocated_aircraft.begin(); iter != allocated_aircraft.end(); ) {
 		delete *iter;
 		iter = allocated_aircraft.erase(iter);
 	}
-
-	XPLMDebugString("Transponder::~Transponder - deleted");
 }
 
 DWORD Transponder::receiveLocation()
@@ -94,10 +87,6 @@ DWORD Transponder::receiveLocation()
 			Distance altitude = { intruderLocation.alt(), Distance::DistanceUnits::METERS };
 			LLA updated_position = { intruderLocation.lat(), intruderLocation.lon(), intruderLocation.alt(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
-			char debug_buf[128];
-			snprintf(debug_buf, 128, "Transponder::receiveLocation- intruderID: %s, pos: (%.3f, %.3f, %.3f)\n", intruderID, latitude.to_degrees(), longitude.to_degrees(), altitude.to_feet());
-			XPLMDebugString(debug_buf);
-
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
 			if (!intruder) {
 				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
@@ -112,16 +101,18 @@ DWORD Transponder::receiveLocation()
 				(*intrudersMap)[intruder->id_] = intruder;
 
 				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id_, intruder->ip_, ResolutionConnection::kTcpPort_);
-				XPLMDebugString("Transponder::receiveLocation - new Resolution Connection\n");
 				(*open_connections)[intruder->id_] = connection;
 			}
 				
 			keepAliveMap[intruder->id_] = 10;
+
+			intruder->lock_.lock();
 			intruder->position_old_ = intruder->position_current_;
 			intruder->position_old_time_ = intruder->position_current_time_;
 
 			intruder->position_current_ = updated_position;
 			intruder->position_current_time_ = ms_since_epoch;
+			intruder->lock_.unlock();
 
 			decider_->Analyze(intruder);
 			}

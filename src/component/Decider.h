@@ -67,6 +67,7 @@ private:
 	the user's vertical velocity, and the separation at the CPA.*/
 	RecommendationRangePair DetermineStrength(Sense sense, Velocity user_vvel, Velocity intr_vvel,
 		Distance user_altitude, Distance intr_altitude, double tau_seconds) const;
+	RecommendationRangePair DetermineUpwardSenseStrengh(Velocity user_vvel, Distance ALIM, Distance separation_at_cpa, Velocity relative_min_vvel_to_achieve_alim) const;
 
 	/* Reevaluates the supplied proximity intruder based upon the horizontal and vertical tau (time to close 
 	based upon closure rate) and ensures the threat classification can only be upgraded and not downgraded. */

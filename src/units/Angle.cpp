@@ -58,3 +58,11 @@ Angle Angle::BearingToCartesianAngle(Angle const * const bearing) {
 		return cartesian_angle;
 	}
 }
+
+bool Angle::operator < (Angle const & that) const {
+	return value_degrees_ < that.value_degrees_;
+}
+
+bool Angle::operator > (Angle const & that) const {
+	return value_degrees_ > that.value_degrees_;
+}

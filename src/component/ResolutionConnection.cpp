@@ -20,28 +20,22 @@ ResolutionConnection::ResolutionConnection(std::string const mmac, std::string c
 	current_sense = Sense::UNKNOWN;
 	consensusAchieved = false;
 	
-	LPTHREAD_START_ROUTINE task;
-	if (strcmp(my_mac.c_str(), intruder_mac.c_str()) > 0) {
-		task = startResolutionSender;
-	} else {
-		task = startResolutionReceiver;
-	}
-	XPLMDebugString("ResolutionConnection::ResolutionConnection - task set\n");
+	LPTHREAD_START_ROUTINE task = strcmp(my_mac.c_str(), intruder_mac.c_str()) > 0 ? startResolutionSender : startResolutionReceiver;
 	DWORD ThreadID;
 	CreateThread(NULL, 0, task, (void*) this, 0, &ThreadID);
-	XPLMDebugString("ResolutionConnection::ResolutionConnection - thread started\n");
 }
 
 ResolutionConnection::~ResolutionConnection()
 {
 	running = false;
+
+	// We need to ensure that the thread using the socket has stopped running before we close the socket so we wait until then
 	while (!thread_stopped)
 	{
 		Sleep(100);
 	}
-	XPLMDebugString("ResolutionConnection::~ResolutionConnection - attempting to close socket\n");
+
 	closesocket(sock);
-	XPLMDebugString("ResolutionConnection::~ResolutionConnection - closed socket\n");
 }
 
 SOCKET ResolutionConnection::acceptIncomingIntruder(int port)
@@ -49,15 +43,19 @@ SOCKET ResolutionConnection::acceptIncomingIntruder(int port)
 	memset(&sock, 0, sizeof sock);
 	memset(&my_addr, 0, sizeof my_addr);
 	memset(&intruder_addr, 0, sizeof intruder_addr);
+
 	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock == INVALID_SOCKET) {
 		socketDebug("ResolutionConnection::acceptIncomingIntruder - socket failed to open\n", false);
 		return NULL;
 	}
+
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_addr.s_addr = INADDR_ANY;
 	my_addr.sin_port = htons(kTcpPort_);
+
 	int bind_success = bind(sock, (struct sockaddr*)&my_addr, sizeof(my_addr));
+
 	if (bind_success < 0) {
 		char the_error[32];
 		sprintf(the_error, "ResolutionConnection::acceptIncomingIntruder - failed to bind: %d\n", GetLastError());
@@ -65,12 +63,10 @@ SOCKET ResolutionConnection::acceptIncomingIntruder(int port)
 		return NULL;
 	}
 	SOCKET accept_socket;
-	XPLMDebugString("ResolutionConnection::acceptIncomingIntruder - waiting for connect\n");
 	socklen_t addr_len = sizeof(intruder_addr);
 	listen(sock, 24);
-	XPLMDebugString("...\n");
+
 	accept_socket = accept(sock, (struct sockaddr *)&intruder_addr, &addr_len);
-	XPLMDebugString("...\n");
 	if (accept_socket == INVALID_SOCKET) {
 		socketCloseWithError("ResolutionConnection::acceptIncomingIntruder - to accept error: %d\n", sock);
 		return NULL;
@@ -81,9 +77,8 @@ SOCKET ResolutionConnection::acceptIncomingIntruder(int port)
 DWORD ResolutionConnection::senseReceiver()
 {
 	char* ack = "ACK";
-	XPLMDebugString("ResolutionConnection::senseReceiver - accept\n");
 	SOCKET accept_socket = acceptIncomingIntruder(kTcpPort_);
-	XPLMDebugString("ResolutionConnection::senseReceiver - accepted\n");
+
 	if (accept_socket) {
 		connected = true;
 		open_socket = accept_socket;
@@ -95,9 +90,10 @@ DWORD ResolutionConnection::senseReceiver()
 
 int ResolutionConnection::connectToIntruder(std::string ip, int port)
 {
-	XPLMDebugString("ResolutionConnection::connectToIntruder - attempting to establish a connection\n");
 	struct sockaddr_in dest;
+	// sockaddr structs need to be initialized to 0
 	memset(&dest, 0, sizeof dest);
+
 	dest.sin_family = AF_INET;
 	dest.sin_port = htons(kTcpPort_);
 	dest.sin_addr.s_addr = inet_addr(ip.c_str());
@@ -118,7 +114,6 @@ DWORD ResolutionConnection::senseSender()
 		XPLMDebugString("ResolutionConnection::senseSender - failed to establish connection\n");
 	}
 	else {
-		XPLMDebugString("ResolutionConnection::senseSender - connection established\n");
 		connected = true;
 		open_socket = sock;
 		resolveSense();
@@ -128,7 +123,6 @@ DWORD ResolutionConnection::senseSender()
 
 void ResolutionConnection::resolveSense()
 {
-	XPLMDebugString("ResolutionConnection::resolveSense - started\n");
 	char msg[256];
 	static char* ack = "ACK";
 
@@ -137,9 +131,6 @@ void ResolutionConnection::resolveSense()
 		if (recv(open_socket, msg, 255, 0) < 0) {
 			socketCloseWithError("ResolutionConnection::resolveSense - Failed to receive: %d\n", open_socket);
 		} else {
-			XPLMDebugString("ResolutionConnection::resolveSense - received message: ");
-			XPLMDebugString(msg);
-			XPLMDebugString("\n");
 
 			lock.lock();
 			if (strcmp(msg, ack) == 0) {
@@ -224,8 +215,10 @@ int ResolutionConnection::sendSense(Sense s)
 	} else if (s == Sense::DOWNWARD) {
 		s = Sense::UPWARD;
 	} else {
+		// Sending a sense of unknown or maintained will cause undefined behavior
 		XPLMDebugString("ResolutionConnection::sendSense - Sense is UNKNOWN or MAINTAINED\n");
 	}
+
 	if (connected) {
 		char* msg = senseToString(s);
 		if (send(open_socket, msg, strlen(msg) + 1, 0) == SOCKET_ERROR) {

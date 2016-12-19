@@ -25,6 +25,8 @@ public:
 	Velocity operator + (Velocity const & that) const;
 	Velocity operator - (Velocity const & that) const;
 
+	bool operator > (Velocity const & that) const;
+	bool operator < (Velocity const & that) const;
 private:
 	static double const kMphToFtPerMin_;
 	static double const kMetersPerSecToFtPerMin_;

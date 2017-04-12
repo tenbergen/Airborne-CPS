@@ -20,7 +20,7 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
 - After building the Google Protobuf library and linking it to the plugin project:
   * Ensure the project is configured to build to your X-Plane plugin directory.
   * Build the plugin.
-  * Copy the "Images" folder from this project to your X-Plane plugin directory and rename it to "AirborneCPS).
+  * Copy the "Images" folder from this project to your X-Plane plugin directory and rename it to "AirborneCPS".
   
 ### Current Functionality
 

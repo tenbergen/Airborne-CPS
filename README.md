@@ -12,11 +12,15 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
   * glu32.lib
   * glaux.lib
 
-- You will also need to get Google's serialization protocol buffers from [here](https://github.com/google/protobuf/releases/tag/v3.0.0).
-  * For this project you'll need either protobuf-cpp-3.0.0.tar.gz or protobuf-cpp-3.0.0.zip
+- You will also need to get Google's serialization protocol buffers from [here](https://github.com/google/protobuf/releases/tag/v3.1.0).
+  * For this project you'll need either protobuf-cpp-3.1.0.tar.gz or protobuf-cpp-3.1.0.zip
   * To build this library you'll also need [CMake](https://cmake.org/).
   * You'll have to run the CMake on the CMake file, which will result in a Visual Studio project you can build.
   
+- After building the Google Protobuf library and linking it to the plugin project:
+  * Ensure the project is configured to build to your X-Plane plugin directory.
+  * Build the plugin.
+  * Copy the "Images" folder from this project to your X-Plane plugin directory and rename it to "AirborneCPS).
   
 ### Current Functionality
 

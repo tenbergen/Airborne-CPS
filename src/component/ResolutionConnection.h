@@ -13,6 +13,8 @@
 #include "units/LLA.h"
 #include "data/Sense.h"
 
+#include "data/Aircraft.h"
+
 #define MAC_LENGTH 18
 
 class ResolutionConnection
@@ -39,6 +41,9 @@ public:
 	DWORD senseSender();
 	DWORD senseReceiver();
 	int sendSense(Sense);
+
+	Aircraft* user_aircraft_copy;
+	std::chrono::milliseconds time_of_cpa = std::chrono::milliseconds(0);
 private:
 	std::atomic<bool> running;
 	std::atomic<bool> thread_stopped;

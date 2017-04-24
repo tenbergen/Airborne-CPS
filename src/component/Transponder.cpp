@@ -102,7 +102,10 @@ DWORD Transponder::receiveLocation()
 
 				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id_, intruder->ip_, ResolutionConnection::kTcpPort_);
 				(*open_connections)[intruder->id_] = connection;
+				connection->user_aircraft_copy = new Aircraft(*aircraft);
 			}
+
+			Aircraft* user = (*open_connections)[intruder->id_]->user_aircraft_copy;
 				
 			keepAliveMap[intruder->id_] = 10;
 
@@ -114,8 +117,16 @@ DWORD Transponder::receiveLocation()
 			intruder->position_current_time_ = ms_since_epoch;
 			intruder->lock_.unlock();
 
-			decider_->Analyze(intruder);
-			}
+			user->lock_.lock();
+			user->position_old_ = user->position_current_;
+			user->position_old_time_ = user->position_current_time_;
+
+			user->position_current_ = aircraft->position_current_;
+			user->position_current_time_ = ms_since_epoch;
+			user->lock_.unlock();
+
+			decider_->Analyze(intruder, user, (*open_connections)[intruder->id_]);
+		}
 		free(buffer);
 	}
 	return 0;

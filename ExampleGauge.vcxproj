@@ -110,7 +110,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\..\..\..\X-Plane 10\Resources\plugins</OutDir>
+    <OutDir>..\..\..\Desktop\X-Plane 10\Resources\plugins</OutDir>
     <IntDir>.\Release\32\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -150,7 +150,7 @@
       <Optimization>MaxSpeed</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>C:\Users\Oswego\Documents\Airborne-CPS\SDK\CHeaders;SDK\CHeaders\XPLM;C:\Users\Oswego\Documents\Airborne-CPS\src;SDK\CHeaders\Widgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Bill Cook\Source\Repos\Airborne-CPS\SDK\CHeaders;SDK\CHeaders\XPLM;C:\Users\Bill Cook\Source\Repos\Airborne-CPS\src;SDK\CHeaders\Widgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;SIMDATA_EXPORTS;IBM=1;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Release\32\</AssemblerListingLocation>
       <PrecompiledHeaderOutputFile>.\Release\32\ExampleGauge.pch</PrecompiledHeaderOutputFile>
@@ -180,7 +180,7 @@
       <LinkDLL>true</LinkDLL>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Release\32\ExampleGauge.lib</ImportLibrary>
-      <AdditionalLibraryDirectories>C:\Users\Oswego\Documents\Airborne-CPS\Release\32;SDK\Libraries\Win;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\Bill Cook\Source\Repos\Airborne-CPS\Release\32;SDK\Libraries\Win;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;libprotobuf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

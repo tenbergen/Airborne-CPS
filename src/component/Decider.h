@@ -10,7 +10,7 @@
 class Decider {
 public:
 	Decider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>*);
-	void Analyze(Aircraft* intruder);
+	void Analyze(Aircraft* intruder, Aircraft* user, ResolutionConnection* rc);
 
 	std::mutex recommendation_range_lock_;
 	RecommendationRange positive_recommendation_range_;
@@ -43,7 +43,7 @@ private:
 
 	/* Analyzes the supplied intruder, determining if the intruder is a threat, and begins the process of
 	 determining actions that will avoid potential collisions. */
-	void DetermineActionRequired(Aircraft* intruder);
+	void DetermineActionRequired(Aircraft* intruder, Aircraft* user, ResolutionConnection* rc);
 
 	/* Calculates the slant range, or the distance between two aircraft as measured by a straight line from
 	one aircraft to the other.*/
@@ -67,12 +67,11 @@ private:
 	the user's vertical velocity, and the separation at the CPA.*/
 	RecommendationRangePair DetermineStrength(Sense sense, Velocity user_vvel, Velocity intr_vvel,
 		Distance user_altitude, Distance intr_altitude, double tau_seconds) const;
-	RecommendationRangePair DetermineUpwardSenseStrengh(Velocity user_vvel, Distance ALIM, Distance separation_at_cpa, Velocity relative_min_vvel_to_achieve_alim) const;
 
 	/* Reevaluates the supplied proximity intruder based upon the horizontal and vertical tau (time to close 
 	based upon closure rate) and ensures the threat classification can only be upgraded and not downgraded. */
-	Aircraft::ThreatClassification ReevaluateProximinityIntruderThreatClassification(double horizontal_tau_seconds, double vertical_tau_seconds, 
-		Aircraft::ThreatClassification current_threat_class) const;
+	Aircraft::ThreatClassification ReevaluateProximinityIntruderThreatClassification(double horizontal_tau_seconds, double vertical_tau_seconds,
+		Aircraft::ThreatClassification current_threat_class, std::chrono::milliseconds time_of_cpa) const;
 
 	/* Determines the ALIM, or the minimum required vertical separation between two aircraft, based upon the
 	altitude of the aircraft.*/

@@ -301,15 +301,31 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 
 	for (auto & iter = intruding_aircraft.cbegin(); iter != intruding_aircraft.cend(); ++iter) {
 		Aircraft* intruder = iter -> second;
+		ResolutionConnection* conn = open_connections[intruder->id_];
+		conn->lock.lock();
+		int ms_to_cpa = (conn->time_of_cpa - std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())).count();
+		conn->lock.unlock();
+
+		bool threat = false;
 
 		intruder->lock_.lock();
 		LLA const intruder_pos = intruder -> position_current_;
+		if (intruder->threat_classification_ == Aircraft::ThreatClassification::RESOLUTION_ADVISORY
+			|| intruder->threat_classification_ == Aircraft::ThreatClassification::TRAFFIC_ADVISORY)
+			threat = true;
 		intruder->lock_.unlock();
 
 		position_buf[0] = '\0';
 		snprintf(position_buf, 128, "intr_pos: (%.3f, %.3f)", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees());
 		XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
 		offset_y_pxls += 20;
+
+		if (threat && ms_to_cpa > 0) {
+			position_buf[0] = '\0';
+			snprintf(position_buf, 128, "ms_to_cpa: %.3d", ms_to_cpa);
+			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
+			offset_y_pxls += 20;
+		}
 	}
 }
 

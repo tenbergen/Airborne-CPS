@@ -15,17 +15,10 @@ static DWORD WINAPI startResolutionSender(void* param)
 ResolutionConnection::ResolutionConnection(std::string const mmac, std::string const imac, std::string const ip_addr, int const port_num, Aircraft* user_ac) :
 	my_mac(mmac), intruder_mac(imac), ip(ip_addr), port(port_num)
 {
-	if (strcmp(my_mac.c_str(), intruder_mac.c_str()) > 0) {
-		user_position = user_ac->position_current_;
-		user_position_time = user_ac->position_current_time_;
-		user_position_old = user_ac->position_old_;
-		user_position_old_time = user_ac->position_old_time_;
-	} else {
-		user_position2 = user_ac->position_current_;
-		user_position_time2 = user_ac->position_current_time_;
-		user_position_old2 = user_ac->position_old_;
-		user_position_old_time2 = user_ac->position_old_time_;
-	}
+	user_position = user_ac->position_current_;
+	user_position_time = user_ac->position_current_time_;
+	user_position_old = user_ac->position_old_;
+	user_position_old_time = user_ac->position_old_time_;
 	user_ac->lock_.unlock();
 
 	running = true;

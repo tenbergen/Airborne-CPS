@@ -39,11 +39,6 @@ public:
 	LLA user_position_old;
 	std::chrono::milliseconds user_position_old_time;
 
-	LLA user_position2;
-	std::chrono::milliseconds user_position_time2;
-	LLA user_position_old2;
-	std::chrono::milliseconds user_position_old_time2;
-
 	int connectToIntruder(std::string, int);
 	SOCKET acceptIncomingIntruder(int);
 

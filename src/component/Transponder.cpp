@@ -111,15 +111,27 @@ DWORD Transponder::receiveLocation()
 			intruder->lock_.lock();
 			aircraft->lock_.lock();
 			conn->lock.lock();
-			intruder->position_old_ = intruder->position_current_;
-			conn->user_position_old = conn->user_position;
-			intruder->position_old_time_ = intruder->position_current_time_;
-			conn->user_position_old_time = conn->user_position_time;
+			if (strcmp(getHardwareAddress().c_str(), mac_address.c_str()) > 0) {
+				intruder->position_old_ = intruder->position_current_;
+				conn->user_position_old = conn->user_position;
+				intruder->position_old_time_ = intruder->position_current_time_;
+				conn->user_position_old_time = conn->user_position_time;
 
-			intruder->position_current_ = updated_position;
-			conn->user_position = aircraft->position_current_;
-			intruder->position_current_time_ = ms_since_epoch;
-			conn->user_position_time = ms_since_epoch;
+				intruder->position_current_ = updated_position;
+				conn->user_position = aircraft->position_current_;
+				intruder->position_current_time_ = ms_since_epoch;
+				conn->user_position_time = ms_since_epoch;
+			} else {
+				intruder->position_old_ = intruder->position_current_;
+				conn->user_position_old2 = conn->user_position2;
+				intruder->position_old_time_ = intruder->position_current_time_;
+				conn->user_position_old_time2 = conn->user_position_time2;
+
+				intruder->position_current_ = updated_position;
+				conn->user_position2 = aircraft->position_current_;
+				intruder->position_current_time_ = ms_since_epoch;
+				conn->user_position_time2 = ms_since_epoch;
+			}
 			intruder->lock_.unlock();
 			aircraft->lock_.unlock();
 			conn->lock.unlock();

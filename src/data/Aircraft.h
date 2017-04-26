@@ -42,12 +42,14 @@ public:
 	// The rate of change of the altitude
 	Velocity vertical_velocity_;
 	/* The true airspeed of the aircraft relative to the air mass around the craft
-	   This is only populated for the user's aircraft and is currently not used but might need to be used in decider calculations
-	   since the user's aircraft position is updated every time the plugins render method is called, which means the elapsed time
-	   will be extremely small.
+	This is only populated for the user's aircraft and is currently not used but might need to be used in decider calculations
+	since the user's aircraft position is updated every time the plugins render method is called, which means the elapsed time
+	will be extremely small.
 	*/
 	Velocity true_airspeed_;
 	Angle heading_;
 
 	ThreatClassification threat_classification_ = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
+
+	std::chrono::milliseconds time_of_cpa = std::chrono::milliseconds(0);
 };

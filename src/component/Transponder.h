@@ -57,7 +57,7 @@ private:
 
 	std::vector<Aircraft*> allocated_aircraft;
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap;
-	
+
 	std::string getIpAddr();
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);
 };

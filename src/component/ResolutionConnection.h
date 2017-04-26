@@ -12,8 +12,7 @@
 
 #include "units/LLA.h"
 #include "data/Sense.h"
-
-#include "data/Aircraft.h"
+#include <data/Aircraft.h>
 
 #define MAC_LENGTH 18
 
@@ -22,7 +21,7 @@ class ResolutionConnection
 public:
 	static unsigned short const kTcpPort_ = 21218;
 
-	ResolutionConnection(std::string const user_mac, std::string const intruder_mac, std::string const ip, int const port);
+	ResolutionConnection(std::string const user_mac, std::string const intruder_mac, std::string const ip, int const port, Aircraft* user_ac);
 	~ResolutionConnection();
 
 	std::string const intruder_mac;
@@ -34,16 +33,18 @@ public:
 	volatile Sense current_sense;
 	std::mutex lock;
 	std::chrono::milliseconds last_analyzed;
-	
+
+	LLA user_position;
+	std::chrono::milliseconds user_position_time;
+	LLA user_position_old;
+	std::chrono::milliseconds user_position_old_time;
+
 	int connectToIntruder(std::string, int);
 	SOCKET acceptIncomingIntruder(int);
 
 	DWORD senseSender();
 	DWORD senseReceiver();
 	int sendSense(Sense);
-
-	Aircraft* user_aircraft_copy;
-	std::chrono::milliseconds time_of_cpa = std::chrono::milliseconds(0);
 private:
 	std::atomic<bool> running;
 	std::atomic<bool> thread_stopped;
@@ -62,9 +63,9 @@ static inline char* const senseToString(Sense s)
 {
 	switch (s)
 	{
-		case Sense::UPWARD: return "UPWARD";
-		case Sense::DOWNWARD: return "DOWNWARD";
-		default: return "UNKNOWN";
+	case Sense::UPWARD: return "UPWARD";
+	case Sense::DOWNWARD: return "DOWNWARD";
+	default: return "UNKNOWN";
 	}
 }
 

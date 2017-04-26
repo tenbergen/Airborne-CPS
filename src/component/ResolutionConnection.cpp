@@ -12,14 +12,20 @@ static DWORD WINAPI startResolutionSender(void* param)
 	return rc->senseSender();
 }
 
-ResolutionConnection::ResolutionConnection(std::string const mmac, std::string const imac, std::string const ip_addr, int const port_num) : 
+ResolutionConnection::ResolutionConnection(std::string const mmac, std::string const imac, std::string const ip_addr, int const port_num, Aircraft* user_ac) :
 	my_mac(mmac), intruder_mac(imac), ip(ip_addr), port(port_num)
 {
+	user_position = user_ac->position_current_;
+	user_position_time = user_ac->position_current_time_;
+	user_position_old = user_ac->position_old_;
+	user_position_old_time = user_ac->position_old_time_;
+	user_ac->lock_.unlock();
+
 	running = true;
 	connected = false;
 	current_sense = Sense::UNKNOWN;
 	consensusAchieved = false;
-	
+
 	LPTHREAD_START_ROUTINE task = strcmp(my_mac.c_str(), intruder_mac.c_str()) > 0 ? startResolutionSender : startResolutionReceiver;
 	DWORD ThreadID;
 	CreateThread(NULL, 0, task, (void*) this, 0, &ThreadID);
@@ -112,8 +118,7 @@ DWORD ResolutionConnection::senseSender()
 {
 	if (connectToIntruder(ip, port) < 0) {
 		XPLMDebugString("ResolutionConnection::senseSender - failed to establish connection\n");
-	}
-	else {
+	} else {
 		connected = true;
 		open_socket = sock;
 		resolveSense();
@@ -145,8 +150,7 @@ void ResolutionConnection::resolveSense()
 					if (send(open_socket, ack, strlen(ack) + 1, 0) == SOCKET_ERROR) {
 						lock.unlock();
 						socketCloseWithError("ResolutionConnection::resolveSense - failed to send ack after receiving intruder sense with user_sense unknown\n", open_socket);
-					}
-					else {
+					} else {
 						consensusAchieved = true;
 						lock.unlock();
 						XPLMDebugString("ResolutionConnection::resolveSense - achieved consensus in case where intruder sent sense first\n");
@@ -181,8 +185,7 @@ void ResolutionConnection::resolveSense()
 						XPLMDebugString(debug_buf);
 						if (recv(open_socket, msg, 255, 0) < 0) {
 							socketCloseWithError("ResolutionConnection::resolveSense - failed to receive sense from intr in edge case with user_mac < intr_mac: %d\n", open_socket);
-						}
-						else {
+						} else {
 							Sense sense_from_intruder = stringToSense(msg);
 							debug_buf[0] = '\0';
 							snprintf(debug_buf, 256, "ResolutionConnection::resolveSense - received sense %s from intruder.\n", msg);
@@ -190,15 +193,14 @@ void ResolutionConnection::resolveSense()
 
 							if (send(open_socket, ack, strlen(ack) + 1, 0) == SOCKET_ERROR) {
 								socketCloseWithError("ResolutionConnection::resolveSense - Failed to send ack in edge case with user_mac < intr_mac\n", open_socket);
-							}
-							else {
+							} else {
 								lock.lock();
 								consensusAchieved = true;
 								current_sense = sense_from_intruder;
 								lock.unlock();
 
 								XPLMDebugString("ResolutionConnection::resolveSense - Achieved consensus in edge case with user_mac < intr_mac\n");
-							}						
+							}
 						}
 					}
 				}
@@ -224,8 +226,7 @@ int ResolutionConnection::sendSense(Sense s)
 		if (send(open_socket, msg, strlen(msg) + 1, 0) == SOCKET_ERROR) {
 			socketCloseWithError("ResolutionConnection::resolveSense - ack failed: %d\n", open_socket);
 			return -1;
-		}
-		else {
+		} else {
 			return 0; // success
 		}
 	} else {

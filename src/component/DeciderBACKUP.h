@@ -30,8 +30,8 @@ private:
 	static Distance const kAltitudeAlim350Threshold_;
 	static Distance const kAltitudeAlim400Threshold_;
 	static Distance const kAltitudeAlim600Threshold_;
-
-	/* The velocity delta that should be added and subtracted from the user aircraft's vertical velocity
+	
+	/* The velocity delta that should be added and subtracted from the user aircraft's vertical velocity 
 	to estimate a climbing or descending trajectory resprectively*/
 	static Velocity const kVerticalVelocityClimbDescendDelta_;
 
@@ -41,25 +41,24 @@ private:
 	double taThresholdSeconds = 60.0; //seconds
 	double raThresholdSeconds = 30.0; //seconds
 
-									  /* Analyzes the supplied intruder, determining if the intruder is a threat, and begins the process of
-									  determining actions that will avoid potential collisions. */
+	/* Analyzes the supplied intruder, determining if the intruder is a threat, and begins the process of
+	 determining actions that will avoid potential collisions. */
 	void DetermineActionRequired(Aircraft* intruder);
 
-	/* Determines the appropriate threat classification*/
-	Aircraft::ThreatClassification DetermineThreatClass(Aircraft* intr_copy, ResolutionConnection* conn);
-
-	/* Returns whether the supplied taus trigger a TA at this altitude*/
-	bool tau_passes_TA_threshold(double alt, double range_tau_s, double vertical_tau_s);
-
-	/* Returns whether the supplied taus trigger a RA at this altitude*/
-	bool tau_passes_RA_threshold(double alt, double range_tau_s, double vertical_tau_s);
-
+	/* Calculates the slant range, or the distance between two aircraft as measured by a straight line from
+	one aircraft to the other.*/
+	Distance CalculateSlantRange(Distance horizontalSeparation, Distance verticalSeparation);
+	/* Calcluates the slant range rate, or the rate of closure of the aircraft over the slant range. */
+	Velocity CalculateSlantRangeRate(Velocity horizontalRate, Velocity verticalRate, double elapsed_time_minutes);
+	
 	// Converts the supplied milliseconds to minutes
 	double ToMinutes(std::chrono::milliseconds time);
 
 	/* Determines the sense (Sense::UPWARDS or Sense::DOWNWARDS) that the user's aircraft should use when
-	resolving an RA with the details of the supplied intruding aircraft.*/
-	Sense DetermineResolutionSense(double user_alt_ft, double intr_alt_ft);
+	resolving an RA with the details of the supplied intruding aircraft. Sense::UNKNOWN is returned in the 
+	case where the supplied time to collision is not a positive value.*/
+	Sense DetermineResolutionSense(Distance user_current_altitude, Distance intr_current_altitude, Velocity user_vvel,
+		Velocity intr_vvel, double slant_tau_seconds);
 
 	/* Calculates the minimum vertical velocity required to achieve ALIM separation at the CPA relative to the user's current vertical velocity */
 	Velocity Decider::DetermineRelativeMinimumVerticalVelocityToAchieveAlim(Distance ALIM, Distance separation_at_cpa, double tau_seconds) const;
@@ -70,9 +69,9 @@ private:
 		Distance user_altitude, Distance intr_altitude, double tau_seconds) const;
 	RecommendationRangePair DetermineUpwardSenseStrengh(Velocity user_vvel, Distance ALIM, Distance separation_at_cpa, Velocity relative_min_vvel_to_achieve_alim) const;
 
-	/* Reevaluates the supplied proximity intruder based upon the horizontal and vertical tau (time to close
+	/* Reevaluates the supplied proximity intruder based upon the horizontal and vertical tau (time to close 
 	based upon closure rate) and ensures the threat classification can only be upgraded and not downgraded. */
-	Aircraft::ThreatClassification ReevaluateProximinityIntruderThreatClassification(double horizontal_tau_seconds, double vertical_tau_seconds,
+	Aircraft::ThreatClassification ReevaluateProximinityIntruderThreatClassification(double horizontal_tau_seconds, double vertical_tau_seconds, 
 		Aircraft::ThreatClassification current_threat_class) const;
 
 	/* Determines the ALIM, or the minimum required vertical separation between two aircraft, based upon the

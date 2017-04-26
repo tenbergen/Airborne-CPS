@@ -2,34 +2,34 @@
 
 /*
 NOTES:
-	1. On windows you will need to add these to the linker/input/AdditionalDependencies settings
-       glu32.lib 
-	   glaux.lib
+1. On windows you will need to add these to the linker/input/AdditionalDependencies settings
+glu32.lib
+glaux.lib
 
-	2. If you want to have the xpl go directly to the plugin directory you need to 
-	set path variables. Currently I set it to build in the top directory of the 
-	project.
-	
-	3. Networking might be easier to do with UDP through the menu options as it is
-	available. There are options for things like reading inputs from the network
-	and also saving to the local disk. These are found under the settings menu ->
-	data input and output, and network options. This is called the Data Set in 
-	x-plane. info here:
-	http://www.x-plane.com/manuals/desktop/#datainputandoutputfromx-plane
-	http://www.x-plane.com/?article=data-set-output-table
-	http://www.nuclearprojects.com/xplane/info.shtml
+2. If you want to have the xpl go directly to the plugin directory you need to
+set path variables. Currently I set it to build in the top directory of the
+project.
 
-	Added the define IBM 1 thing because you have to specify it before doing
-	// compiling. It is system specific. For Macs you must use 'define APL 1' and
-	// set the ibm to 0. Info about this is here:
-	// http://www.xsquawkbox.net/xpsdk/docs/macbuild.html
-	//
-	// Also added the header file for using the data refs. I might need to add other
-	// header files for the navigation "XPLMNavigation". "XPLMDataAccess" is to
-	// read plane info and set other options. Navigation has lookups for gps and 
-	// fms, while the data access is the api for reading and writing plane/sensor
-	// info. DataRefs:
-	// http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
+3. Networking might be easier to do with UDP through the menu options as it is
+available. There are options for things like reading inputs from the network
+and also saving to the local disk. These are found under the settings menu ->
+data input and output, and network options. This is called the Data Set in
+x-plane. info here:
+http://www.x-plane.com/manuals/desktop/#datainputandoutputfromx-plane
+http://www.x-plane.com/?article=data-set-output-table
+http://www.nuclearprojects.com/xplane/info.shtml
+
+Added the define IBM 1 thing because you have to specify it before doing
+// compiling. It is system specific. For Macs you must use 'define APL 1' and
+// set the ibm to 0. Info about this is here:
+// http://www.xsquawkbox.net/xpsdk/docs/macbuild.html
+//
+// Also added the header file for using the data refs. I might need to add other
+// header files for the navigation "XPLMNavigation". "XPLMDataAccess" is to
+// read plane info and set other options. Navigation has lookups for gps and
+// fms, while the data access is the api for reading and writing plane/sensor
+// info. DataRefs:
+// http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
 */
 
 #include "XPLMDefs.h"
@@ -65,8 +65,8 @@ Decider* decider;
 
 /// Used for dragging plugin panel window.
 static	int	CoordInRect(int x, int y, int l, int t, int r, int b);
-static int	CoordInRect(int x, int y, int l, int t, int r, int b) {	
-	return ((x >= l) && (x < r) && (y < t) && (y >= b)); 
+static int	CoordInRect(int x, int y, int l, int t, int r, int b) {
+	return ((x >= l) && (x < r) && (y < t) && (y >= b));
 }
 
 /// Prototypes for callbacks etc.
@@ -105,9 +105,9 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 #if IBM
 	char *pFileName = "Resources\\Plugins\\AirborneCPS\\";
 #elif LIN
-    char *pFileName = "Resources/plugins/AirborneCPS/";
+	char *pFileName = "Resources/plugins/AirborneCPS/";
 #else
-    char *pFileName = "Resources:Plugins:AirborneCPS:";
+	char *pFileName = "Resources:Plugins:AirborneCPS:";
 #endif
 	/// Setup texture file locations
 	XPLMGetSystemPath(gPluginDataFile);
@@ -116,7 +116,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	strcpy(outName, "AirborneCPS");
 	strcpy(outSig, "AirborneCPS");
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
-	
+
 	//test();
 
 	/* Now we create a window.  We pass in a rectangle in left, top, right, bottom screen coordinates.  We pass in three callbacks. */
@@ -144,7 +144,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	cockpit_lighting_green = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
 	cockpit_lighting_blue = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
-	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag,   "F8",   ExampleGaugeHotKey, NULL);
+	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", ExampleGaugeHotKey, NULL);
 
 	Transponder::initNetworking();
 	std::string my_mac = Transponder::getHardwareAddress();
@@ -182,15 +182,15 @@ PLUGIN_API void XPluginDisable(void) {}
 
 PLUGIN_API int XPluginEnable(void) { return 1; }
 
-PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void * inParam){}
+PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void * inParam) {}
 
 /* The callback responsible for drawing the gauge during the X-Plane gauge drawing phase. */
-int	GaugeDrawingCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon) {
+int	GaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon) {
 	// Do the actual drawing, but only if the window is active
 	if (ExampleGaugeDisplayPanelWindow) {
-		LLA updated ={ Angle {XPLMGetDatad(latitude_ref), Angle::AngleUnits::DEGREES}, 
-			Angle{XPLMGetDatad(longitude_ref), Angle::AngleUnits::DEGREES}, 
-			Distance {XPLMGetDatad(altitude_ref), Distance::DistanceUnits::METERS} };
+		LLA updated = { Angle{ XPLMGetDatad(latitude_ref), Angle::AngleUnits::DEGREES },
+			Angle{ XPLMGetDatad(longitude_ref), Angle::AngleUnits::DEGREES },
+			Distance{ XPLMGetDatad(altitude_ref), Distance::DistanceUnits::METERS } };
 		Velocity updated_vvel = Velocity(XPLMGetDataf(vert_speed_ref), Velocity::VelocityUnits::FEET_PER_MIN);
 		std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
@@ -204,7 +204,7 @@ int	GaugeDrawingCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon
 		user_aircraft->vertical_velocity_ = updated_vvel;
 		user_aircraft->heading_ = Angle(XPLMGetDataf(heading_true_mag_deg_ref), Angle::AngleUnits::DEGREES);
 		user_aircraft->true_airspeed_ = Velocity(XPLMGetDataf(true_airspeed_ref), Velocity::VelocityUnits::METERS_PER_S);
-		
+
 		user_aircraft->lock_.unlock();
 
 		DrawGLScene();
@@ -214,17 +214,17 @@ int	GaugeDrawingCallback(XPLMDrawingPhase inPhase,int inIsBefore,void * inRefcon
 
 
 /* This callback does not do any drawing as such.
- * We use the mouse callback below to handle dragging of the window
- * X-Plane will automatically do the redraw. */
-void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon){}
+* We use the mouse callback below to handle dragging of the window
+* X-Plane will automatically do the redraw. */
+void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon) {}
 
 /* Our key handling callback does nothing in this plugin.  This is ok;
- * we simply don't use keyboard input.*/
-void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID,char inKey, 
-	XPLMKeyFlags inFlags,char inVirtualKey, void * inRefcon, int losingFocus){}
+* we simply don't use keyboard input.*/
+void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey,
+	XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus) {}
 
 /* Our mouse click callback updates the position that the windows is dragged to. */
-int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon){
+int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon) {
 	int	dX = 0, dY = 0;
 	int	Weight = 0, Height = 0;
 	int	Left, Top, Right, Bottom;
@@ -237,10 +237,10 @@ int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, X
 	/// Get the windows current position
 	XPLMGetWindowGeometry(inWindowID, &Left, &Top, &Right, &Bottom);
 
-	switch(inMouse) {
+	switch (inMouse) {
 	case xplm_MouseDown:
 		/// Test for the mouse in the top part of the window
-		if (CoordInRect(x, y, Left, Top, Right, Top-15)){
+		if (CoordInRect(x, y, Left, Top, Right, Top - 15)) {
 			dX = x - Left;
 			dY = y - Top;
 			Weight = Right - Left;
@@ -285,12 +285,12 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int		left, top, right, bottom;
 	static float color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
 
-	/* First we get the location of the window passed in to us. */
+												/* First we get the location of the window passed in to us. */
 	XPLMGetWindowGeometry(inWindowID, &left, &top, &right, &bottom);
 
 	/* We now use an XPLMGraphics routine to draw a translucent dark rectangle that is our window's shape. */
 	XPLMDrawTranslucentDarkBox(left, top, right, bottom);
-	
+
 	/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
 	char position_buf[128];
 	snprintf(position_buf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitude_ref), XPLMGetDataf(longitude_ref), XPLMGetDataf(altitude_ref));
@@ -300,43 +300,38 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int offset_y_pxls = 40;
 
 	for (auto & iter = intruding_aircraft.cbegin(); iter != intruding_aircraft.cend(); ++iter) {
-		Aircraft* intruder = iter -> second;
-		ResolutionConnection* conn = open_connections[intruder->id_];
-		conn->lock.lock();
-		int ms_to_cpa = (conn->time_of_cpa - std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())).count();
-		conn->lock.unlock();
-
-		bool threat = false;
+		Aircraft* intruder = iter->second;
 
 		intruder->lock_.lock();
-		LLA const intruder_pos = intruder -> position_current_;
-		if (intruder->threat_classification_ == Aircraft::ThreatClassification::RESOLUTION_ADVISORY
-			|| intruder->threat_classification_ == Aircraft::ThreatClassification::TRAFFIC_ADVISORY)
-			threat = true;
+		LLA const intruder_pos = intruder->position_current_;
+		double time_of_cpa_s = intruder->time_of_cpa.count() / 1000;
 		intruder->lock_.unlock();
 
 		position_buf[0] = '\0';
-		snprintf(position_buf, 128, "intr_pos: (%.3f, %.3f)", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees());
+		snprintf(position_buf, 128, "intr_pos: (%.3f, %.3f, %3f)", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees(), intruder_pos.altitude_.to_meters());
 		XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
 		offset_y_pxls += 20;
 
-		if (threat && ms_to_cpa > 0) {
-			position_buf[0] = '\0';
-			snprintf(position_buf, 128, "ms_to_cpa: %.3d", ms_to_cpa);
-			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-			offset_y_pxls += 20;
-		}
+		/*position_buf[0] = '\0';
+		snprintf(position_buf, 128, "time_of_cpa_s: %.3f", time_of_cpa_s);
+		XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
+		offset_y_pxls += 20;
+
+		position_buf[0] = '\0';
+		snprintf(position_buf, 128, "time_remaining_s: %.3f", time_of_cpa_s - (std::chrono::system_clock::now().time_since_epoch().count() / 1000));
+		XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
+		offset_y_pxls += 20;*/
 	}
 }
 
 /* Our key handling callback does nothing in this plugin.  This is ok; we simply don't use keyboard input. */
-void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, 
-	char inVirtualKey, void * inRefcon, int losingFocus){}
+void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags,
+	char inVirtualKey, void * inRefcon, int losingFocus) {}
 
 /*Our mouse click callback toggles the status of our mouse variable
 * as the mouse is clicked.  We then update our text on the next sim
 * cycle. */
-int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon){
+int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon) {
 	/* If we get a down or up, toggle our status click.  We will
 	* never get a down without an up if we accept the down. */
 	if ((inMouse == xplm_MouseDown) || (inMouse == xplm_MouseUp))

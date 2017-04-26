@@ -1,7 +1,7 @@
 #include "Decider.h"
 
-Velocity const Decider::kMinGaugeVerticalVelocity = {-4000.0, Velocity::VelocityUnits::FEET_PER_MIN};
-Velocity const Decider::kMaxGaugeVerticalVelocity = {4000.0, Velocity::VelocityUnits::FEET_PER_MIN};
+Velocity const Decider::kMinGaugeVerticalVelocity = { -4000.0, Velocity::VelocityUnits::FEET_PER_MIN };
+Velocity const Decider::kMaxGaugeVerticalVelocity = { 4000.0, Velocity::VelocityUnits::FEET_PER_MIN };
 
 Distance const Decider::kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUnits::NMI };
 
@@ -10,16 +10,16 @@ Distance const Decider::kAlim400_ = { 400.0, Distance::DistanceUnits::FEET };
 Distance const Decider::kAlim600_ = { 600.0, Distance::DistanceUnits::FEET };
 Distance const Decider::kAlim700_ = { 700.0, Distance::DistanceUnits::FEET };
 
-Distance const Decider::kAltitudeAlim350Threshold_ = { 5000.0, Distance::DistanceUnits::FEET};
-Distance const Decider::kAltitudeAlim400Threshold_ = { 10000.0, Distance::DistanceUnits::FEET};
-Distance const Decider::kAltitudeAlim600Threshold_ = { 20000.0, Distance::DistanceUnits::FEET};
+Distance const Decider::kAltitudeAlim350Threshold_ = { 5000.0, Distance::DistanceUnits::FEET };
+Distance const Decider::kAltitudeAlim400Threshold_ = { 10000.0, Distance::DistanceUnits::FEET };
+Distance const Decider::kAltitudeAlim600Threshold_ = { 20000.0, Distance::DistanceUnits::FEET };
 
-Velocity const Decider::kVerticalVelocityClimbDescendDelta_ = {1500.0, Velocity::VelocityUnits::FEET_PER_MIN};
+Velocity const Decider::kVerticalVelocityClimbDescendDelta_ = { 1500.0, Velocity::VelocityUnits::FEET_PER_MIN };
 
 Decider::Decider(Aircraft* this_Aircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* map) : thisAircraft_(this_Aircraft), active_connections(map) {}
 
-void Decider::Analyze(Aircraft* intruder, Aircraft* user, ResolutionConnection* rc) {
-	Decider::DetermineActionRequired(intruder, user, rc);
+void Decider::Analyze(Aircraft* intruder) {
+	Decider::DetermineActionRequired(intruder);
 }
 
 std::string get_threat_class_str(Aircraft::ThreatClassification threat_class) {
@@ -37,204 +37,142 @@ std::string get_threat_class_str(Aircraft::ThreatClassification threat_class) {
 	}
 }
 
-void Decider::DetermineActionRequired(Aircraft* intruder, Aircraft* user, ResolutionConnection* rc) {
-	user->lock_.lock();
-	Aircraft user_copy = *(user);
-	user->lock_.unlock();
+void Decider::DetermineActionRequired(Aircraft* intruder) {
+	thisAircraft_->lock_.lock();
+	Aircraft user_copy = *(thisAircraft_);
+	thisAircraft_->lock_.unlock();
 
 	intruder->lock_.lock();
 	Aircraft intr_copy = *(intruder);
 	intruder->lock_.unlock();
 
-	rc->lock.lock();
-	if (rc->time_of_cpa != std::chrono::milliseconds(0) && rc->time_of_cpa < std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())) {
-		rc->time_of_cpa = std::chrono::milliseconds(0);
-	}
-	rc->lock.unlock();
+	ResolutionConnection* connection = (*active_connections)[intr_copy.id_];
+	Aircraft::ThreatClassification threat_class = Decider::DetermineThreatClass(&intr_copy, connection);
+	Sense my_sense = Sense::UNKNOWN;
 
-	Distance prevHorizontalSeparation = user_copy.position_old_.Range(&intr_copy.position_old_);
-	Distance prevVerticalSeparation = Distance(abs(user_copy.position_old_.altitude_.to_feet() - intr_copy.position_old_.altitude_.to_feet()), Distance::DistanceUnits::FEET);
-	Distance prevSlantRange = Decider::CalculateSlantRange(prevHorizontalSeparation, prevVerticalSeparation);
-
-	Distance currHorizontalSeparation = user_copy.position_current_.Range(&intr_copy.position_current_);
-	Distance currVerticalSeparation = Distance(abs(user_copy.position_current_.altitude_.to_feet() - intr_copy.position_current_.altitude_.to_feet()), Distance::DistanceUnits::FEET);
-	Distance currSlantRange = Decider::CalculateSlantRange(currHorizontalSeparation, currVerticalSeparation);
-
-	double intr_elapsed_time_minutes = Decider::ToMinutes(intr_copy.position_current_time_) - Decider::ToMinutes(intr_copy.position_old_time_);
-	double user_elapsed_time_minutes = Decider::ToMinutes(user_copy.position_current_time_) - Decider::ToMinutes(user_copy.position_old_time_);
-
-	Distance alt_diff = user_copy.position_current_.altitude_ - user_copy.position_old_.altitude_;
-
-	Aircraft::ThreatClassification threat_class;
-	Velocity horizontalRate = Velocity((currHorizontalSeparation - prevHorizontalSeparation).to_feet() / user_elapsed_time_minutes, Velocity::VelocityUnits::FEET_PER_MIN);
-	Velocity verticalRate = Velocity((currVerticalSeparation - prevVerticalSeparation).to_feet() / user_elapsed_time_minutes, Velocity::VelocityUnits::FEET_PER_MIN);
-	double horizontalTauSeconds = abs(currHorizontalSeparation.to_feet() / horizontalRate.to_feet_per_min()) * 60.0;
-	double verticalTauSeconds = abs(currVerticalSeparation.to_feet() / verticalRate.to_feet_per_min()) * 60.0;
-	Velocity slantRangeRate = Decider::CalculateSlantRangeRate(horizontalRate, verticalRate, user_elapsed_time_minutes);
-	double slantRangeTauSeconds = abs(currSlantRange.to_feet() / slantRangeRate.to_feet_per_min()) * 60.0; //Time to Closest Point of Approach (CPA)
-	std::chrono::milliseconds time_of_cpa = std::chrono::milliseconds(0);
-	if (intr_copy.threat_classification_ == Aircraft::ThreatClassification::RESOLUTION_ADVISORY
-		|| intr_copy.threat_classification_ == Aircraft::ThreatClassification::TRAFFIC_ADVISORY) {
-		rc->lock.lock();
-		if (rc->time_of_cpa == std::chrono::milliseconds(0)) {
-			rc->time_of_cpa = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) + std::chrono::milliseconds((int)(slantRangeTauSeconds * 1000));
+	if (threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY) {
+		connection->lock.lock();
+		if (connection->consensusAchieved) {
+			my_sense = connection->current_sense;
+		} else {
+			my_sense = Decider::DetermineResolutionSense(user_copy.position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET),
+				intr_copy.position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET));
+			connection->sendSense(my_sense);
 		}
-		time_of_cpa = rc->time_of_cpa;
-		rc->lock.unlock();
+		connection->lock.unlock();
+	} else if (my_sense != Sense::UNKNOWN && threat_class == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {
+		connection->lock.lock();
+		connection->consensusAchieved = false;
+		connection->lock.unlock();
+		my_sense = Sense::UNKNOWN;
 	}
 
-	if (user_elapsed_time_minutes != 0.0 && intr_elapsed_time_minutes != 0.0 &&  alt_diff.to_feet() != 0.0 && user_copy.position_current_.altitude_.to_feet() > 100.0) {
-		
-		// Ensure the aircraft are actually closing on each other
-		if (!signbit(horizontalRate.to_feet_per_min()) && !signbit(verticalRate.to_feet_per_min())) {
-
-			Velocity inHorizontalVelocity = Velocity(intr_copy.position_current_.Range(&intr_copy.position_old_).to_feet() / intr_elapsed_time_minutes, Velocity::VelocityUnits::FEET_PER_MIN);
-			Velocity inVerticalVelocity = Velocity((intr_copy.position_current_.altitude_ - intr_copy.position_old_.altitude_).to_feet() / intr_elapsed_time_minutes, Velocity::VelocityUnits::FEET_PER_MIN);
-
-			Velocity taHorizontalVelocity = Velocity(user_copy.position_current_.Range(&user_copy.position_old_).to_feet() / user_elapsed_time_minutes, Velocity::VelocityUnits::FEET_PER_MIN);
-			
-			ResolutionConnection* connection = (*active_connections)[intr_copy.id_];
-			Sense sense = Decider::DetermineResolutionSense(user_copy.position_current_.altitude_, intr_copy.position_current_.altitude_, user_copy.vertical_velocity_, inVerticalVelocity, slantRangeTauSeconds);
-			bool consensus = false;
-
-			std::chrono::milliseconds last_analyzed_copy = connection->last_analyzed;
-
-			if (currSlantRange.to_feet() < kProtectionVolumeRadius_.to_feet()) {
-				threat_class = ReevaluateProximinityIntruderThreatClassification(horizontalTauSeconds, verticalTauSeconds, intr_copy.threat_classification_, time_of_cpa);
-
-				if (threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY) {
-					Sense sense_copy;
-
-					connection->lock.lock();
-					consensus = connection->consensusAchieved;
-					sense_copy = connection->current_sense;
-					connection->last_analyzed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-
-					if (consensus) {
-						sense = sense_copy;
-						connection->lock.unlock();
-
-						RecommendationRangePair strength = Decider::DetermineStrength(sense, user_copy.vertical_velocity_, inVerticalVelocity,
-							user_copy.position_current_.altitude_, intr_copy.position_current_.altitude_, slantRangeTauSeconds);
-
-						recommendation_range_lock_.lock();
-						positive_recommendation_range_ = strength.positive;
-						negative_recommendation_range_ = strength.negative;
-						recommendation_range_lock_.unlock();
-					}
-					else if (sense_copy == Sense::UNKNOWN && sense != Sense::UNKNOWN) {
-						connection->current_sense = sense;
-						connection->lock.unlock();
-
-						connection->sendSense(sense);
-					}
-					else {
-						connection->lock.unlock();
-					}
-				}
-				else {
-					recommendation_range_lock_.lock();
-					positive_recommendation_range_.valid = false;
-					negative_recommendation_range_.valid = false;
-					recommendation_range_lock_.unlock();
-				}
-			}
-			else {
-				threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
-				// if the intruder has left the protection volume for more than ten seconds, we should reset the sense consensus
-				if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch() - last_analyzed_copy).count() > 10000) {
-					connection->lock.lock();
-					connection->consensusAchieved = false;
-					connection->lock.unlock();
-				}
-
-				recommendation_range_lock_.lock();
-				positive_recommendation_range_.valid = false;
-				negative_recommendation_range_.valid = false;
-				recommendation_range_lock_.unlock();
-			}
-
-			intruder->lock_.lock();
-			intruder->threat_classification_ = threat_class;
-			intruder->lock_.unlock();
-		}
-	}
-	else {
-		threat_class = ReevaluateProximinityIntruderThreatClassification(horizontalTauSeconds, verticalTauSeconds, intr_copy.threat_classification_, time_of_cpa);
-		intruder->lock_.lock();
-		intruder->threat_classification_ = threat_class;
-		intruder->lock_.unlock();
-	}
+	intruder->lock_.lock();
+	intruder->threat_classification_ = threat_class;
+	intruder->time_of_cpa = intr_copy.time_of_cpa;
+	intruder->lock_.unlock();
 }
 
-Aircraft::ThreatClassification Decider::ReevaluateProximinityIntruderThreatClassification(double horizontal_tau, double vertical_tau, Aircraft::ThreatClassification current_threat_class, std::chrono::milliseconds time_of_cpa) const {
-	if ((current_threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY || 
-		(horizontal_tau < raThresholdSeconds && vertical_tau < raThresholdSeconds))
-		&& time_of_cpa > std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())) {
-		return Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
-	} else if((current_threat_class == Aircraft::ThreatClassification::TRAFFIC_ADVISORY || 
-		(horizontal_tau < taThresholdSeconds && vertical_tau < taThresholdSeconds))
-		&& time_of_cpa < std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())) {
-		return Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
+Aircraft::ThreatClassification Decider::DetermineThreatClass(Aircraft* intr_copy, ResolutionConnection* conn) {
+	conn->lock.lock();
+	LLA user_position = conn->user_position;
+	LLA user_position_old = conn->user_position_old;
+	std::chrono::milliseconds user_position_time = conn->user_position_time;
+	std::chrono::milliseconds user_position_old_time = conn->user_position_old_time;
+	conn->lock.unlock();
+	Aircraft::ThreatClassification prev_threat_class = intr_copy->threat_classification_;
+	double slant_range_nmi = user_position.Range(&intr_copy->position_current_).ToUnits(Distance::DistanceUnits::NMI);
+	double delta_distance_m = user_position.Range(&intr_copy->position_current_).ToUnits(Distance::DistanceUnits::METERS)
+		- user_position_old.Range(&intr_copy->position_old_).ToUnits(Distance::DistanceUnits::METERS);
+	double elapsed_time_s = (double)(intr_copy->position_current_time_ - intr_copy->position_old_time_).count() / 1000;
+	double closing_speed_knots = Velocity(delta_distance_m / elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S).ToUnits(Velocity::VelocityUnits::KNOTS);
+	double alt_sep_ft = intr_copy->position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET) -
+		user_position.altitude_.ToUnits(Distance::DistanceUnits::FEET);
+	double delta_distance2_ft = (intr_copy->position_old_.altitude_.ToUnits(Distance::DistanceUnits::FEET) -
+		user_position_old.altitude_.ToUnits(Distance::DistanceUnits::FEET)) -
+		(intr_copy->position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET) -
+			user_position.altitude_.ToUnits(Distance::DistanceUnits::FEET));
+	double elapsed_time_min = elapsed_time_s / 60;
+	double vert_closing_spd_ft_p_min = delta_distance2_ft / elapsed_time_min;
+	double range_tau_s = slant_range_nmi / closing_speed_knots * 3600;
+	double vertical_tau_s = alt_sep_ft / vert_closing_spd_ft_p_min * 60;
+
+	Aircraft::ThreatClassification new_threat_class;
+	// if within proximity range
+	if (slant_range_nmi < 6 && abs(alt_sep_ft) < 1200) {
+		// if reaches TA threshold
+		//if (prev_threat_class >= Aircraft::ThreatClassification::TRAFFIC_ADVISORY
+		//	|| tau_passes_TA_threshold(user_position.altitude_.ToUnits(Distance::DistanceUnits::FEET), range_tau_s, vertical_tau_s)) {
+		//	// if reaches RA threshold
+		//	if (prev_threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY
+		//		|| tau_passes_RA_threshold(user_position.altitude_.ToUnits(Distance::DistanceUnits::FEET), range_tau_s, vertical_tau_s)) {
+		//		new_threat_class = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
+		//		// if new RA
+		//		if (intr_copy->time_of_cpa == std::chrono::milliseconds(0)
+		//			|| prev_threat_class == Aircraft::ThreatClassification::TRAFFIC_ADVISORY)
+		//			intr_copy->time_of_cpa = std::chrono::milliseconds(std::chrono::system_clock::now().time_since_epoch().count() + (int)(range_tau_s * 1000));
+		//	} else {
+		//		// did not rach RA threshold
+		//		new_threat_class = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
+		//		// if new TA
+		//		if (intr_copy->time_of_cpa == std::chrono::milliseconds(0))
+		//			intr_copy->time_of_cpa = std::chrono::milliseconds(std::chrono::system_clock::now().time_since_epoch().count() + (int)(range_tau_s * 1000));
+		//	}
+		//} else {
+		// does not reach TA threshold
+		new_threat_class = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
+		//}
+	} else {
+		// is not within proximity range
+		new_threat_class = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 	}
-	else {
-		return Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
-	}
+
+	return new_threat_class;
 }
 
-Sense Decider::DetermineResolutionSense(Distance user_current_altitude, Distance intr_current_altitude, Velocity user_vvel, Velocity intr_vvel, double slant_tau_seconds) {
-	Distance ALIM = DetermineALIM(user_current_altitude);
-
-	// The projected altitude of the intruding aircraft at the CPA assuming the intruder maintains its current vertical velocity
-	Distance intr_projected_altitude = Distance(intr_current_altitude.to_feet() + intr_vvel.to_feet_per_min() * (slant_tau_seconds / 60), Distance::DistanceUnits::FEET);
-
-	// Used for determining if climb or descend will cross altitude
-	bool user_below_intr_initially = user_current_altitude < intr_current_altitude;
-
-	// Account for user delay in reacting as 5.0 seconds; the acceleration of the aircraft at 0.25g should also be taken into account but is not
-	slant_tau_seconds -= 5.0;
-
-	if (slant_tau_seconds > 0.0) {
-		/* Project the user's final altitude based upon climbining at 1500 fpm greater than the current vertical 
-		 velocity for slant_tau_seconds (which is time to CPA)*/
-		Velocity user_vvel_climb = user_vvel + kVerticalVelocityClimbDescendDelta_;
-		Distance user_projected_altitude_climbing = Distance(user_current_altitude.to_feet() + user_vvel_climb.to_feet_per_min() * (slant_tau_seconds / 60.0), Distance::DistanceUnits::FEET);
-		bool climbing_crosses_altitude = user_below_intr_initially && user_projected_altitude_climbing.to_feet() > intr_projected_altitude.to_feet();
-
-		/* Same thing as above but projecting the user's final altitude when descending at 1500 fpm less than current
-		vertical velocity*/
-		Velocity user_vvel_descend = user_vvel - kVerticalVelocityClimbDescendDelta_;
-		Distance user_projected_altitude_descending = Distance(user_current_altitude.to_feet() + user_vvel_descend.to_feet_per_min() * (slant_tau_seconds / 60), Distance::DistanceUnits::FEET);
-		bool descending_crosses_altitude = user_below_intr_initially && user_projected_altitude_descending.to_feet() < intr_projected_altitude.to_feet();
-
-		Distance vertical_separation_at_cpa_climbing = user_projected_altitude_climbing - intr_projected_altitude;
-		Distance vertical_separation_at_cpa_descending = user_projected_altitude_descending - intr_projected_altitude;
-
-		/* The sense should be the direction that results in the greatest vertical separation at the CPA  but crossing altitudes 
-		with the intruding aircraft should be avoided if it can be*/
-		if (abs(vertical_separation_at_cpa_climbing.to_feet()) > abs(vertical_separation_at_cpa_descending.to_feet())) {
-			/* The sense returned should avoid crossing altitudes unless the desired amount of vertical safe distance, ALIM, 
-			 can be acheived */
-			// RETURN WITH NO CROSSING ALLOWED TEMPORARILY
-			if (!climbing_crosses_altitude) {
-				return Sense::UPWARD;
-			}
-			else {
-				return Sense::DOWNWARD;
-			}
-		}
-		else {
-			if (!descending_crosses_altitude) {
-				return Sense::DOWNWARD;
-			}
-			else {
-				return Sense::UPWARD;
-			}
-		}
+bool Decider::tau_passes_TA_threshold(double alt, double range_tau_s, double vertical_tau_s)
+{
+	if (alt < 1000 && range_tau_s < 20 && vertical_tau_s < 20) {
+		return true;
+	} else if (alt >= 1000 && alt < 2350 && range_tau_s < 25 && vertical_tau_s < 25) {
+		return true;
+	} else if (alt >= 2350 && alt < 5000 && range_tau_s < 30 && vertical_tau_s < 30) {
+		return true;
+	} else if (alt >= 5000 && alt < 10000 && range_tau_s < 40 && vertical_tau_s < 40) {
+		return true;
+	} else if (alt >= 10000 && alt < 20000 && range_tau_s < 45 && vertical_tau_s < 45) {
+		return true;
+	} else if (alt >= 20000 && range_tau_s < 48 && vertical_tau_s < 48) {
+		return true;
 	}
-	else {
-		return Sense::UNKNOWN;
+
+	return false;
+}
+
+bool Decider::tau_passes_RA_threshold(double alt, double range_tau_s, double vertical_tau_s)
+{
+	if (alt < 1000) {
+		return false;
+	} else if (alt >= 1000 && alt < 2350 && range_tau_s < 15 && vertical_tau_s < 15) {
+		return true;
+	} else if (alt >= 2350 && alt < 5000 && range_tau_s < 20 && vertical_tau_s < 20) {
+		return true;
+	} else if (alt >= 5000 && alt < 10000 && range_tau_s < 25 && vertical_tau_s < 25) {
+		return true;
+	} else if (alt >= 10000 && alt < 20000 && range_tau_s < 30 && vertical_tau_s < 30) {
+		return true;
+	} else if (alt >= 20000 && range_tau_s < 35 && vertical_tau_s < 35) {
+		return true;
 	}
+
+	return false;
+}
+
+Sense Decider::DetermineResolutionSense(double user_alt_ft, double intr_alt_ft) {
+	if (user_alt_ft > intr_alt_ft)
+		return Sense::UPWARD;
+	else
+		return Sense::DOWNWARD;
 }
 
 Velocity Decider::DetermineRelativeMinimumVerticalVelocityToAchieveAlim(Distance ALIM, Distance separation_at_cpa, double tau_seconds) const {
@@ -242,7 +180,7 @@ Velocity Decider::DetermineRelativeMinimumVerticalVelocityToAchieveAlim(Distance
 	return Velocity(sign * (ALIM.to_feet() - abs(separation_at_cpa.to_feet())) / tau_seconds, Velocity::VelocityUnits::FEET_PER_MIN);
 }
 
-RecommendationRangePair Decider::DetermineStrength(Sense sense, Velocity user_vvel, Velocity intr_vvel, Distance user_altitude, 
+RecommendationRangePair Decider::DetermineStrength(Sense sense, Velocity user_vvel, Velocity intr_vvel, Distance user_altitude,
 	Distance intr_altitude, double tau_seconds) const {
 	RecommendationRange positive, negative;
 	// Account for delay in user reaction by subtracting 5 seconds; tau is time to reaching closest of approach (cpa)
@@ -264,8 +202,8 @@ RecommendationRangePair Decider::DetermineStrength(Sense sense, Velocity user_vv
 		Velocity relative_min_vvel_rounded = Velocity(rounded_to_nearest_500th, Velocity::VelocityUnits::FEET_PER_MIN);*/
 
 		/* The velocity determined above is relative to the user's vertical velocity as it is calculated based upon the projected separation
-		 at the CPA assuming the user and intruder maintain the same trajectory, so to calculate the absolute velocity, the determined 
-		 relative vertical velocity should be added to the user's vertical velocity */
+		at the CPA assuming the user and intruder maintain the same trajectory, so to calculate the absolute velocity, the determined
+		relative vertical velocity should be added to the user's vertical velocity */
 		Velocity absolute_min_vvel_to_achieve_alim = alim_achieved ? user_vvel : user_vvel + relative_min_vvel_to_achieve_alim;
 
 		Velocity positive_max_vvel = Velocity::ZERO;
@@ -276,24 +214,21 @@ RecommendationRangePair Decider::DetermineStrength(Sense sense, Velocity user_vv
 			// This logic needs to be changed; if your sense is upward and you're supposed to descend, what should you do? Maintain?
 			if (signbit(absolute_min_vvel_to_achieve_alim.to_feet_per_min())) {
 				positive_max_vvel = absolute_min_vvel_to_achieve_alim;
-			}
-			else {
+			} else {
 				positive_max_vvel = Velocity(absolute_min_vvel_to_achieve_alim.to_feet_per_min() + 500.0, Velocity::VelocityUnits::FEET_PER_MIN);
 			}
 
 			negative_max_vvel = kMinGaugeVerticalVelocity;
-		}
-		else {
+		} else {
 			/* If the user is supposed to be descending and the required vertical velocity to achieve ALIM is negative,
 			the recommended max velocity should be 500 fpm less than the absolute velocity; if the velocity to achieve ALIM is
 			positive, then the recommended max velocity should be ?*/
 			if (signbit(absolute_min_vvel_to_achieve_alim.to_feet_per_min())) {
 				positive_max_vvel = Velocity(absolute_min_vvel_to_achieve_alim.to_feet_per_min() - 500.0, Velocity::VelocityUnits::FEET_PER_MIN);
-			}
-			else {
+			} else {
 				positive_max_vvel = kMinGaugeVerticalVelocity;
 			}
-			
+
 			negative_max_vvel = kMaxGaugeVerticalVelocity;
 		}
 
@@ -304,8 +239,7 @@ RecommendationRangePair Decider::DetermineStrength(Sense sense, Velocity user_vv
 		negative.min_vertical_speed = absolute_min_vvel_to_achieve_alim;
 		negative.max_vertical_speed = negative_max_vvel;
 		negative.valid = true;
-	}
-	else {
+	} else {
 		positive.valid = false;
 		negative.valid = false;
 	}
@@ -318,27 +252,14 @@ double Decider::ToMinutes(std::chrono::milliseconds time) {
 	return ((double)result1) / 60000.0;
 }
 
-Distance Decider::CalculateSlantRange(Distance horizontalSeparation, Distance verticalSeparation) {
-	return Distance(sqrt(horizontalSeparation.to_feet() * horizontalSeparation.to_feet() + verticalSeparation.to_feet() * verticalSeparation.to_feet()), Distance::DistanceUnits::FEET);
-}
-
-Velocity Decider::CalculateSlantRangeRate(Velocity horizontalRate, Velocity verticalRate, double elapsed_time_minutes) {
-	return Velocity(sqrt((horizontalRate.to_feet_per_min() * horizontalRate.to_feet_per_min() 
-		+ verticalRate.to_feet_per_min() * verticalRate.to_feet_per_min())) / elapsed_time_minutes, 
-		Velocity::VelocityUnits::FEET_PER_MIN);
-}
-
 Distance Decider::DetermineALIM(Distance user_altitude) const {
 	if (user_altitude < kAltitudeAlim350Threshold_) {
 		return kAlim350_;
-	}
-	else if (user_altitude < kAltitudeAlim400Threshold_) {
+	} else if (user_altitude < kAltitudeAlim400Threshold_) {
 		return kAlim400_;
-	}
-	else if (user_altitude < kAltitudeAlim600Threshold_) {
+	} else if (user_altitude < kAltitudeAlim600Threshold_) {
 		return kAlim600_;
-	}
-	else {
+	} else {
 		return kAlim700_;
 	}
 }

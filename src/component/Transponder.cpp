@@ -91,7 +91,7 @@ DWORD Transponder::receiveLocation()
 			if (!intruder) {
 				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
 				allocated_aircraft.push_back(intruder);
-				
+
 				// Fill in the current values so that the aircraft will not have two wildly different position values
 				// If the position current is not set, position old will get set to LLA::ZERO while position current will
 				// be some real value, so setting the position current here prevents the LLAs from being radically different
@@ -99,33 +99,32 @@ DWORD Transponder::receiveLocation()
 				intruder->position_current_time_ = ms_since_epoch;
 
 				(*intrudersMap)[intruder->id_] = intruder;
-
-				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id_, intruder->ip_, ResolutionConnection::kTcpPort_);
+				aircraft->lock_.lock();
+				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id_, intruder->ip_, ResolutionConnection::kTcpPort_, aircraft);
 				(*open_connections)[intruder->id_] = connection;
-				connection->user_aircraft_copy = new Aircraft(*aircraft);
 			}
 
-			Aircraft* user = (*open_connections)[intruder->id_]->user_aircraft_copy;
-				
 			keepAliveMap[intruder->id_] = 10;
 
+			ResolutionConnection* conn = (*open_connections)[intruder->id_];
+
 			intruder->lock_.lock();
+			aircraft->lock_.lock();
+			conn->lock.lock();
 			intruder->position_old_ = intruder->position_current_;
+			conn->user_position_old = conn->user_position;
 			intruder->position_old_time_ = intruder->position_current_time_;
+			conn->user_position_old_time = conn->user_position_time;
 
 			intruder->position_current_ = updated_position;
+			conn->user_position = aircraft->position_current_;
 			intruder->position_current_time_ = ms_since_epoch;
+			conn->user_position_time = ms_since_epoch;
 			intruder->lock_.unlock();
+			aircraft->lock_.unlock();
+			conn->lock.unlock();
 
-			user->lock_.lock();
-			user->position_old_ = user->position_current_;
-			user->position_old_time_ = user->position_current_time_;
-
-			user->position_current_ = aircraft->position_current_;
-			user->position_current_time_ = ms_since_epoch;
-			user->lock_.unlock();
-
-			decider_->Analyze(intruder, user, (*open_connections)[intruder->id_]);
+			decider_->Analyze(intruder);
 		}
 		free(buffer);
 	}
@@ -149,7 +148,7 @@ DWORD Transponder::sendLocation()
 
 		myLocation.SerializeToArray(buffer, size);
 
-		sendto(outSocket, (const char *) buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
+		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
 
 		free(buffer);
 		Sleep(1000);
@@ -201,8 +200,7 @@ std::string Transponder::getHardwareAddress()
 				hardware_address = mac_addr;
 				pAdapter = pAdapter->Next;
 			}
-		}
-		else {
+		} else {
 			XPLMDebugString("Transponder::getHardwareAddress - Failed to retrieve network adapter information.\n");
 		}
 
@@ -217,12 +215,12 @@ std::string Transponder::getIpAddr()
 	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
 	std::string googleDnsIp = "8.8.8.8";
 	uint16_t dnsPort = 53;
-	struct sockaddr_in server = {0};
+	struct sockaddr_in server = { 0 };
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET;
 	InetPton(AF_INET, googleDnsIp.c_str(), &server.sin_addr.s_addr);
 	server.sin_port = htons(dnsPort);
-	
+
 	int result;
 	result = connect(sock, (const sockaddr*)&server, sizeof(server));
 	if (result == SOCKET_ERROR) {
@@ -230,7 +228,7 @@ std::string Transponder::getIpAddr()
 		closesocket(sock);
 		return "error";
 	}
-	
+
 	sockaddr_in name;
 	int namelen = sizeof(name);
 	char addr[16];

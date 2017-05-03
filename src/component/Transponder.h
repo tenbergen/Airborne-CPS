@@ -34,6 +34,8 @@ public:
 	~Transponder();
 	DWORD receiveLocation(), sendLocation(), keepalive();
 	void start();
+
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* open_connections;
 protected:
 	std::string ip;
 
@@ -46,7 +48,7 @@ protected:
 	std::atomic<int> communication;
 	xplane::Location intruderLocation, myLocation;
 
-	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* open_connections;
+	
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
 private:
 	static std::atomic<bool> initialized;

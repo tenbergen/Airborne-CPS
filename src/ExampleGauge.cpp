@@ -304,23 +304,81 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 
 		intruder->lock_.lock();
 		LLA const intruder_pos = intruder->position_current_;
-		double time_of_cpa_s = intruder->time_of_cpa.count() / 1000;
+		LLA const intruder_pos_old = intruder->position_old_;
+		Aircraft intr_copy = *intruder;
 		intruder->lock_.unlock();
+		ResolutionConnection* conn = (*transponder->open_connections)[intr_copy.id_];
+		conn->lock.lock();
+		LLA const user_position = conn->user_position;
+		LLA const user_position_old = conn->user_position_old;
+		std::chrono::milliseconds user_position_time = conn->user_position_time;
+		std::chrono::milliseconds user_position_old_time = conn->user_position_old_time;
+		conn->lock.unlock();
+
+		double slant_range_nmi = abs(user_position.Range(&intr_copy.position_current_).ToUnits(Distance::DistanceUnits::NMI));
+		double delta_distance_m = abs(user_position_old.Range(&intr_copy.position_old_).ToUnits(Distance::DistanceUnits::METERS))
+			- abs(user_position.Range(&intr_copy.position_current_).ToUnits(Distance::DistanceUnits::METERS));
+		double elapsed_time_s = (double)(intr_copy.position_current_time_ - intr_copy.position_old_time_).count() / 1000;
+		double closing_speed_knots = Velocity(delta_distance_m / elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S).ToUnits(Velocity::VelocityUnits::KNOTS);
+		double alt_sep_ft = abs(intr_copy.position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET) -
+			user_position.altitude_.ToUnits(Distance::DistanceUnits::FEET));
+		double delta_distance2_ft = abs(intr_copy.position_old_.altitude_.ToUnits(Distance::DistanceUnits::FEET) -
+			user_position_old.altitude_.ToUnits(Distance::DistanceUnits::FEET)) -
+			abs(intr_copy.position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET) -
+				user_position.altitude_.ToUnits(Distance::DistanceUnits::FEET));
+		double elapsed_time_min = elapsed_time_s / 60;
+		double vert_closing_spd_ft_p_min = delta_distance2_ft / elapsed_time_min;
+		double range_tau_s = slant_range_nmi / closing_speed_knots * 3600;
+		double vertical_tau_s = alt_sep_ft / vert_closing_spd_ft_p_min * 60;
+		Velocity user_velocity = Velocity(user_position.Range(&user_position_old).to_meters() / ((user_position_time.count() - user_position_old_time.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
+		Velocity intr_velocity = Velocity(intruder_pos.Range(&intruder_pos_old).to_meters() / ((intr_copy.position_current_time_.count() - intr_copy.position_old_time_.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
+		Distance user_distance_by_cpa = Distance(user_velocity.to_meters_per_s() * range_tau_s, Distance::DistanceUnits::METERS);
+		Distance intr_distance_by_cpa = Distance(intr_velocity.to_meters_per_s() * range_tau_s, Distance::DistanceUnits::METERS);
+		LLA user_position_at_cpa = user_position.Translate(&user_position_old.Bearing(&user_position), &user_distance_by_cpa);
+		LLA intr_position_at_cpa = intruder_pos.Translate(&intruder_pos_old.Bearing(&intruder_pos), &intr_distance_by_cpa);
+		double distance_at_cpa_ft = user_position_at_cpa.Range(&intr_position_at_cpa).to_feet();
+		double ta_mod_tau_s = Decider::get_mod_tau_s(slant_range_nmi, closing_speed_knots, Decider::get_ta_dmod_nmi(user_position.altitude_.to_feet()));
+		double ra_mod_tau_s = Decider::get_mod_tau_s(slant_range_nmi, closing_speed_knots, Decider::get_ra_dmod_nmi(user_position.altitude_.to_feet()));
 
 		position_buf[0] = '\0';
 		snprintf(position_buf, 128, "intr_pos: (%.3f, %.3f, %3f)", intruder_pos.latitude_.to_degrees(), intruder_pos.longitude_.to_degrees(), intruder_pos.altitude_.to_meters());
 		XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
 		offset_y_pxls += 20;
 
-		/*position_buf[0] = '\0';
-		snprintf(position_buf, 128, "time_of_cpa_s: %.3f", time_of_cpa_s);
-		XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-		offset_y_pxls += 20;
+		if (range_tau_s > 0) {
+			position_buf[0] = '\0';
+			snprintf(position_buf, 128, "range_tau_s: %.3f", range_tau_s);
+			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
+			offset_y_pxls += 20;
+		}
 
-		position_buf[0] = '\0';
-		snprintf(position_buf, 128, "time_remaining_s: %.3f", time_of_cpa_s - (std::chrono::system_clock::now().time_since_epoch().count() / 1000));
-		XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-		offset_y_pxls += 20;*/
+		if (ta_mod_tau_s > 0) {
+			position_buf[0] = '\0';
+			snprintf(position_buf, 128, "ta_mod_tau_s: %.3f", ta_mod_tau_s);
+			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
+			offset_y_pxls += 20;
+		}
+
+		if (ra_mod_tau_s > 0) {
+			position_buf[0] = '\0';
+			snprintf(position_buf, 128, "ra_mod_tau_s: %.3f", ra_mod_tau_s);
+			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
+			offset_y_pxls += 20;
+		}
+
+		if (vertical_tau_s > 0) {
+			position_buf[0] = '\0';
+			snprintf(position_buf, 128, "vertical_tau_s: %.3f", vertical_tau_s);
+			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
+			offset_y_pxls += 20;
+		}
+
+		if (range_tau_s > 0 && distance_at_cpa_ft > 0) {
+			position_buf[0] = '\0';
+			snprintf(position_buf, 128, "distance_at_cpa_ft: %.3f", distance_at_cpa_ft);
+			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
+			offset_y_pxls += 20;
+		}
 	}
 }
 

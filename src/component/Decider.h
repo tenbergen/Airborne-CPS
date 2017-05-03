@@ -16,6 +16,24 @@ public:
 	RecommendationRange positive_recommendation_range_;
 	RecommendationRange negative_recommendation_range_;
 
+	/* Determines ALIM for supplied altitude. Returns -1 if below 1000 ft */
+	static int get_alim_ft(double alt_ft);
+
+	/* Determines RA DMOD for supplied altitude */
+	static double get_ra_dmod_nmi(double alt_ft);
+
+	/* Determines TA DMOD for supplied altitude */
+	static double get_ta_dmod_nmi(double alt_ft);
+
+	/* Determines RA ZTHR for supplied altitude. Returns -1 if below 1000 ft */
+	static int get_ra_zthr_ft(double alt_ft);
+
+	/* Determines TA ZTHR for supplied altitude. Returns -1 if below 1000 ft */
+	static int get_ta_zthr_ft(double alt_ft);
+
+	/* Calculates modified tau */
+	static double get_mod_tau_s(double range_nmi, double closure_rate_knots, double dmod_nmi);
+
 private:
 	static Velocity const kMinGaugeVerticalVelocity;
 	static Velocity const kMaxGaugeVerticalVelocity;
@@ -49,10 +67,10 @@ private:
 	Aircraft::ThreatClassification DetermineThreatClass(Aircraft* intr_copy, ResolutionConnection* conn);
 
 	/* Returns whether the supplied taus trigger a TA at this altitude*/
-	bool tau_passes_TA_threshold(double alt, double range_tau_s, double vertical_tau_s);
+	bool tau_passes_TA_threshold(double alt_ft, double mod_tau_s, double vert_tau_s, double v_sep_ft);
 
 	/* Returns whether the supplied taus trigger a RA at this altitude*/
-	bool tau_passes_RA_threshold(double alt, double range_tau_s, double vertical_tau_s);
+	bool tau_passes_RA_threshold(double alt_ft, double mod_tau_s, double vert_tau_s, double v_sep_ft);
 
 	// Converts the supplied milliseconds to minutes
 	double ToMinutes(std::chrono::milliseconds time);
@@ -75,7 +93,10 @@ private:
 	Aircraft::ThreatClassification ReevaluateProximinityIntruderThreatClassification(double horizontal_tau_seconds, double vertical_tau_seconds,
 		Aircraft::ThreatClassification current_threat_class) const;
 
-	/* Determines the ALIM, or the minimum required vertical separation between two aircraft, based upon the
-	altitude of the aircraft.*/
-	Distance DetermineALIM(Distance user_altitude) const;
+	/* Returns a pair of recommendation ranges as for a Resolution Advisory */
+	RecommendationRangePair get_rec_range_pair(Sense sense, double user_vvel_ft_m, double intr_vvel_ft_m, double user_alt_ft,
+		double intr_alt_ft, double range_tau_s);
+
+	/* Returns the vertical velocity necessary to achieve ALIM */
+	double get_vvel_for_alim(double alt_ft, double vsep_at_cpa_ft, double intr_proj_alt_ft, double range_tau_s);
 };

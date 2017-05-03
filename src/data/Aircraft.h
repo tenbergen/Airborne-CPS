@@ -51,5 +51,4 @@ public:
 
 	ThreatClassification threat_classification_ = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 
-	std::chrono::milliseconds time_of_cpa = std::chrono::milliseconds(0);
 };

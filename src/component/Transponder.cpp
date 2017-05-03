@@ -85,6 +85,7 @@ DWORD Transponder::receiveLocation()
 			Angle latitude = { intruderLocation.lat(), Angle::AngleUnits::DEGREES };
 			Angle longitude = { intruderLocation.lon(), Angle::AngleUnits::DEGREES };
 			Distance altitude = { intruderLocation.alt(), Distance::DistanceUnits::METERS };
+			printf("Transponder::recieveLocation - altitude = %d\n", altitude.to_meters());
 			LLA updated_position = { intruderLocation.lat(), intruderLocation.lon(), intruderLocation.alt(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];

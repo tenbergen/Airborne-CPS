@@ -344,7 +344,7 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 				positive.min_vertical_speed = Velocity(user_vvel_ft_m - 500, Velocity::VelocityUnits::FEET_PER_MIN);
 			}
 		}
-		positive.valid = true;
+		positive.valid = false;
 		negative.valid = true;
 	} else {
 		positive.valid = false;

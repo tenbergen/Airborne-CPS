@@ -2,7 +2,7 @@
 
 const double GaugeRenderer::kMillisecondsPerSecond_ = 60000.0;
 
-const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 75.0;
+const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 150.0; // was 75
 Distance const GaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::DistanceUnits::NMI };
 Distance const GaugeRenderer::kAircraftToGaugeCenterOffset_ { (28.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.to_feet() * 2.0, Distance::DistanceUnits::FEET};
 
@@ -178,7 +178,7 @@ void GaugeRenderer::DrawIntrudingAircraft(LLA const * const intruder_pos, Veloci
 	bearing.normalize();
 
 	double range_over_max_range_ratio = range->to_feet() / kGaugeInnerCircleRadius_.to_feet();
-	double pixel_offset = range_over_max_range_ratio * kGaugeInnerCircleRadiusPxls_ * GAUGE_RANGE_SCALE;
+	double pixel_offset = range_over_max_range_ratio * kGaugeInnerCircleRadiusPxls_;
 
 	Angle cartesian_angle = Angle::BearingToCartesianAngle(&bearing);
 	double pixel_offset_x = cos(cartesian_angle.to_radians()) * pixel_offset;

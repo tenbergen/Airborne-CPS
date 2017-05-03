@@ -25,8 +25,6 @@ public:
 	// The clockwise degree rotation corresponding to the maximum vertical speed, with 180 degrees on a unit circle defined as 0 degrees
 	static double const kMaxVSpeedDegrees;
 
-	const double GAUGE_RANGE_SCALE = 2.0;
-
 private:
 	// The radius of the inner circle of the gauge that contains the airplane icons in pixels
 	static double const kGaugeInnerCircleRadiusPxls_;

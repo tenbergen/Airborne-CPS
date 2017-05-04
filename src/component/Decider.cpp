@@ -314,7 +314,7 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 
 		if (vsep_at_cpa_ft < alim_ft) {
 			// Corrective RA
-			Velocity absolute_min_vvel_to_achieve_alim = Velocity(get_vvel_for_alim(user_alt_ft, vsep_at_cpa_ft, intr_projected_altitude_at_cpa, range_tau_s), Velocity::VelocityUnits::FEET_PER_MIN);
+			Velocity absolute_min_vvel_to_achieve_alim = Velocity(get_vvel_for_alim(sense, user_alt_ft, vsep_at_cpa_ft, intr_projected_altitude_at_cpa, range_tau_s), Velocity::VelocityUnits::FEET_PER_MIN);
 			if (sense == Sense::UPWARD) {
 				// upward
 				positive.max_vertical_speed = Velocity(absolute_min_vvel_to_achieve_alim.to_feet_per_min() + 500, Velocity::VelocityUnits::FEET_PER_MIN);
@@ -344,7 +344,7 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 				positive.min_vertical_speed = Velocity(user_vvel_ft_m - 500, Velocity::VelocityUnits::FEET_PER_MIN);
 			}
 		}
-		positive.valid = false;
+		positive.valid = true;
 		negative.valid = true;
 	} else {
 		positive.valid = false;
@@ -354,13 +354,19 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 	return RecommendationRangePair{ positive, negative };
 }
 
-double Decider::get_vvel_for_alim(double alt_ft, double vsep_at_cpa_ft, double intr_proj_alt_ft, double range_tau_s) {
+double Decider::get_vvel_for_alim(Sense sense, double alt_ft, double vsep_at_cpa_ft, double intr_proj_alt_ft, double range_tau_s) {
 	double v_needed1 = (get_alim_ft(alt_ft) + intr_proj_alt_ft - alt_ft) / (range_tau_s / 60);
 	double v_needed2 = (get_alim_ft(alt_ft) - intr_proj_alt_ft + alt_ft) / -(range_tau_s / 60);
-	if (v_needed1 < kMaxGaugeVerticalVelocity.to_feet_per_min() && v_needed1 > kMinGaugeVerticalVelocity.to_feet_per_min()) {
+	if (sense == Sense::UPWARD && v_needed1 > 0)
 		return v_needed1;
-	} else
+	else if (sense == Sense::UPWARD && v_needed2 > 0)
 		return v_needed2;
+	else if (sense == Sense::DOWNWARD && v_needed1 < 0)
+		return v_needed1;
+	else if (sense == Sense::DOWNWARD && v_needed2 < 0)
+		return v_needed2;
+	else
+		return 0;
 }
 
 Velocity Decider::DetermineRelativeMinimumVerticalVelocityToAchieveAlim(Distance ALIM, Distance separation_at_cpa, double tau_seconds) const {

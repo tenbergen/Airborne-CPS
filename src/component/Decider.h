@@ -98,5 +98,5 @@ private:
 		double intr_alt_ft, double range_tau_s);
 
 	/* Returns the vertical velocity necessary to achieve ALIM */
-	double get_vvel_for_alim(double alt_ft, double vsep_at_cpa_ft, double intr_proj_alt_ft, double range_tau_s);
+	double get_vvel_for_alim(Sense sense, double alt_ft, double vsep_at_cpa_ft, double intr_proj_alt_ft, double range_tau_s);
 };

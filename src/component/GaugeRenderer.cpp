@@ -2,7 +2,7 @@
 
 const double GaugeRenderer::kMillisecondsPerSecond_ = 60000.0;
 
-const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 150.0; // was 75
+const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 150.0;
 Distance const GaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::DistanceUnits::NMI };
 Distance const GaugeRenderer::kAircraftToGaugeCenterOffset_ { (28.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.to_feet() * 2.0, Distance::DistanceUnits::FEET};
 

@@ -302,6 +302,33 @@ double Decider::get_mod_tau_s(double range_nmi, double closure_rate_knots, doubl
 
 RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vvel_ft_m, double intr_vvel_ft_m, double user_alt_ft,
 	double intr_alt_ft, double range_tau_s) {
+	// INSERT PRINT TO LOG HERE
+	char* senseAsString = senseToString(sense);
+	char toPrint[1000];
+	strcpy(toPrint, "Sense = ");
+	strcat(toPrint, senseAsString);
+	strcat(toPrint, ", user_vvel_ft_m = ");
+	char* user_vvel_ft_m_st;
+	sprintf(user_vvel_ft_m_st, "%d", user_vvel_ft_m);
+	strcat(toPrint, user_vvel_ft_m_st);
+	strcat(toPrint, ", intr_vvel_ft_m = ");
+	char* intr_vvel_ft_m_st;
+	sprintf(intr_vvel_ft_m_st, "%d", intr_vvel_ft_m);
+	strcat(toPrint, intr_vvel_ft_m_st);
+	strcat(toPrint, ", user_alt_ft = ");
+	char* user_alt_ft_st;
+	sprintf(user_alt_ft_st, "%d", user_alt_ft);
+	strcat(toPrint, user_alt_ft_st);
+	strcat(toPrint, ", intr_alt_ft = ");
+	char* intr_alt_ft_st;
+	sprintf(intr_alt_ft_st, "%d", intr_alt_ft);
+	strcat(toPrint, intr_alt_ft_st);
+	strcat(toPrint, ", range_tau_s = ");
+	char* range_tau_s_st;
+	sprintf(range_tau_s_st, "%d", range_tau_s);
+	strcat(toPrint, range_tau_s_st);
+	XPLMDebugString(toPrint);
+
 	RecommendationRange positive, negative;
 	// Account for delay in user reaction by subtracting 5 seconds; tau is time to reaching closest of approach (cpa)
 	range_tau_s -= 5.0;
@@ -357,7 +384,9 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 double Decider::get_vvel_for_alim(Sense sense, double alt_ft, double vsep_at_cpa_ft, double intr_proj_alt_ft, double range_tau_s) {
 	// INSERT PRINT TO LOG HERE
 	char* senseAsString = senseToString(sense);
-	char* toPrint = strcat("Sense = ", senseAsString);
+	char toPrint[1000];
+	strcpy(toPrint, "Sense = ");
+	strcat(toPrint, senseAsString);
 	strcat(toPrint, ", alt_ft = ");
 	char* alt_ft_st;
 	sprintf(alt_ft_st, "%d", alt_ft);

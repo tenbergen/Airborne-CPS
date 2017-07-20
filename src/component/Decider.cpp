@@ -355,6 +355,27 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 }
 
 double Decider::get_vvel_for_alim(Sense sense, double alt_ft, double vsep_at_cpa_ft, double intr_proj_alt_ft, double range_tau_s) {
+	// INSERT PRINT TO LOG HERE
+	char* senseAsString = senseToString(sense);
+	char* toPrint = strcat("Sense = ", senseAsString);
+	strcat(toPrint, ", alt_ft = ");
+	char* alt_ft_st;
+	sprintf(alt_ft_st, "%d", alt_ft);
+	strcat(toPrint, alt_ft_st);
+	strcat(toPrint, ", vsep_at_cpa_ft = ");
+	char* vsep_at_cpa_ft_st;
+	sprintf(vsep_at_cpa_ft_st, "%d", vsep_at_cpa_ft);
+	strcat(toPrint, vsep_at_cpa_ft_st);
+	strcat(toPrint, ", intr_proj_alt_ft = ");
+	char* intr_proj_alt_ft_st;
+	sprintf(intr_proj_alt_ft_st, "%d", intr_proj_alt_ft);
+	strcat(toPrint, intr_proj_alt_ft_st);
+	strcat(toPrint, ", range_tau_s = ");
+	char* range_tau_s_st;
+	sprintf(range_tau_s_st, "%d", range_tau_s);
+	strcat(toPrint, range_tau_s_st);
+	XPLMDebugString(toPrint);
+
 	double v_needed1 = (get_alim_ft(alt_ft) + intr_proj_alt_ft - alt_ft) / (range_tau_s / 60);
 	double v_needed2 = (get_alim_ft(alt_ft) - intr_proj_alt_ft + alt_ft) / -(range_tau_s / 60);
 	if (sense == Sense::UPWARD && v_needed1 > 0)

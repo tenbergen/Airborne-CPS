@@ -303,31 +303,31 @@ double Decider::get_mod_tau_s(double range_nmi, double closure_rate_knots, doubl
 RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vvel_ft_m, double intr_vvel_ft_m, double user_alt_ft,
 	double intr_alt_ft, double range_tau_s) {
 	// INSERT PRINT TO LOG HERE
-	char* senseAsString = senseToString(sense);
+	/*char* senseAsString = senseToString(sense);
 	char toPrint[1000];
 	strcpy(toPrint, "Sense = ");
 	strcat(toPrint, senseAsString);
 	strcat(toPrint, ", user_vvel_ft_m = ");
-	char* user_vvel_ft_m_st;
-	sprintf(user_vvel_ft_m_st, "%d", user_vvel_ft_m);
+	char* user_vvel_ft_m_st = new char[50];
+	sprintf(user_vvel_ft_m_st, "%f", user_vvel_ft_m);
 	strcat(toPrint, user_vvel_ft_m_st);
 	strcat(toPrint, ", intr_vvel_ft_m = ");
-	char* intr_vvel_ft_m_st;
-	sprintf(intr_vvel_ft_m_st, "%d", intr_vvel_ft_m);
+	char* intr_vvel_ft_m_st = new char[50];
+	sprintf(intr_vvel_ft_m_st, "%f", intr_vvel_ft_m);
 	strcat(toPrint, intr_vvel_ft_m_st);
 	strcat(toPrint, ", user_alt_ft = ");
-	char* user_alt_ft_st;
-	sprintf(user_alt_ft_st, "%d", user_alt_ft);
+	char* user_alt_ft_st = new char[50];
+	sprintf(user_alt_ft_st, "%f", user_alt_ft);
 	strcat(toPrint, user_alt_ft_st);
 	strcat(toPrint, ", intr_alt_ft = ");
-	char* intr_alt_ft_st;
-	sprintf(intr_alt_ft_st, "%d", intr_alt_ft);
+	char* intr_alt_ft_st = new char[50];
+	sprintf(intr_alt_ft_st, "%f", intr_alt_ft);
 	strcat(toPrint, intr_alt_ft_st);
 	strcat(toPrint, ", range_tau_s = ");
-	char* range_tau_s_st;
-	sprintf(range_tau_s_st, "%d", range_tau_s);
+	char* range_tau_s_st = new char[50];
+	sprintf(range_tau_s_st, "%f", range_tau_s);
 	strcat(toPrint, range_tau_s_st);
-	XPLMDebugString(toPrint);
+	XPLMDebugString(toPrint);*/
 
 	RecommendationRange positive, negative;
 	// Account for delay in user reaction by subtracting 5 seconds; tau is time to reaching closest of approach (cpa)
@@ -342,6 +342,10 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 		if (vsep_at_cpa_ft < alim_ft) {
 			// Corrective RA
 			Velocity absolute_min_vvel_to_achieve_alim = Velocity(get_vvel_for_alim(sense, user_alt_ft, vsep_at_cpa_ft, intr_projected_altitude_at_cpa, range_tau_s), Velocity::VelocityUnits::FEET_PER_MIN);
+			char toPrint[100];
+			sprintf(toPrint, "result f/m = %f\n", absolute_min_vvel_to_achieve_alim.to_feet_per_min());
+			XPLMDebugString(toPrint);
+
 			if (sense == Sense::UPWARD) {
 				// upward
 				positive.max_vertical_speed = Velocity(absolute_min_vvel_to_achieve_alim.to_feet_per_min() + 500, Velocity::VelocityUnits::FEET_PER_MIN);
@@ -388,33 +392,33 @@ double Decider::get_vvel_for_alim(Sense sense, double alt_ft, double vsep_at_cpa
 	strcpy(toPrint, "Sense = ");
 	strcat(toPrint, senseAsString);
 	strcat(toPrint, ", alt_ft = ");
-	char* alt_ft_st;
-	sprintf(alt_ft_st, "%d", alt_ft);
+	char* alt_ft_st = new char[50];
+	sprintf(alt_ft_st, "%f", alt_ft);
 	strcat(toPrint, alt_ft_st);
 	strcat(toPrint, ", vsep_at_cpa_ft = ");
-	char* vsep_at_cpa_ft_st;
-	sprintf(vsep_at_cpa_ft_st, "%d", vsep_at_cpa_ft);
+	char* vsep_at_cpa_ft_st = new char[50];
+	sprintf(vsep_at_cpa_ft_st, "%f", vsep_at_cpa_ft);
 	strcat(toPrint, vsep_at_cpa_ft_st);
 	strcat(toPrint, ", intr_proj_alt_ft = ");
-	char* intr_proj_alt_ft_st;
-	sprintf(intr_proj_alt_ft_st, "%d", intr_proj_alt_ft);
+	char* intr_proj_alt_ft_st = new char[50];
+	sprintf(intr_proj_alt_ft_st, "%f", intr_proj_alt_ft);
 	strcat(toPrint, intr_proj_alt_ft_st);
 	strcat(toPrint, ", range_tau_s = ");
-	char* range_tau_s_st;
-	sprintf(range_tau_s_st, "%d", range_tau_s);
+	char* range_tau_s_st = new char[50];
+	sprintf(range_tau_s_st, "%f\n", range_tau_s);
 	strcat(toPrint, range_tau_s_st);
 	XPLMDebugString(toPrint);
 
 	double v_needed1 = (get_alim_ft(alt_ft) + intr_proj_alt_ft - alt_ft) / (range_tau_s / 60);
 	double v_needed2 = (get_alim_ft(alt_ft) - intr_proj_alt_ft + alt_ft) / -(range_tau_s / 60);
 	if (sense == Sense::UPWARD && v_needed1 > 0)
-		return v_needed1;
+		return v_needed1/10;
 	else if (sense == Sense::UPWARD && v_needed2 > 0)
-		return v_needed2;
+		return v_needed2/10;
 	else if (sense == Sense::DOWNWARD && v_needed1 < 0)
-		return v_needed1;
+		return v_needed1/10;
 	else if (sense == Sense::DOWNWARD && v_needed2 < 0)
-		return v_needed2;
+		return v_needed2/10;
 	else
 		return 0;
 }

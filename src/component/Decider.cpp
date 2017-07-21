@@ -54,7 +54,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 
 	if (threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY) {
 		connection->lock.lock();
-		if (connection->consensusAchieved) {
+		if (connection->consensusAchieved && (connection->current_sense == Sense::UPWARD || connection->current_sense == Sense::DOWNWARD)) {
 			my_sense = connection->current_sense;
 		} else {
 			my_sense = Decider::DetermineResolutionSense(user_copy.position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET),

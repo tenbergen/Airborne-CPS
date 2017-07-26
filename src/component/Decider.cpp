@@ -38,10 +38,6 @@ std::string get_threat_class_str(Aircraft::ThreatClassification threat_class) {
 }
 
 void Decider::DetermineActionRequired(Aircraft* intruder) {
-	thisAircraft_->lock_.lock();
-	Aircraft user_copy = *(thisAircraft_);
-	thisAircraft_->lock_.unlock();
-
 	intruder->lock_.lock();
 	Aircraft intr_copy = *(intruder);
 	intruder->lock_.unlock();
@@ -54,27 +50,27 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 
 	if (threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY) {
 		connection->lock.lock();
-		if (connection->current_sense == Sense::UPWARD || connection->current_sense == Sense::DOWNWARD) {
+		if (connection->consensusAchieved && (connection->current_sense == Sense::UPWARD || connection->current_sense == Sense::DOWNWARD)) {
 			my_sense = connection->current_sense;
 		} else {
-			my_sense = Decider::DetermineResolutionSense(user_copy.position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET),
+			my_sense = Decider::DetermineResolutionSense(connection->user_position.altitude_.ToUnits(Distance::DistanceUnits::FEET),
 				intr_copy.position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET));
 			connection->sendSense(my_sense);
 		}
 		connection->lock.unlock();
 
-		double user_delta_pos_m = user_copy.position_current_.Range(&user_copy.position_old_).to_meters();
+		double user_delta_pos_m = connection->user_position.Range(&connection->user_position_old).to_meters();
 		double intr_delta_pos_m = intr_copy.position_current_.Range(&intr_copy.position_old_).to_meters();
-		double user_elapsed_time_s = (double)(user_copy.position_current_time_ - user_copy.position_old_time_).count() / 1000;
+		double user_elapsed_time_s = (double)(connection->user_position_time - connection->user_position_old_time).count() / 1000;
 		double intr_elapsed_time_s = (double)(intr_copy.position_current_time_ - intr_copy.position_old_time_).count() / 1000;
-		double slant_range_nmi = abs(user_copy.position_current_.Range(&intr_copy.position_current_).ToUnits(Distance::DistanceUnits::NMI));
-		double delta_distance_m = abs(user_copy.position_old_.Range(&intr_copy.position_old_).ToUnits(Distance::DistanceUnits::METERS))
-			- abs(user_copy.position_current_.Range(&intr_copy.position_current_).ToUnits(Distance::DistanceUnits::METERS));
+		double slant_range_nmi = abs(connection->user_position.Range(&intr_copy.position_current_).ToUnits(Distance::DistanceUnits::NMI));
+		double delta_distance_m = abs(connection->user_position_old.Range(&intr_copy.position_old_).ToUnits(Distance::DistanceUnits::METERS))
+			- abs(connection->user_position.Range(&intr_copy.position_current_).ToUnits(Distance::DistanceUnits::METERS));
 		double closing_speed_knots = Velocity(delta_distance_m / intr_elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S).ToUnits(Velocity::VelocityUnits::KNOTS);
 		Velocity user_vvel = Velocity(user_delta_pos_m / user_elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S);
 		Velocity intr_vvel = Velocity(intr_delta_pos_m / intr_elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S);
 		double range_tau_s = slant_range_nmi / closing_speed_knots * 3600;
-		rec_range = get_rec_range_pair(my_sense, user_vvel.to_feet_per_min(), intr_vvel.to_feet_per_min(), user_copy.position_current_.altitude_.to_feet(), intr_copy.position_current_.altitude_.to_feet(), range_tau_s);
+		rec_range = get_rec_range_pair(my_sense, user_vvel.to_feet_per_min(), intr_vvel.to_feet_per_min(), connection->user_position.altitude_.to_feet(), intr_copy.position_current_.altitude_.to_feet(), range_tau_s);
 
 	} else if (threat_class == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {
 		connection->lock.lock();

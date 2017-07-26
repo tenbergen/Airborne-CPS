@@ -69,7 +69,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		double closing_speed_knots = Velocity(delta_distance_m / intr_elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S).ToUnits(Velocity::VelocityUnits::KNOTS);
 		Velocity user_vvel = Velocity(user_delta_pos_m / user_elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S);
 		Velocity intr_vvel = Velocity(intr_delta_pos_m / intr_elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S);
-		double range_tau_s = slant_range_nmi / closing_speed_knots * 3600;
+		double range_tau_s = get_mod_tau_s(slant_range_nmi, closing_speed_knots, get_ra_dmod_nmi(connection->user_position.altitude_.to_feet()));
 		rec_range = get_rec_range_pair(my_sense, user_vvel.to_feet_per_min(), intr_vvel.to_feet_per_min(), connection->user_position.altitude_.to_feet(), intr_copy.position_current_.altitude_.to_feet(), range_tau_s);
 
 	} else if (threat_class == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {

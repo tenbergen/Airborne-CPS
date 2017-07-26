@@ -60,9 +60,9 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		connection->lock.unlock();
 
 		double user_delta_pos_m = connection->user_position.Range(&connection->user_position_old).to_meters();
-		double user_delta_alt_m = abs(connection->user_position.altitude_.to_meters() - connection->user_position_old.altitude_.to_meters());
+		double user_delta_alt_m = connection->user_position.altitude_.to_meters() - connection->user_position_old.altitude_.to_meters();
 		double intr_delta_pos_m = intr_copy.position_current_.Range(&intr_copy.position_old_).to_meters();
-		double intr_delta_alt_m = abs(intr_copy.position_current_.altitude_.to_meters() - intr_copy.position_old_.altitude_.to_meters());
+		double intr_delta_alt_m = intr_copy.position_current_.altitude_.to_meters() - intr_copy.position_old_.altitude_.to_meters();
 		double user_elapsed_time_s = (double)(connection->user_position_time - connection->user_position_old_time).count() / 1000;
 		double intr_elapsed_time_s = (double)(intr_copy.position_current_time_ - intr_copy.position_old_time_).count() / 1000;
 		double slant_range_nmi = abs(connection->user_position.Range(&intr_copy.position_current_).ToUnits(Distance::DistanceUnits::NMI));

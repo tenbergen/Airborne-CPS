@@ -80,7 +80,6 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		connection->lock.lock();
 		connection->current_sense = Sense::UNKNOWN;
 		connection->lock.unlock();
-		my_sense = Sense::UNKNOWN;
 		rec_range.negative.valid = false;
 		rec_range.positive.valid = false;
 	}
@@ -304,8 +303,6 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 	double intr_alt_ft, double range_tau_s) {
 
 	RecommendationRange positive, negative;
-	// Account for delay in user reaction by subtracting 5 seconds; tau is time to reaching closest of approach (cpa)
-	range_tau_s -= 5.0;
 
 	if (sense != Sense::UNKNOWN && range_tau_s > 0.0) {
 		double alim_ft = get_alim_ft(user_alt_ft);

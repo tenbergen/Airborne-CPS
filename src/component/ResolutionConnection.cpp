@@ -196,7 +196,7 @@ void ResolutionConnection::resolveSense()
 							} else {
 								lock.lock();
 								consensusAchieved = true;
-								current_sense = sense_from_intruder;
+								current_sense = SenseUtil::OpositeFromSense(sense_from_intruder);
 								lock.unlock();
 
 								XPLMDebugString("ResolutionConnection::resolveSense - Achieved consensus in edge case with user_mac < intr_mac\n");

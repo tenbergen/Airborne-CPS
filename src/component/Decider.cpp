@@ -54,7 +54,7 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 
 	if (threat_class == Aircraft::ThreatClassification::RESOLUTION_ADVISORY) {
 		connection->lock.lock();
-		if (connection->consensusAchieved && (connection->current_sense == Sense::UPWARD || connection->current_sense == Sense::DOWNWARD)) {
+		if (connection->current_sense == Sense::UPWARD || connection->current_sense == Sense::DOWNWARD) {
 			my_sense = connection->current_sense;
 		} else {
 			my_sense = Decider::DetermineResolutionSense(user_copy.position_current_.altitude_.ToUnits(Distance::DistanceUnits::FEET),
@@ -76,9 +76,9 @@ void Decider::DetermineActionRequired(Aircraft* intruder) {
 		double range_tau_s = slant_range_nmi / closing_speed_knots * 3600;
 		rec_range = get_rec_range_pair(my_sense, user_vvel.to_feet_per_min(), intr_vvel.to_feet_per_min(), user_copy.position_current_.altitude_.to_feet(), intr_copy.position_current_.altitude_.to_feet(), range_tau_s);
 
-	} else if (my_sense != Sense::UNKNOWN && threat_class == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {
+	} else if (threat_class == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {
 		connection->lock.lock();
-		connection->consensusAchieved = false;
+		connection->current_sense = Sense::UNKNOWN;
 		connection->lock.unlock();
 		my_sense = Sense::UNKNOWN;
 		rec_range.negative.valid = false;
@@ -302,32 +302,6 @@ double Decider::get_mod_tau_s(double range_nmi, double closure_rate_knots, doubl
 
 RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vvel_ft_m, double intr_vvel_ft_m, double user_alt_ft,
 	double intr_alt_ft, double range_tau_s) {
-	// INSERT PRINT TO LOG HERE
-	/*char* senseAsString = senseToString(sense);
-	char toPrint[1000];
-	strcpy(toPrint, "Sense = ");
-	strcat(toPrint, senseAsString);
-	strcat(toPrint, ", user_vvel_ft_m = ");
-	char* user_vvel_ft_m_st = new char[50];
-	sprintf(user_vvel_ft_m_st, "%f", user_vvel_ft_m);
-	strcat(toPrint, user_vvel_ft_m_st);
-	strcat(toPrint, ", intr_vvel_ft_m = ");
-	char* intr_vvel_ft_m_st = new char[50];
-	sprintf(intr_vvel_ft_m_st, "%f", intr_vvel_ft_m);
-	strcat(toPrint, intr_vvel_ft_m_st);
-	strcat(toPrint, ", user_alt_ft = ");
-	char* user_alt_ft_st = new char[50];
-	sprintf(user_alt_ft_st, "%f", user_alt_ft);
-	strcat(toPrint, user_alt_ft_st);
-	strcat(toPrint, ", intr_alt_ft = ");
-	char* intr_alt_ft_st = new char[50];
-	sprintf(intr_alt_ft_st, "%f", intr_alt_ft);
-	strcat(toPrint, intr_alt_ft_st);
-	strcat(toPrint, ", range_tau_s = ");
-	char* range_tau_s_st = new char[50];
-	sprintf(range_tau_s_st, "%f", range_tau_s);
-	strcat(toPrint, range_tau_s_st);
-	XPLMDebugString(toPrint);*/
 
 	RecommendationRange positive, negative;
 	// Account for delay in user reaction by subtracting 5 seconds; tau is time to reaching closest of approach (cpa)

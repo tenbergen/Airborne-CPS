@@ -359,12 +359,19 @@ double Decider::get_vvel_for_alim(Sense sense, double alt_ft, double vsep_at_cpa
 	sprintf(toPrint, "Sense = %s, alt_ft = %f, vsep_at_cpa_ft = %f, intr_proj_alt_ft = %f, range_tau = %f\n", senseAsString, alt_ft, vsep_at_cpa_ft, intr_proj_alt_ft, range_tau_s);
 	XPLMDebugString(toPrint);
 
+	double toReturn;
 	if (sense == Sense::UPWARD) {
-		return (get_alim_ft(alt_ft) - vsep_at_cpa_ft) / (range_tau_s / 60);
+		toReturn = (get_alim_ft(alt_ft) - vsep_at_cpa_ft) / (range_tau_s / 60);
+		if (toReturn > kMaxGaugeVerticalVelocity.to_feet_per_min()- 500)
+			toReturn = kMaxGaugeVerticalVelocity.to_feet_per_min() - 500;
 	} else if (sense == Sense::DOWNWARD) {
-		return -(get_alim_ft(alt_ft) - vsep_at_cpa_ft) / (range_tau_s / 60);
+		toReturn = -(get_alim_ft(alt_ft) - vsep_at_cpa_ft) / (range_tau_s / 60);
+		if (toReturn < kMinGaugeVerticalVelocity.to_feet_per_min() + 500)
+			toReturn = kMinGaugeVerticalVelocity.to_feet_per_min() + 500;
 	} else
-		return 0;
+		toReturn = 0;
+
+	return toReturn;
 }
 
 Velocity Decider::DetermineRelativeMinimumVerticalVelocityToAchieveAlim(Distance ALIM, Distance separation_at_cpa, double tau_seconds) const {

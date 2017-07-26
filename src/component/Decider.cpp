@@ -363,37 +363,14 @@ double Decider::get_vvel_for_alim(Sense sense, double alt_ft, double vsep_at_cpa
 	// INSERT PRINT TO LOG HERE
 	char* senseAsString = senseToString(sense);
 	char toPrint[1000];
-	strcpy(toPrint, "Sense = ");
-	strcat(toPrint, senseAsString);
-	strcat(toPrint, ", alt_ft = ");
-	char* alt_ft_st = new char[50];
-	sprintf(alt_ft_st, "%f", alt_ft);
-	strcat(toPrint, alt_ft_st);
-	strcat(toPrint, ", vsep_at_cpa_ft = ");
-	char* vsep_at_cpa_ft_st = new char[50];
-	sprintf(vsep_at_cpa_ft_st, "%f", vsep_at_cpa_ft);
-	strcat(toPrint, vsep_at_cpa_ft_st);
-	strcat(toPrint, ", intr_proj_alt_ft = ");
-	char* intr_proj_alt_ft_st = new char[50];
-	sprintf(intr_proj_alt_ft_st, "%f", intr_proj_alt_ft);
-	strcat(toPrint, intr_proj_alt_ft_st);
-	strcat(toPrint, ", range_tau_s = ");
-	char* range_tau_s_st = new char[50];
-	sprintf(range_tau_s_st, "%f\n", range_tau_s);
-	strcat(toPrint, range_tau_s_st);
+	sprintf(toPrint, "Sense = %s, alt_ft = %f, vsep_at_cpa_ft = %f, intr_proj_alt_ft = %f, range_tau = %f\n", senseAsString, alt_ft, vsep_at_cpa_ft, intr_proj_alt_ft, range_tau_s);
 	XPLMDebugString(toPrint);
 
-	double v_needed1 = (get_alim_ft(alt_ft) + intr_proj_alt_ft - alt_ft) / (range_tau_s / 60);
-	double v_needed2 = (get_alim_ft(alt_ft) - intr_proj_alt_ft + alt_ft) / -(range_tau_s / 60);
-	if (sense == Sense::UPWARD && v_needed1 > 0)
-		return v_needed1/10;
-	else if (sense == Sense::UPWARD && v_needed2 > 0)
-		return v_needed2/10;
-	else if (sense == Sense::DOWNWARD && v_needed1 < 0)
-		return v_needed1/10;
-	else if (sense == Sense::DOWNWARD && v_needed2 < 0)
-		return v_needed2/10;
-	else
+	if (sense == Sense::UPWARD) {
+		return (get_alim_ft(alt_ft) - vsep_at_cpa_ft) / (range_tau_s / 60);
+	} else if (sense == Sense::DOWNWARD) {
+		return -(get_alim_ft(alt_ft) - vsep_at_cpa_ft) / (range_tau_s / 60);
+	} else
 		return 0;
 }
 

@@ -308,7 +308,7 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 		double user_projected_altitude_at_cpa = user_alt_ft + user_vvel_ft_m * (range_tau_s / 60.0);
 		double vsep_at_cpa_ft = abs(intr_projected_altitude_at_cpa - user_projected_altitude_at_cpa);
 
-		if (vsep_at_cpa_ft < alim_ft) {
+		/*if (vsep_at_cpa_ft < alim_ft) {*/
 			// Corrective RA
 			Velocity absolute_min_vvel_to_achieve_alim = Velocity(get_vvel_for_alim(sense, user_alt_ft, vsep_at_cpa_ft, intr_projected_altitude_at_cpa, range_tau_s), Velocity::VelocityUnits::FEET_PER_MIN);
 			char toPrint[100];
@@ -328,25 +328,26 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 				positive.max_vertical_speed = absolute_min_vvel_to_achieve_alim;
 				positive.min_vertical_speed = Velocity(absolute_min_vvel_to_achieve_alim.to_feet_per_min() - 500, Velocity::VelocityUnits::FEET_PER_MIN);
 			}
-		} else {
-			// Preventative RA
-			char toPrint[100];
-			sprintf(toPrint, "Preventative RA: user_vvel_ft_m = %f, sense = %s\n", user_vvel_ft_m, senseToString(sense));
-			XPLMDebugString(toPrint);
-			if (sense == Sense::UPWARD) {
-				// upward
-				positive.max_vertical_speed = Velocity(user_vvel_ft_m + 500, Velocity::VelocityUnits::FEET_PER_MIN);
-				positive.min_vertical_speed = Velocity(user_vvel_ft_m, Velocity::VelocityUnits::FEET_PER_MIN);
-				negative.max_vertical_speed = Velocity(user_vvel_ft_m, Velocity::VelocityUnits::FEET_PER_MIN);
-				negative.min_vertical_speed = kMinGaugeVerticalVelocity;
-			} else {
-				// downward
-				negative.max_vertical_speed = kMaxGaugeVerticalVelocity;
-				negative.min_vertical_speed = Velocity(user_vvel_ft_m, Velocity::VelocityUnits::FEET_PER_MIN);
-				positive.max_vertical_speed = Velocity(user_vvel_ft_m, Velocity::VelocityUnits::FEET_PER_MIN);
-				positive.min_vertical_speed = Velocity(user_vvel_ft_m - 500, Velocity::VelocityUnits::FEET_PER_MIN);
-			}
-		}
+		
+		//} else {
+		//	// Preventative RA
+		//	char toPrint[100];
+		//	sprintf(toPrint, "Preventative RA: user_vvel_ft_m = %f, sense = %s\n", user_vvel_ft_m, senseToString(sense));
+		//	XPLMDebugString(toPrint);
+		//	if (sense == Sense::UPWARD) {
+		//		// upward
+		//		positive.max_vertical_speed = Velocity(user_vvel_ft_m + 500, Velocity::VelocityUnits::FEET_PER_MIN);
+		//		positive.min_vertical_speed = Velocity(user_vvel_ft_m, Velocity::VelocityUnits::FEET_PER_MIN);
+		//		negative.max_vertical_speed = Velocity(user_vvel_ft_m, Velocity::VelocityUnits::FEET_PER_MIN);
+		//		negative.min_vertical_speed = kMinGaugeVerticalVelocity;
+		//	} else {
+		//		// downward
+		//		negative.max_vertical_speed = kMaxGaugeVerticalVelocity;
+		//		negative.min_vertical_speed = Velocity(user_vvel_ft_m, Velocity::VelocityUnits::FEET_PER_MIN);
+		//		positive.max_vertical_speed = Velocity(user_vvel_ft_m, Velocity::VelocityUnits::FEET_PER_MIN);
+		//		positive.min_vertical_speed = Velocity(user_vvel_ft_m - 500, Velocity::VelocityUnits::FEET_PER_MIN);
+		//	}
+		//}
 		positive.valid = true;
 		negative.valid = true;
 	} else {

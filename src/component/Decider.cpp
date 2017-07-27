@@ -330,6 +330,9 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 			}
 		} else {
 			// Preventative RA
+			char toPrint[100];
+			sprintf(toPrint, "Preventative RA: user_vvel_ft_m = %f, sense = %s\n", user_vvel_ft_m, senseToString(sense));
+			XPLMDebugString(toPrint);
 			if (sense == Sense::UPWARD) {
 				// upward
 				positive.max_vertical_speed = Velocity(user_vvel_ft_m + 500, Velocity::VelocityUnits::FEET_PER_MIN);
@@ -351,14 +354,16 @@ RecommendationRangePair Decider::get_rec_range_pair(Sense sense, double user_vve
 		negative.valid = false;
 	}
 
+	char toPrint[100];
+	sprintf(toPrint, "Recommended Max = %f f/m, Recommended Min = %f f/m, Danger Max = %f f/m, Danger Min = %f f/m\n", positive.max_vertical_speed.to_feet_per_min(), positive.min_vertical_speed.to_feet_per_min(), negative.max_vertical_speed.to_feet_per_min(), negative.min_vertical_speed.to_feet_per_min());
+	XPLMDebugString(toPrint);
+
 	return RecommendationRangePair{ positive, negative };
 }
 
 double Decider::get_vvel_for_alim(Sense sense, double alt_ft, double vsep_at_cpa_ft, double intr_proj_alt_ft, double range_tau_s) {
-	// INSERT PRINT TO LOG HERE
-	char* senseAsString = senseToString(sense);
 	char toPrint[1000];
-	sprintf(toPrint, "Sense = %s, alt_ft = %f, vsep_at_cpa_ft = %f, intr_proj_alt_ft = %f, range_tau = %f\n", senseAsString, alt_ft, vsep_at_cpa_ft, intr_proj_alt_ft, range_tau_s);
+	sprintf(toPrint, "Sense = %s, alt_ft = %f, vsep_at_cpa_ft = %f, intr_proj_alt_ft = %f, range_tau = %f\n", senseToString(sense), alt_ft, vsep_at_cpa_ft, intr_proj_alt_ft, range_tau_s);
 	XPLMDebugString(toPrint);
 
 	double toReturn;

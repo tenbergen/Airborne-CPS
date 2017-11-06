@@ -13,14 +13,14 @@
 class GaugeRenderer
 {
 public:
-	GaugeRenderer(char const * const app_path, Decider * const decider, Aircraft * const user_aircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * intruding_aircraft);
+	GaugeRenderer(char const * const appPath, Decider * const decider, Aircraft * const userAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * intrudingAircraft);
 	~GaugeRenderer();
 
-	void LoadTextures();
-	void Render(texture_constants::GlRgb8Color cockpit_lighting);
+	void loadTextures();
+	void render(textureconstants::GlRgb8Color cockpitLighting);
 
 	// The minimum and maximum vertical speed values in units of feet per minute
-	static double const kMinVertSpeed_, kMaxVertSpeed_;
+	static double const kMinVertSpeed, kMaxVertSpeed;
 
 	// The clockwise degree rotation corresponding to the maximum vertical speed, with 180 degrees on a unit circle defined as 0 degrees
 	static double const kMaxVSpeedDegrees;
@@ -49,57 +49,57 @@ private:
 	static Distance const kAircraftToGaugeCenterOffset_;
 
 	/* The pixel positions of the window the gauge is drawn in since our window is static (does not move)*/
-	static float const kGaugePosLeft, kGaugePosRight, kGaugePosBot, kGaugePosTop;
-	static float const kGaugeCenterX, kGaugeCenterY;
+	static float const kGaugePosLeft_, kGaugePosRight_, kGaugePosBot_, kGaugePosTop_;
+	static float const kGaugeCenterX_, kGaugeCenterY_;
 	
 	/* The absolute pixel positions of the needle (determined relative to the gauge positions). */
-	static float const kNeedlePosLeft, kNeedlePosRight, kNeedlePosBot, kNeedlePosTop;
+	static float const kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosBot_, kNeedlePosTop_;
 	/* The translation that is applied to the needle in order to allow for rotation about the gauge center.*/
-	static float const kNeedleTranslationX, kNeedleTranslationY;
+	static float const kNeedleTranslationX_, kNeedleTranslationY_;
 
 	/* The offset that must be applied to account for OpenGL functions treating the +z axis 
 	(90 degrees on a unit circle) as 0 degrees. */
 	static float const kGlAngleOffset_;
 
 	// The "application path", which for the plugin is the directory that the plugin is contained in
-	char const * const app_path_;
+	char const * const appPath_;
 	
 	Decider * const decider_;
-	Aircraft * const user_aircraft_;
+	Aircraft * const userAircraft_;
 	// The map of intruding aircraft
 	concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intruders_;
 
 	// An OpenGL quadric (quadratic) object required for use with the GLUT library's partial disk function.
 	GLUquadricObj* quadric_;
 
-	XPLMTextureID glTextures_[texture_constants::kNumTextures];
+	XPLMTextureID glTextures_[textureconstants::kNumTextures];
 
-	static texture_constants::TexCoords const * AircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threat_class);
-	static texture_constants::GlRgb8Color const * GaugeRenderer::SymbolColorFromThreatClassification(Aircraft::ThreatClassification threat_class);
+	static textureconstants::TexCoords const * aircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threatClass);
+	static textureconstants::GlRgb8Color const * GaugeRenderer::symbolColorFromThreatClassification(Aircraft::ThreatClassification threatClass);
 
-	bool LoadTexture(char * tex_path, int tex_id) const;
+	bool loadTexture(char * texPath, int texId) const;
 
 	/* Draws the outer gauge ring.*/
-	void DrawOuterGauge() const;
+	void drawOuterGauge() const;
 	/* Draw the inner vertical speed gauge rings. */
-	void DrawInnerGaugeVelocityRing() const;
+	void drawInnerGaugeVelocityRing() const;
 	/* Draws the vertical speed indicator needle on the gauge from the supplied vertical velocity.*/
-	void DrawVerticalVelocityNeedle(Velocity const user_aircraft_vert_vel) const;
+	void drawVerticalVelocityNeedle(Velocity const userAircraftVertVel) const;
 	/*  */
-	void DrawIntrudingAircraft(LLA const * const intruder_pos, Velocity const * const intruder_vvel, Angle const * const user_heading, LLA const * const gauge_center_pos, Distance const * const range, Aircraft::ThreatClassification threat_class) const;
+	void drawIntrudingAircraft(LLA const * const intruderPos, Velocity const * const intruderVvel, Angle const * const userHeading, LLA const * const gaugeCenterPos, Distance const * const range, Aircraft::ThreatClassification threatClass) const;
 
 	/* Draws the supplied recommendation range  as either recommended (green) or not recommended (red). */
-	void DrawRecommendationRange(RecommendationRange* rec_range, bool recommended) const;
+	void drawRecommendationRange(RecommendationRange* recRange, bool recommended) const;
 	/* Draws the supplied vertical speed range as either recommended (green) or not recommended (red). */
-	void DrawRecommendedVerticalSpeedRange(Velocity min_vert_speed, Velocity max_vert_speed, bool recommended) const;
+	void drawRecommendedVerticalSpeedRange(Velocity minVertSpeed, Velocity maxVertSpeed, bool recommended) const;
 	/* Draws the supplied degree range as either recommended (green) or not recommended (red).*/
-	void DrawRecommendationRangeStartStop(Angle start, Angle stop, bool recommended) const;
+	void drawRecommendationRangeStartStop(Angle start, Angle stop, bool recommended) const;
 	/* Draws a recommendation range starting at the supplied start angle in a sweep_angle degrees arc.*/
-	void DrawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const;
+	void drawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const;
 
-	void DrawTextureRegion(texture_constants::TexCoords const * tex_coords, double vert_left, double vert_right, double vert_top, double vert_bot) const;
+	void drawTextureRegion(textureconstants::TexCoords const * texCoords, double vertLeft, double vertRight, double vertTop, double vertBot) const;
 
-	texture_constants::TexCoords const * GaugeRenderer::GaugeTexCoordsFromDigitCharacter(char) const;
+	textureconstants::TexCoords const * GaugeRenderer::gaugeTexCoordsFromDigitCharacter(char) const;
 
 	// No copy constructor or copy-assignment 
 	GaugeRenderer (const GaugeRenderer& that) = delete;

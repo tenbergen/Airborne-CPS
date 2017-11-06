@@ -38,11 +38,11 @@ double Distance::FeetFromUnits(double val, Distance::DistanceUnits units) {
 	}
 }
 
-double Distance::to_feet() const {
+double Distance::toFeet() const {
 	return value_ft_;
 }
 
-double Distance::to_meters() const {
+double Distance::toMeters() const {
 	return value_ft_ * kMetersPerFt_;
 }
 
@@ -54,7 +54,7 @@ double Distance::to_nmi() const {
 	return value_ft_ * kNmiPerFt_;
 }
 
-double Distance::ToUnits(Distance::DistanceUnits units) const {
+double Distance::toUnits(Distance::DistanceUnits units) const {
 	return UnitsFromFeet(value_ft_, units);
 }
 

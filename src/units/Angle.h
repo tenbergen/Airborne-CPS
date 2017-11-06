@@ -22,12 +22,12 @@ public:
 	static double const kMaxDegrees_;
 
 	// Converts an azimuth (north-referenced bearing) to its equivalent unit circle-referenced angle (cartesian angle?)
-	static Angle BearingToCartesianAngle(Angle const * const bearing);
+	static Angle bearingToCartesianAngle(Angle const * const bearing);
 	
 	Angle(double value, AngleUnits units);
 	
-	double to_degrees() const;
-	double to_radians() const;
+	double toDegrees() const;
+	double toRadians() const;
 
 	void normalize();
 

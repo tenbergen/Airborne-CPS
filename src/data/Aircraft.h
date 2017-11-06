@@ -30,25 +30,25 @@ public:
 
 	// Aircraft must be locked before getting or setting any non-const values. Copies should be made of any relevant data and no pointers
 	// to fields should be used.
-	std::mutex lock_;
+	std::mutex lock;
 
 	// Values that are updated via datarefs from xplane
-	std::chrono::milliseconds position_current_time_;
-	LLA position_current_;
+	std::chrono::milliseconds positionCurrentTime;
+	LLA positionCurrent;
 
-	std::chrono::milliseconds position_old_time_;
-	LLA position_old_;
+	std::chrono::milliseconds positionOldTime;
+	LLA positionOld;
 
 	// The rate of change of the altitude
-	Velocity vertical_velocity_;
+	Velocity verticalVelocity;
 	/* The true airspeed of the aircraft relative to the air mass around the craft
 	This is only populated for the user's aircraft and is currently not used but might need to be used in decider calculations
 	since the user's aircraft position is updated every time the plugins render method is called, which means the elapsed time
 	will be extremely small.
 	*/
 	Velocity true_airspeed_;
-	Angle heading_;
+	Angle heading;
 
-	ThreatClassification threat_classification_ = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
+	ThreatClassification threatClassification = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 
 };

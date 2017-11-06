@@ -18,7 +18,7 @@ int ConvertPath(const char * inPath, char * outPath, int outPathMaxLen)
 }
 #endif
 
-void str_util::BuildFilePath(char * const in_buffer, char const * const tex_fname, char const * const plugin_path) {
+void strutil::buildFilePath(char * const in_buffer, char const * const tex_fname, char const * const plugin_path) {
 	in_buffer[0] = '\0';
 	strcat(in_buffer, plugin_path);
 	strcat(in_buffer, tex_fname);

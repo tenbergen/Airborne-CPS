@@ -41,16 +41,16 @@ public:
 	typedef struct	tagIMAGEDATA
 	{
 		unsigned char *	pData;
-		int			Width;
-		int			Height;
+		int			width;
+		int			height;
 		int			Padding;
-		short		Channels;
+		short		channels;
 	} IMAGEDATA;
 
 #pragma pack(pop, ident)
 
-	static int		LoadBmp(const char *FilePath, IMAGEDATA *ImageData);
-	static void		SwapRedBlue(IMAGEDATA *ImageData);
+	static int		loadBmp(const char *FilePath, IMAGEDATA *ImageData);
+	static void		swapRedBlue(IMAGEDATA *ImageData);
 
 	/// Cross Platform Bitmap functions
 	/// Functions to handle endian differeneces between windows, linux and mac.

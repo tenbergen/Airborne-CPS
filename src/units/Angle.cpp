@@ -13,19 +13,19 @@ double const Angle::kMaxDegrees_ = 360.0;
 Angle::Angle(double val, Angle::AngleUnits units) : value_degrees_(units == AngleUnits::RADIANS ? DegreesFromRadians(val) : val) {}
 
 double Angle::DegreesFromRadians(double degrees){
-	return degrees * (k180Degrees_.to_degrees() / M_PI);
+	return degrees * (k180Degrees_.toDegrees() / M_PI);
 }
 
 double Angle::RadiansFromDegrees(double radians) {
-	return radians * (M_PI / k180Degrees_.to_degrees());
+	return radians * (M_PI / k180Degrees_.toDegrees());
 }
 
-double Angle::to_degrees() const {
+double Angle::toDegrees() const {
 	return value_degrees_;
 }
 
-double Angle::to_radians() const {
-	return value_degrees_ * (M_PI / k180Degrees_.to_degrees());
+double Angle::toRadians() const {
+	return value_degrees_ * (M_PI / k180Degrees_.toDegrees());
 }
 
 void Angle::normalize() {
@@ -48,12 +48,12 @@ void Angle::operator = (Angle const & a) {
 	value_degrees_ = a.value_degrees_;
 }
 
-Angle Angle::BearingToCartesianAngle(Angle const * const bearing) {
-	if (bearing->to_degrees() < 0.0) {
-		return Angle(fabs(bearing->to_degrees()) + 90.0, Angle::AngleUnits::DEGREES);
+Angle Angle::bearingToCartesianAngle(Angle const * const bearing) {
+	if (bearing->toDegrees() < 0.0) {
+		return Angle(fabs(bearing->toDegrees()) + 90.0, Angle::AngleUnits::DEGREES);
 	}
 	else {
-		Angle cartesian_angle = { 90.0 - bearing->to_degrees(), Angle::AngleUnits::DEGREES };
+		Angle cartesian_angle = { 90.0 - bearing->toDegrees(), Angle::AngleUnits::DEGREES };
 		cartesian_angle.normalize();
 		return cartesian_angle;
 	}

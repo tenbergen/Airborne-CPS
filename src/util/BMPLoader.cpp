@@ -1,6 +1,6 @@
 #include "BMPLoader.h"
 
-int BmpLoader::LoadBmp(const char * FilePath, IMAGEDATA * ImageData)
+int BmpLoader::loadBmp(const char * FilePath, IMAGEDATA * ImageData)
 {
 	char debugStringBuf[256];
 	sprintf(debugStringBuf, "ExampleGuage::BitmapLoader - FilePath: %s\n", FilePath);
@@ -51,18 +51,18 @@ int BmpLoader::LoadBmp(const char * FilePath, IMAGEDATA * ImageData)
 						Padding = (ImageInfo.biWidth * channels + channels) & ~channels;
 						Padding -= ImageInfo.biWidth * channels;
 
-						ImageData->Width = ImageInfo.biWidth;
-						ImageData->Height = ImageInfo.biHeight;
+						ImageData->width = ImageInfo.biWidth;
+						ImageData->height = ImageInfo.biHeight;
 						ImageData->Padding = Padding;
 
 						/// Allocate memory for the actual image.
-						ImageData->Channels = channels;
-						ImageData->pData = (unsigned char *)malloc(ImageInfo.biWidth * ImageInfo.biHeight * ImageData->Channels + ImageInfo.biHeight * Padding);
+						ImageData->channels = channels;
+						ImageData->pData = (unsigned char *)malloc(ImageInfo.biWidth * ImageInfo.biHeight * ImageData->channels + ImageInfo.biHeight * Padding);
 
 						if (ImageData->pData != NULL)
 						{
 							/// Get the actual image.
-							if (fread(ImageData->pData, ImageInfo.biWidth * ImageInfo.biHeight * ImageData->Channels + ImageInfo.biHeight * Padding, 1, BitmapFile) == 1)
+							if (fread(ImageData->pData, ImageInfo.biWidth * ImageInfo.biHeight * ImageData->channels + ImageInfo.biHeight * Padding, 1, BitmapFile) == 1)
 							{
 								RetCode = 1;
 							}
@@ -98,25 +98,25 @@ int BmpLoader::LoadBmp(const char * FilePath, IMAGEDATA * ImageData)
 	return RetCode;
 }
 /// Swap the red and blue pixels.
-void BmpLoader::SwapRedBlue(IMAGEDATA *ImageData)
+void BmpLoader::swapRedBlue(IMAGEDATA *ImageData)
 {
 	unsigned char  * srcPixel;
 	int		x, y;
 	unsigned char sTemp;
-	short channels = ImageData->Channels;
+	short channels = ImageData->channels;
 
 	/// Do the swap
 	srcPixel = ImageData->pData;
 
-	for (y = 0; y < ImageData->Height; ++y) {
-		for (x = 0; x < ImageData->Width; ++x)
+	for (y = 0; y < ImageData->height; ++y) {
+		for (x = 0; x < ImageData->width; ++x)
 		{
 			sTemp = srcPixel[0];
 			srcPixel[0] = srcPixel[2];
 			srcPixel[2] = sTemp;
 
 			srcPixel += channels;
-			if (x == (ImageData->Width - 1))
+			if (x == (ImageData->width - 1))
 				srcPixel += ImageData->Padding;
 		}
 	}

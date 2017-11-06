@@ -31,13 +31,13 @@ public:
 
 	/* Calculates the range (distance) to the supplied LLA using the haversine formula.
 	Taken from: https://en.wikipedia.org/wiki/Great-circle_distance#Computational_formulas */
-	Distance Range(LLA const *const other) const;
+	Distance range(LLA const *const other) const;
 
 	/* Calculates the north-referenced bearing (aka azimuth).*/
-	Angle Bearing(LLA const *const other) const;
+	Angle bearing(LLA const *const other) const;
 
 	/*Returns an LLA that results from a translation of the supplied distance in the supplied heading (bearing).*/
-	LLA Translate(Angle const *const bearing, Distance const *const distance) const;
+	LLA translate(Angle const *const bearing, Distance const *const distance) const;
 
 	LLA operator + (LLA const & l) const;
 	LLA operator - (LLA const & l) const;
@@ -53,5 +53,5 @@ public:
 
 	Angle latitude_;
 	Angle longitude_;
-	Distance altitude_;
+	Distance altitude;
 };

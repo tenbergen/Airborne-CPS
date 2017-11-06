@@ -85,7 +85,7 @@ DWORD Transponder::receiveLocation()
 			Angle latitude = { intruderLocation.lat(), Angle::AngleUnits::DEGREES };
 			Angle longitude = { intruderLocation.lon(), Angle::AngleUnits::DEGREES };
 			Distance altitude = { intruderLocation.alt(), Distance::DistanceUnits::METERS };
-			printf("Transponder::recieveLocation - altitude = %d\n", altitude.to_meters());
+			printf("Transponder::recieveLocation - altitude = %d\n", altitude.toMeters());
 			LLA updated_position = { intruderLocation.lat(), intruderLocation.lon(), intruderLocation.alt(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
@@ -96,11 +96,11 @@ DWORD Transponder::receiveLocation()
 				// Fill in the current values so that the aircraft will not have two wildly different position values
 				// If the position current is not set, position old will get set to LLA::ZERO while position current will
 				// be some real value, so setting the position current here prevents the LLAs from being radically different
-				intruder->position_current_ = updated_position;
-				intruder->position_current_time_ = ms_since_epoch;
+				intruder->positionCurrent = updated_position;
+				intruder->positionCurrentTime = ms_since_epoch;
 
 				(*intrudersMap)[intruder->id_] = intruder;
-				aircraft->lock_.lock();
+				aircraft->lock.lock();
 				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id_, intruder->ip_, ResolutionConnection::kTcpPort_, aircraft);
 				(*open_connections)[intruder->id_] = connection;
 			}
@@ -109,23 +109,23 @@ DWORD Transponder::receiveLocation()
 
 			ResolutionConnection* conn = (*open_connections)[intruder->id_];
 
-			intruder->lock_.lock();
-			aircraft->lock_.lock();
+			intruder->lock.lock();
+			aircraft->lock.lock();
 			conn->lock.lock();
-			intruder->position_old_ = intruder->position_current_;
-			conn->user_position_old = conn->user_position;
-			intruder->position_old_time_ = intruder->position_current_time_;
-			conn->user_position_old_time = conn->user_position_time;
+			intruder->positionOld = intruder->positionCurrent;
+			conn->userPositionOld = conn->userPosition;
+			intruder->positionOldTime = intruder->positionCurrentTime;
+			conn->userPositionOldTime = conn->userPositionTime;
 
-			intruder->position_current_ = updated_position;
-			conn->user_position = aircraft->position_current_;
-			intruder->position_current_time_ = ms_since_epoch;
-			conn->user_position_time = ms_since_epoch;
-			intruder->lock_.unlock();
-			aircraft->lock_.unlock();
+			intruder->positionCurrent = updated_position;
+			conn->userPosition = aircraft->positionCurrent;
+			intruder->positionCurrentTime = ms_since_epoch;
+			conn->userPositionTime = ms_since_epoch;
+			intruder->lock.unlock();
+			aircraft->lock.unlock();
 			conn->lock.unlock();
 
-			decider_->Analyze(intruder);
+			decider_->analyze(intruder);
 		}
 		free(buffer);
 	}
@@ -136,13 +136,13 @@ DWORD Transponder::sendLocation()
 {
 	while (communication)
 	{
-		aircraft->lock_.lock();
-		LLA position = aircraft->position_current_;
-		aircraft->lock_.unlock();
+		aircraft->lock.lock();
+		LLA position = aircraft->positionCurrent;
+		aircraft->lock.unlock();
 
-		myLocation.set_lat(position.latitude_.to_degrees());
-		myLocation.set_lon(position.longitude_.to_degrees());
-		myLocation.set_alt(position.altitude_.to_meters());
+		myLocation.set_lat(position.latitude_.toDegrees());
+		myLocation.set_lon(position.longitude_.toDegrees());
+		myLocation.set_alt(position.altitude.toMeters());
 
 		int size = myLocation.ByteSize();
 		void * buffer = malloc(size);

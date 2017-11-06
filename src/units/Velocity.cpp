@@ -38,11 +38,11 @@ double Velocity::UnitsFromFeetPerMin(double val, VelocityUnits to_units) {
 	}
 }
 
-double Velocity::ToUnits(VelocityUnits units) const {
+double Velocity::toUnits(VelocityUnits units) const {
 	return UnitsFromFeetPerMin(val_ft_per_min_, units);
 }
 
-double Velocity::to_feet_per_min() const {
+double Velocity::toFeetPerMin() const {
 	return val_ft_per_min_;
 }
 
@@ -50,7 +50,7 @@ double Velocity::to_mph() const {
 	return val_ft_per_min_ * kFtPerMinToMph_;
 }
 
-double Velocity::to_meters_per_s() const {
+double Velocity::toMetersPerS() const {
 	return val_ft_per_min_ * kFtPerMinToMetersPerSec_;
 }
 

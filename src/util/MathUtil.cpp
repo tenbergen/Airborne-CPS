@@ -1,6 +1,6 @@
 #include "MathUtil.h"
 
-namespace math_util{
+namespace mathutil{
 
 	float clampf(float val, float min, float max) {
 		if (val < min)

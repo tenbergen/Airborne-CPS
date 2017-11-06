@@ -30,14 +30,14 @@ public:
 	int const port;
 
 	volatile bool consensusAchieved;
-	volatile Sense current_sense;
+	volatile Sense currentSense;
 	std::mutex lock;
 	std::chrono::milliseconds last_analyzed;
 
-	LLA user_position;
-	std::chrono::milliseconds user_position_time;
-	LLA user_position_old;
-	std::chrono::milliseconds user_position_old_time;
+	LLA userPosition;
+	std::chrono::milliseconds userPositionTime;
+	LLA userPositionOld;
+	std::chrono::milliseconds userPositionOldTime;
 
 	int connectToIntruder(std::string, int);
 	SOCKET acceptIncomingIntruder(int);

@@ -13,11 +13,11 @@ public:
 
 	Velocity(double val, VelocityUnits units);
 
-	double ToUnits(VelocityUnits units) const;
+	double toUnits(VelocityUnits units) const;
 
-	double to_feet_per_min() const;
+	double toFeetPerMin() const;
 	double to_mph() const;
-	double to_meters_per_s() const;
+	double toMetersPerS() const;
 	// one knot equals 1 nmi/hr
 	double to_knots() const;
 

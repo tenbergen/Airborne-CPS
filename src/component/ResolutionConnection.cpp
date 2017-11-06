@@ -15,15 +15,15 @@ static DWORD WINAPI startResolutionSender(void* param)
 ResolutionConnection::ResolutionConnection(std::string const mmac, std::string const imac, std::string const ip_addr, int const port_num, Aircraft* user_ac) :
 	my_mac(mmac), intruder_mac(imac), ip(ip_addr), port(port_num)
 {
-	user_position = user_ac->position_current_;
-	user_position_time = user_ac->position_current_time_;
-	user_position_old = user_ac->position_old_;
-	user_position_old_time = user_ac->position_old_time_;
-	user_ac->lock_.unlock();
+	userPosition = user_ac->positionCurrent;
+	userPositionTime = user_ac->positionCurrentTime;
+	userPositionOld = user_ac->positionOld;
+	userPositionOldTime = user_ac->positionOldTime;
+	user_ac->lock.unlock();
 
 	running = true;
 	connected = false;
-	current_sense = Sense::UNKNOWN;
+	currentSense = Sense::UNKNOWN;
 	consensusAchieved = false;
 
 	LPTHREAD_START_ROUTINE task = strcmp(my_mac.c_str(), intruder_mac.c_str()) > 0 ? startResolutionSender : startResolutionReceiver;
@@ -144,8 +144,8 @@ void ResolutionConnection::resolveSense()
 				lock.unlock();
 			} else {
 				// received a sense
-				if (current_sense == Sense::UNKNOWN) {
-					current_sense = stringToSense(msg);
+				if (currentSense == Sense::UNKNOWN) {
+					currentSense = stringToSense(msg);
 
 					if (send(open_socket, ack, strlen(ack) + 1, 0) == SOCKET_ERROR) {
 						lock.unlock();
@@ -157,7 +157,7 @@ void ResolutionConnection::resolveSense()
 					}
 				} else {
 					XPLMDebugString("ResolutionConnection::resolveSense - edge case entered - current sense != unknown and received intruder sense\n");
-					Sense sense_current = current_sense;
+					Sense sense_current = currentSense;
 					lock.unlock();
 
 					char debug_buf[256];
@@ -196,7 +196,7 @@ void ResolutionConnection::resolveSense()
 							} else {
 								lock.lock();
 								consensusAchieved = true;
-								current_sense = SenseUtil::OpositeFromSense(sense_from_intruder);
+								currentSense = SenseUtil::OpositeFromSense(sense_from_intruder);
 								lock.unlock();
 
 								XPLMDebugString("ResolutionConnection::resolveSense - Achieved consensus in edge case with user_mac < intr_mac\n");

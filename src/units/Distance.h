@@ -13,10 +13,10 @@ public:
 
 	Distance(double val, DistanceUnits units);
 
-	double ToUnits(DistanceUnits units) const;
+	double toUnits(DistanceUnits units) const;
 
-	double to_feet() const;
-	double to_meters() const;
+	double toFeet() const;
+	double toMeters() const;
 	double to_miles() const;
 	double to_nmi() const;
 

@@ -59,6 +59,9 @@ private:
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* activeConnections_;
 	Aircraft* thisAircraft_;
 
+	/* Temporary storage for the user's aircraft's sense, for use when consensus is not acheived, to prevent Sense flipping */
+	Sense tempSense_;
+
 	/* Analyzes the supplied intruder, determining if the intruder is a threat, and begins the process of
 	determining actions that will avoid potential collisions. */
 	void determineActionRequired(Aircraft* intruder);

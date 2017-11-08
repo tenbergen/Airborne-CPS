@@ -44,7 +44,7 @@ void Decider::determineActionRequired(Aircraft* intruder) {
 
 	ResolutionConnection* connection = (*activeConnections_)[intrCopy.id_];
 	Aircraft::ThreatClassification threatClass = Decider::determineThreatClass(&intrCopy, connection);
-	Sense mySense = Sense::UNKNOWN;
+	Sense mySense = tempSense_;
 
 	RecommendationRangePair recRange;
 
@@ -52,8 +52,8 @@ void Decider::determineActionRequired(Aircraft* intruder) {
 		connection->lock.lock();
 		if (connection->consensusAchieved && (connection->currentSense == Sense::UPWARD || connection->currentSense == Sense::DOWNWARD)) {
 			mySense = connection->currentSense;
-		} else {
-			mySense = Decider::determineResolutionSense(connection->userPosition.altitude.toUnits(Distance::DistanceUnits::FEET),
+		} else if (tempSense_ == Sense::UNKNOWN) {
+			tempSense_ = mySense = Decider::determineResolutionSense(connection->userPosition.altitude.toUnits(Distance::DistanceUnits::FEET),
 				intrCopy.positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET));
 			connection->sendSense(mySense);
 		}
@@ -75,6 +75,7 @@ void Decider::determineActionRequired(Aircraft* intruder) {
 		recRange = getRecRangePair(mySense, userVvel.toFeetPerMin(), intrVvel.toFeetPerMin(), connection->userPosition.altitude.toFeet(), intrCopy.positionCurrent.altitude.toFeet(), rangeTauS);
 
 	} else if (threatClass == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {
+		tempSense_ = Sense::UNKNOWN;
 		connection->lock.lock();
 		connection->currentSense = Sense::UNKNOWN;
 		connection->lock.unlock();

@@ -21,12 +21,12 @@ public:
 
 	Aircraft(Aircraft const & that);
 	Aircraft(std::string const id, std::string const ip);
-	Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity vertical_velocity);
+	Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity verticalVelocity);
 
 	// The ID of each aircraft is the MAC Address of the network adapter of the machine for the x-plane instance that runs that aircraft
-	std::string const id_;
+	std::string const id;
 	// The IPv4 address that should be used for communicating with the aircraft
-	std::string const ip_;
+	std::string const ip;
 
 	// Aircraft must be locked before getting or setting any non-const values. Copies should be made of any relevant data and no pointers
 	// to fields should be used.
@@ -46,7 +46,7 @@ public:
 	since the user's aircraft position is updated every time the plugins render method is called, which means the elapsed time
 	will be extremely small.
 	*/
-	Velocity true_airspeed_;
+	Velocity trueAirspeed;
 	Angle heading;
 
 	ThreatClassification threatClassification = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;

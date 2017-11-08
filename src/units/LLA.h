@@ -11,23 +11,23 @@ longitude between [-180, 180], with +180 corresponding to east, and altitude mea
 class LLA
 {
 public:
-	LLA(double lat, double lon, double alt, Angle::AngleUnits angle_units, Distance::DistanceUnits dist_units);
+	LLA(double lat, double lon, double alt, Angle::AngleUnits angleUnits, Distance::DistanceUnits distUnits);
 	LLA(Angle lat, Angle lon, Distance alt);
 	LLA(Angle lat, Angle lon);
 	explicit LLA();
 
 	static LLA const ZERO;
 	static Vec2 const NORTH;
-	static Distance const kRadiusEarth_;
+	static Distance const K_RADIUS_EARTH;
 
 	//https://en.wikipedia.org/wiki/Latitude#Length_of_a_degree_of_latitude
-	static double const kMetersPerDegLatConst1_;
-	static double const kMetersPerDegLatConst2_;
-	static double const kMetersPerDegLatConst3_;
+	static double const K_METERS_PER_DEG_LAT_CONST_1;
+	static double const K_METERS_PER_DEG_LAT_CONST_2;
+	static double const K_METERS_PER_DEG_LAT_CONST_3;
 		
-	static double const kMetersPerDegLonConst1_;
-	static double const kMetersPerDegLonConst2_;
-	static double const kMetersPerDegLonConst3_;
+	static double const K_METERS_PER_DEG_LON_CONST_1;
+	static double const K_METERS_PER_DEG_LON_CONST_2;
+	static double const K_METERS_PER_DEG_LON_CONST_3;
 
 	/* Calculates the range (distance) to the supplied LLA using the haversine formula.
 	Taken from: https://en.wikipedia.org/wiki/Great-circle_distance#Computational_formulas */
@@ -45,13 +45,13 @@ public:
 
 	/*Returns the distance per 1 degree of latitude at this LLA. Note: the distance per degree latitude is dependent 
 	on the latitude so it should be recalculated for different locations.*/
-	Distance DistPerDegreeLat() const;
+	Distance distPerDegreeLat() const;
 
 	/*Returns the distance per 1 degree of longitude at this LLA. Note: the distance per degree longitude is dependent
 	on the latitude so it should be recalculated for different locations.*/
-	Distance DistPerDegreeLon() const;
+	Distance distPerDegreeLon() const;
 
-	Angle latitude_;
-	Angle longitude_;
+	Angle latitude;
+	Angle longitude;
 	Distance altitude;
 };

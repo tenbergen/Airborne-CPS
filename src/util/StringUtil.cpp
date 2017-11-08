@@ -18,10 +18,10 @@ int ConvertPath(const char * inPath, char * outPath, int outPathMaxLen)
 }
 #endif
 
-void strutil::buildFilePath(char * const in_buffer, char const * const tex_fname, char const * const plugin_path) {
-	in_buffer[0] = '\0';
-	strcat(in_buffer, plugin_path);
-	strcat(in_buffer, tex_fname);
+void strutil::buildFilePath(char * const inBuffer, char const * const texFname, char const * const pluginPath) {
+	inBuffer[0] = '\0';
+	strcat(inBuffer, pluginPath);
+	strcat(inBuffer, texFname);
 
 #if APL && __MACH__
 	char catBuf2[255];

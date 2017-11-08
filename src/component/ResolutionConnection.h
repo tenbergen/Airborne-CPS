@@ -19,20 +19,20 @@
 class ResolutionConnection
 {
 public:
-	static unsigned short const kTcpPort_ = 21218;
+	static unsigned short const K_TCP_PORT = 21218;
 
-	ResolutionConnection(std::string const user_mac, std::string const intruder_mac, std::string const ip, int const port, Aircraft* user_ac);
+	ResolutionConnection(std::string const userMac, std::string const intruderMac, std::string const ip, int const port, Aircraft* userAc);
 	~ResolutionConnection();
 
-	std::string const intruder_mac;
+	std::string const intruderMac;
 	std::string const ip;
-	std::string const my_mac;
+	std::string const myMac;
 	int const port;
 
 	volatile bool consensusAchieved;
 	volatile Sense currentSense;
 	std::mutex lock;
-	std::chrono::milliseconds last_analyzed;
+	std::chrono::milliseconds lastAnalyzed;
 
 	LLA userPosition;
 	std::chrono::milliseconds userPositionTime;
@@ -46,13 +46,13 @@ public:
 	DWORD senseReceiver();
 	int sendSense(Sense);
 private:
-	std::atomic<bool> running;
-	std::atomic<bool> thread_stopped;
-	std::atomic<bool> connected;
+	std::atomic<bool> running_;
+	std::atomic<bool> threadStopped_;
+	std::atomic<bool> connected_;
 
-	SOCKET sock, open_socket;
-	struct sockaddr_in my_addr;
-	struct sockaddr_in intruder_addr;
+	SOCKET sock_, openSocket_;
+	struct sockaddr_in myAddr_;
+	struct sockaddr_in intruderAddr_;
 
 	void resolveSense();
 	void socketDebug(char*, bool);

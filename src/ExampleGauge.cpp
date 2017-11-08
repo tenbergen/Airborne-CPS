@@ -39,44 +39,44 @@ Added the define IBM 1 thing because you have to specify it before doing
 
 #include "component/Transponder.h"
 
-XPLMDataRef latitude_ref, longitude_ref, altitude_ref;
-XPLMDataRef heading_true_north_deg_ref, heading_true_mag_deg_ref;
-XPLMDataRef vert_speed_ref, true_airspeed_ref, ind_airspeed_ref;
+XPLMDataRef latitudeRef, longitudeRef, altitudeRef;
+XPLMDataRef headingTrueNorthDegRef, headingTrueMagDegRef;
+XPLMDataRef vertSpeedRef, trueAirspeedRef, indAirspeedRef;
 
 // These datarefs represent the RGB color of the lighting inside the cockpit
-XPLMDataRef	cockpit_lighting_red, cockpit_lighting_green, cockpit_lighting_blue;
+XPLMDataRef	cockpitLightingRed, cockpitLightingGreen, cockpitLightingBlue;
 
 static XPLMWindowID	gExampleGaugePanelDisplayWindow = NULL;
-static int ExampleGaugeDisplayPanelWindow = 1;
+static int exampleGaugeDisplayPanelWindow = 1;
 static XPLMHotKeyID gExampleGaugeHotKey = NULL;
 
 // The plugin application path
 static char gPluginDataFile[255];
 
-Aircraft* user_aircraft;
+Aircraft* userAircraft;
 
-GaugeRenderer* gauge_renderer;
+GaugeRenderer* gaugeRenderer;
 
-concurrency::concurrent_unordered_map<std::string, Aircraft*> intruding_aircraft;
-concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> open_connections;
+concurrency::concurrent_unordered_map<std::string, Aircraft*> intrudingAircraft;
+concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> openConnections;
 Transponder* transponder;
 
 Decider* decider;
 
 /// Used for dragging plugin panel window.
-static	int	CoordInRect(int x, int y, int l, int t, int r, int b);
-static int	CoordInRect(int x, int y, int l, int t, int r, int b) {
+static	int	coordInRect(int x, int y, int l, int t, int r, int b);
+static int	coordInRect(int x, int y, int l, int t, int r, int b) {
 	return ((x >= l) && (x < r) && (y < t) && (y >= b));
 }
 
 /// Prototypes for callbacks etc.
-static void DrawGLScene();
+static void drawGLScene();
 
-static int	GaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
-static void ExampleGaugeHotKey(void * refCon);
-static void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
-static void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
-static int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
+static int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
+static void exampleGaugeHotKey(void * refCon);
+static void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
+static void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
+static int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
 static XPLMWindowID	gWindow = NULL;
 static int gClicked = 0;
@@ -92,13 +92,13 @@ float indAirspeed2 = 0;
 float trueAirspeed = 0;
 float verticalSpeedData = 0;
 float latREF, lonREF = 0;
-float I_latREF, I_lonREF = 0;
+float ilatREF, ilonREF = 0;
 
-static void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
+static void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
 
-static void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
+static void myHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
 
-static int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
+static int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
 
 PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	/// Handle cross platform differences
@@ -120,48 +120,48 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	//test();
 
 	/* Now we create a window.  We pass in a rectangle in left, top, right, bottom screen coordinates.  We pass in three callbacks. */
-	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, MyDrawWindowCallback, MyHandleKeyCallback, MyHandleMouseClickCallback, NULL);
+	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, myDrawWindowCallback, myHandleKeyCallback, myHandleMouseClickCallback, NULL);
 
 	/// Register so that our gauge is drawing during the Xplane gauge phase
-	XPLMRegisterDrawCallback(GaugeDrawingCallback, xplm_Phase_Gauges, 0, NULL);
+	XPLMRegisterDrawCallback(gaugeDrawingCallback, XPLM_PHASE_GAUGES, 0, NULL);
 
 	/// Create our window, setup datarefs and register our hotkey.
-	gExampleGaugePanelDisplayWindow = XPLMCreateWindow(1024, 256, 1280, 0, 1, ExampleGaugePanelWindowCallback, ExampleGaugePanelKeyCallback, ExampleGaugePanelMouseClickCallback, NULL);
+	gExampleGaugePanelDisplayWindow = XPLMCreateWindow(1024, 256, 1280, 0, 1, exampleGaugePanelWindowCallback, exampleGaugePanelKeyCallback, exampleGaugePanelMouseClickCallback, NULL);
 
-	vert_speed_ref = XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot");
+	vertSpeedRef = XPLMFindDataRef("sim/cockpit2/gauges/indicators/vvi_fpm_pilot");
 
-	latitude_ref = XPLMFindDataRef("sim/flightmodel/position/latitude");
-	longitude_ref = XPLMFindDataRef("sim/flightmodel/position/longitude");
-	altitude_ref = XPLMFindDataRef("sim/flightmodel/position/elevation");
+	latitudeRef = XPLMFindDataRef("sim/flightmodel/position/latitude");
+	longitudeRef = XPLMFindDataRef("sim/flightmodel/position/longitude");
+	altitudeRef = XPLMFindDataRef("sim/flightmodel/position/elevation");
 
-	heading_true_mag_deg_ref = XPLMFindDataRef("sim/flightmodel/position/mag_psi");
-	heading_true_north_deg_ref = XPLMFindDataRef("sim/flightmodel/position/true_psi");
+	headingTrueMagDegRef = XPLMFindDataRef("sim/flightmodel/position/mag_psi");
+	headingTrueNorthDegRef = XPLMFindDataRef("sim/flightmodel/position/true_psi");
 
-	true_airspeed_ref = XPLMFindDataRef("sim/flightmodel/position/airspeed_true");
-	ind_airspeed_ref = XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed");
+	trueAirspeedRef = XPLMFindDataRef("sim/flightmodel/position/airspeed_true");
+	indAirspeedRef = XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed");
 
-	cockpit_lighting_red = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_r");
-	cockpit_lighting_green = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
-	cockpit_lighting_blue = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
+	cockpitLightingRed = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_r");
+	cockpitLightingGreen = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
+	cockpitLightingBlue = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
-	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", ExampleGaugeHotKey, NULL);
+	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", exampleGaugeHotKey, NULL);
 
 	Transponder::initNetworking();
-	std::string my_mac = Transponder::getHardwareAddress();
+	std::string myMac = Transponder::getHardwareAddress();
 
-	LLA current_pos = LLA::ZERO;
-	user_aircraft = new Aircraft(my_mac, "127.0.0.1", current_pos, Angle::ZERO, Velocity::ZERO);
-	std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-	user_aircraft->positionCurrentTime = ms_since_epoch;
-	user_aircraft->positionOldTime = ms_since_epoch;
+	LLA currentPos = LLA::ZERO;
+	userAircraft = new Aircraft(myMac, "127.0.0.1", currentPos, Angle::ZERO, Velocity::ZERO);
+	std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+	userAircraft->positionCurrentTime = msSinceEpoch;
+	userAircraft->positionOldTime = msSinceEpoch;
 
-	decider = new Decider(user_aircraft, &open_connections);
+	decider = new Decider(userAircraft, &openConnections);
 
-	gauge_renderer = new GaugeRenderer(gPluginDataFile, decider, user_aircraft, &intruding_aircraft);
-	gauge_renderer->loadTextures();
+	gaugeRenderer = new GaugeRenderer(gPluginDataFile, decider, userAircraft, &intrudingAircraft);
+	gaugeRenderer->loadTextures();
 
 	// start broadcasting location, and listening for aircraft
-	transponder = new Transponder(user_aircraft, &intruding_aircraft, &open_connections, decider);
+	transponder = new Transponder(userAircraft, &intrudingAircraft, &openConnections, decider);
 	transponder->start();
 
 	return 1;
@@ -169,12 +169,12 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 
 PLUGIN_API void	XPluginStop(void) {
 	/// Clean up
-	XPLMUnregisterDrawCallback(GaugeDrawingCallback, xplm_Phase_Gauges, 0, NULL);
+	XPLMUnregisterDrawCallback(gaugeDrawingCallback, XPLM_PHASE_GAUGES, 0, NULL);
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
 
-	delete gauge_renderer;
+	delete gaugeRenderer;
 	delete transponder;
 }
 
@@ -185,29 +185,29 @@ PLUGIN_API int XPluginEnable(void) { return 1; }
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void * inParam) {}
 
 /* The callback responsible for drawing the gauge during the X-Plane gauge drawing phase. */
-int	GaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon) {
+int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon) {
 	// Do the actual drawing, but only if the window is active
-	if (ExampleGaugeDisplayPanelWindow) {
-		LLA updated = { Angle{ XPLMGetDatad(latitude_ref), Angle::AngleUnits::DEGREES },
-			Angle{ XPLMGetDatad(longitude_ref), Angle::AngleUnits::DEGREES },
-			Distance{ XPLMGetDatad(altitude_ref), Distance::DistanceUnits::METERS } };
-		Velocity updated_vvel = Velocity(XPLMGetDataf(vert_speed_ref), Velocity::VelocityUnits::FEET_PER_MIN);
-		std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+	if (exampleGaugeDisplayPanelWindow) {
+		LLA updated = { Angle{ XPLMGetDatad(latitudeRef), Angle::AngleUnits::DEGREES },
+			Angle{ XPLMGetDatad(longitudeRef), Angle::AngleUnits::DEGREES },
+			Distance{ XPLMGetDatad(altitudeRef), Distance::DistanceUnits::METERS } };
+		Velocity updatedVvel = Velocity(XPLMGetDataf(vertSpeedRef), Velocity::VelocityUnits::FEET_PER_MIN);
+		std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
-		user_aircraft->lock.lock();
-		user_aircraft->positionOld = user_aircraft->positionCurrent;
-		user_aircraft->positionOldTime = user_aircraft->positionCurrentTime;
+		userAircraft->lock.lock();
+		userAircraft->positionOld = userAircraft->positionCurrent;
+		userAircraft->positionOldTime = userAircraft->positionCurrentTime;
 
-		user_aircraft->positionCurrent = updated;
-		user_aircraft->positionCurrentTime = ms_since_epoch;
+		userAircraft->positionCurrent = updated;
+		userAircraft->positionCurrentTime = msSinceEpoch;
 
-		user_aircraft->verticalVelocity = updated_vvel;
-		user_aircraft->heading = Angle(XPLMGetDataf(heading_true_mag_deg_ref), Angle::AngleUnits::DEGREES);
-		user_aircraft->true_airspeed_ = Velocity(XPLMGetDataf(true_airspeed_ref), Velocity::VelocityUnits::METERS_PER_S);
+		userAircraft->verticalVelocity = updatedVvel;
+		userAircraft->heading = Angle(XPLMGetDataf(headingTrueMagDegRef), Angle::AngleUnits::DEGREES);
+		userAircraft->trueAirspeed = Velocity(XPLMGetDataf(trueAirspeedRef), Velocity::VelocityUnits::METERS_PER_S);
 
-		user_aircraft->lock.unlock();
+		userAircraft->lock.unlock();
 
-		DrawGLScene();
+		drawGLScene();
 	}
 	return 1;
 }
@@ -216,46 +216,46 @@ int	GaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefc
 /* This callback does not do any drawing as such.
 * We use the mouse callback below to handle dragging of the window
 * X-Plane will automatically do the redraw. */
-void ExampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon) {}
+void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon) {}
 
 /* Our key handling callback does nothing in this plugin.  This is ok;
 * we simply don't use keyboard input.*/
-void ExampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey,
+void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey,
 	XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus) {}
 
 /* Our mouse click callback updates the position that the windows is dragged to. */
-int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon) {
+int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon) {
 	int	dX = 0, dY = 0;
-	int	Weight = 0, Height = 0;
-	int	Left, Top, Right, Bottom;
+	int	weight = 0, height = 0;
+	int	left, top, right, bottom;
 
 	int	gDragging = 0;
 
-	if (!ExampleGaugeDisplayPanelWindow)
+	if (!exampleGaugeDisplayPanelWindow)
 		return 0;
 
 	/// Get the windows current position
-	XPLMGetWindowGeometry(inWindowID, &Left, &Top, &Right, &Bottom);
+	XPLMGetWindowGeometry(inWindowID, &left, &top, &right, &bottom);
 
 	switch (inMouse) {
-	case xplm_MouseDown:
+	case XPLM_MOUSE_DOWN:
 		/// Test for the mouse in the top part of the window
-		if (CoordInRect(x, y, Left, Top, Right, Top - 15)) {
-			dX = x - Left;
-			dY = y - Top;
-			Weight = Right - Left;
-			Height = Bottom - Top;
+		if (coordInRect(x, y, left, top, right, top - 15)) {
+			dX = x - left;
+			dY = y - top;
+			weight = right - left;
+			height = bottom - top;
 			gDragging = 1;
 		}
 		break;
-	case xplm_MouseDrag:
+	case XPLM_MOUSE_DRAG:
 		/// We are dragging so update the window position
 		if (gDragging) {
-			Left = (x - dX);
-			Right = Left + Weight;
-			Top = (y - dY);
-			Bottom = Top + Height;
-			XPLMSetWindowGeometry(inWindowID, Left, Top, Right, Bottom);
+			left = (x - dX);
+			right = left + weight;
+			top = (y - dY);
+			bottom = top + height;
+			XPLMSetWindowGeometry(inWindowID, left, top, right, bottom);
 		}
 		break;
 	case xplm_MouseUp:
@@ -266,14 +266,14 @@ int ExampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, X
 }
 
 /// Toggle between display and non display
-void ExampleGaugeHotKey(void * refCon) {
-	ExampleGaugeDisplayPanelWindow = !ExampleGaugeDisplayPanelWindow;
+void exampleGaugeHotKey(void * refCon) {
+	exampleGaugeDisplayPanelWindow = !exampleGaugeDisplayPanelWindow;
 }
 
 /// Draws the textures that make up the gauge
-void DrawGLScene() {
-	textureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpit_lighting_red), XPLMGetDataf(cockpit_lighting_green), XPLMGetDataf(cockpit_lighting_blue) };
-	gauge_renderer->render(cockpit_lighting);
+void drawGLScene() {
+	textureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpitLightingRed), XPLMGetDataf(cockpitLightingGreen), XPLMGetDataf(cockpitLightingBlue) };
+	gaugeRenderer->render(cockpit_lighting);
 }
 
 /* This callback does the work of drawing our window once per sim cycle each time
@@ -281,7 +281,7 @@ void DrawGLScene() {
 * status.  Note that we don't have to tell X-Plane to redraw us when our text
 * changes; we are redrawn by the sim continuously. */
 /// This function draws the window that is currently being used for debug text rendering
-void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
+void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int		left, top, right, bottom;
 	static float color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
 
@@ -292,107 +292,107 @@ void MyDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	XPLMDrawTranslucentDarkBox(left, top, right, bottom);
 
 	/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
-	char position_buf[128];
-	snprintf(position_buf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitude_ref), XPLMGetDataf(longitude_ref), XPLMGetDataf(altitude_ref));
-	XPLMDrawString(color, left + 5, top - 20, position_buf, NULL, xplmFont_Basic);
+	char positionBuf[128];
+	snprintf(positionBuf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitudeRef), XPLMGetDataf(longitudeRef), XPLMGetDataf(altitudeRef));
+	XPLMDrawString(color, left + 5, top - 20, positionBuf, NULL, XPLM_FONT_BASIC);
 
 	/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
-	int offset_y_pxls = 40;
+	int offsetYPxls = 40;
 
-	for (auto & iter = intruding_aircraft.cbegin(); iter != intruding_aircraft.cend(); ++iter) {
+	for (auto & iter = intrudingAircraft.cbegin(); iter != intrudingAircraft.cend(); ++iter) {
 		Aircraft* intruder = iter->second;
 
 		intruder->lock.lock();
-		LLA const intruder_pos = intruder->positionCurrent;
-		LLA const intruder_pos_old = intruder->positionOld;
-		Aircraft intr_copy = *intruder;
+		LLA const intruderPos = intruder->positionCurrent;
+		LLA const intruderPosOld = intruder->positionOld;
+		Aircraft intrCopy = *intruder;
 		intruder->lock.unlock();
-		ResolutionConnection* conn = (*transponder->open_connections)[intr_copy.id_];
+		ResolutionConnection* conn = (*transponder->openConnections)[intrCopy.id];
 		conn->lock.lock();
-		LLA const user_position = conn->userPosition;
-		LLA const user_position_old = conn->userPositionOld;
-		std::chrono::milliseconds user_position_time = conn->userPositionTime;
-		std::chrono::milliseconds user_position_old_time = conn->userPositionOldTime;
+		LLA const userPosition = conn->userPosition;
+		LLA const userPositionOld = conn->userPositionOld;
+		std::chrono::milliseconds userPositionTime = conn->userPositionTime;
+		std::chrono::milliseconds userPositionOldTime = conn->userPositionOldTime;
 		conn->lock.unlock();
 
-		double slant_range_nmi = abs(user_position.range(&intr_copy.positionCurrent).toUnits(Distance::DistanceUnits::NMI));
-		double delta_distance_m = abs(user_position_old.range(&intr_copy.positionOld).toUnits(Distance::DistanceUnits::METERS))
-			- abs(user_position.range(&intr_copy.positionCurrent).toUnits(Distance::DistanceUnits::METERS));
-		double elapsed_time_s = (double)(intr_copy.positionCurrentTime - intr_copy.positionOldTime).count() / 1000;
-		double closing_speed_knots = Velocity(delta_distance_m / elapsed_time_s, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
-		double alt_sep_ft = abs(intr_copy.positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET) -
-			user_position.altitude.toUnits(Distance::DistanceUnits::FEET));
-		double delta_distance2_ft = abs(intr_copy.positionOld.altitude.toUnits(Distance::DistanceUnits::FEET) -
-			user_position_old.altitude.toUnits(Distance::DistanceUnits::FEET)) -
-			abs(intr_copy.positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET) -
-				user_position.altitude.toUnits(Distance::DistanceUnits::FEET));
-		double elapsed_time_min = elapsed_time_s / 60;
-		double vert_closing_spd_ft_p_min = delta_distance2_ft / elapsed_time_min;
-		double range_tau_s = slant_range_nmi / closing_speed_knots * 3600;
-		double vertical_tau_s = alt_sep_ft / vert_closing_spd_ft_p_min * 60;
-		Velocity user_velocity = Velocity(user_position.range(&user_position_old).toMeters() / ((user_position_time.count() - user_position_old_time.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
-		Velocity intr_velocity = Velocity(intruder_pos.range(&intruder_pos_old).toMeters() / ((intr_copy.positionCurrentTime.count() - intr_copy.positionOldTime.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
-		Distance user_distance_by_cpa = Distance(user_velocity.toMetersPerS() * range_tau_s, Distance::DistanceUnits::METERS);
-		Distance intr_distance_by_cpa = Distance(intr_velocity.toMetersPerS() * range_tau_s, Distance::DistanceUnits::METERS);
-		LLA user_position_at_cpa = user_position.translate(&user_position_old.bearing(&user_position), &user_distance_by_cpa);
-		LLA intr_position_at_cpa = intruder_pos.translate(&intruder_pos_old.bearing(&intruder_pos), &intr_distance_by_cpa);
-		double distance_at_cpa_ft = user_position_at_cpa.range(&intr_position_at_cpa).toFeet();
-		double ta_mod_tau_s = Decider::getModTauS(slant_range_nmi, closing_speed_knots, Decider::getTADmodNmi(user_position.altitude.toFeet()));
-		double ra_mod_tau_s = Decider::getModTauS(slant_range_nmi, closing_speed_knots, Decider::getRADmodNmi(user_position.altitude.toFeet()));
+		double slantRangeNmi = abs(userPosition.range(&intrCopy.positionCurrent).toUnits(Distance::DistanceUnits::NMI));
+		double deltaDistanceM = abs(userPositionOld.range(&intrCopy.positionOld).toUnits(Distance::DistanceUnits::METERS))
+			- abs(userPosition.range(&intrCopy.positionCurrent).toUnits(Distance::DistanceUnits::METERS));
+		double elapsedTimeS = (double)(intrCopy.positionCurrentTime - intrCopy.positionOldTime).count() / 1000;
+		double closingSpeedKnots = Velocity(deltaDistanceM / elapsedTimeS, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
+		double altSepFt = abs(intrCopy.positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET) -
+			userPosition.altitude.toUnits(Distance::DistanceUnits::FEET));
+		double deltaDistance2Ft = abs(intrCopy.positionOld.altitude.toUnits(Distance::DistanceUnits::FEET) -
+			userPositionOld.altitude.toUnits(Distance::DistanceUnits::FEET)) -
+			abs(intrCopy.positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET) -
+				userPosition.altitude.toUnits(Distance::DistanceUnits::FEET));
+		double elapsedTimeMin = elapsedTimeS / 60;
+		double vertClosingSpdFtPerMin = deltaDistance2Ft / elapsedTimeMin;
+		double rangeTauS = slantRangeNmi / closingSpeedKnots * 3600;
+		double verticalTauS = altSepFt / vertClosingSpdFtPerMin * 60;
+		Velocity userVelocity = Velocity(userPosition.range(&userPositionOld).toMeters() / ((userPositionTime.count() - userPositionOldTime.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
+		Velocity intrVelocity = Velocity(intruderPos.range(&intruderPosOld).toMeters() / ((intrCopy.positionCurrentTime.count() - intrCopy.positionOldTime.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
+		Distance userDistanceByCpa = Distance(userVelocity.toMetersPerS() * rangeTauS, Distance::DistanceUnits::METERS);
+		Distance intrDistanceByCpa = Distance(intrVelocity.toMetersPerS() * rangeTauS, Distance::DistanceUnits::METERS);
+		LLA userPositionAtCpa = userPosition.translate(&userPositionOld.bearing(&userPosition), &userDistanceByCpa);
+		LLA intrPositionAtCpa = intruderPos.translate(&intruderPosOld.bearing(&intruderPos), &intrDistanceByCpa);
+		double distanceAtCpaFt = userPositionAtCpa.range(&intrPositionAtCpa).toFeet();
+		double taModTauS = Decider::getModTauS(slantRangeNmi, closingSpeedKnots, Decider::getTADmodNmi(userPosition.altitude.toFeet()));
+		double raModTauS = Decider::getModTauS(slantRangeNmi, closingSpeedKnots, Decider::getRADmodNmi(userPosition.altitude.toFeet()));
 
-		position_buf[0] = '\0';
-		snprintf(position_buf, 128, "intr_pos: (%.3f, %.3f, %3f)", intruder_pos.latitude_.toDegrees(), intruder_pos.longitude_.toDegrees(), intruder_pos.altitude.toMeters());
-		XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-		offset_y_pxls += 20;
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "intr_pos: (%.3f, %.3f, %3f)", intruderPos.latitude.toDegrees(), intruderPos.longitude.toDegrees(), intruderPos.altitude.toMeters());
+		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+		offsetYPxls += 20;
 
-		if (range_tau_s > 0) {
-			position_buf[0] = '\0';
-			snprintf(position_buf, 128, "range_tau_s: %.3f", range_tau_s);
-			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-			offset_y_pxls += 20;
+		if (rangeTauS > 0) {
+			positionBuf[0] = '\0';
+			snprintf(positionBuf, 128, "range_tau_s: %.3f", rangeTauS);
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			offsetYPxls += 20;
 		}
 
-		if (ta_mod_tau_s > 0) {
-			position_buf[0] = '\0';
-			snprintf(position_buf, 128, "ta_mod_tau_s: %.3f", ta_mod_tau_s);
-			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-			offset_y_pxls += 20;
+		if (taModTauS > 0) {
+			positionBuf[0] = '\0';
+			snprintf(positionBuf, 128, "ta_mod_tau_s: %.3f", taModTauS);
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			offsetYPxls += 20;
 		}
 
-		if (ra_mod_tau_s > 0) {
-			position_buf[0] = '\0';
-			snprintf(position_buf, 128, "ra_mod_tau_s: %.3f", ra_mod_tau_s);
-			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-			offset_y_pxls += 20;
+		if (raModTauS > 0) {
+			positionBuf[0] = '\0';
+			snprintf(positionBuf, 128, "ra_mod_tau_s: %.3f", raModTauS);
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			offsetYPxls += 20;
 		}
 
-		if (vertical_tau_s > 0) {
-			position_buf[0] = '\0';
-			snprintf(position_buf, 128, "vertical_tau_s: %.3f", vertical_tau_s);
-			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-			offset_y_pxls += 20;
+		if (verticalTauS > 0) {
+			positionBuf[0] = '\0';
+			snprintf(positionBuf, 128, "vertical_tau_s: %.3f", verticalTauS);
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			offsetYPxls += 20;
 		}
 
-		if (range_tau_s > 0 && distance_at_cpa_ft > 0) {
-			position_buf[0] = '\0';
-			snprintf(position_buf, 128, "distance_at_cpa_ft: %.3f", distance_at_cpa_ft);
-			XPLMDrawString(color, left + 5, top - offset_y_pxls, (char*)position_buf, NULL, xplmFont_Basic);
-			offset_y_pxls += 20;
+		if (rangeTauS > 0 && distanceAtCpaFt > 0) {
+			positionBuf[0] = '\0';
+			snprintf(positionBuf, 128, "distance_at_cpa_ft: %.3f", distanceAtCpaFt);
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			offsetYPxls += 20;
 		}
 	}
 }
 
 /* Our key handling callback does nothing in this plugin.  This is ok; we simply don't use keyboard input. */
-void MyHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags,
+void myHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags,
 	char inVirtualKey, void * inRefcon, int losingFocus) {}
 
 /*Our mouse click callback toggles the status of our mouse variable
 * as the mouse is clicked.  We then update our text on the next sim
 * cycle. */
-int MyHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon) {
+int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon) {
 	/* If we get a down or up, toggle our status click.  We will
 	* never get a down without an up if we accept the down. */
-	if ((inMouse == xplm_MouseDown) || (inMouse == xplm_MouseUp))
+	if ((inMouse == XPLM_MOUSE_DOWN) || (inMouse == xplm_MouseUp))
 		gClicked = 1 - gClicked;
 
 	/* Returning 1 tells X-Plane that we 'accepted' the click; otherwise

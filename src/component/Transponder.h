@@ -35,7 +35,7 @@ public:
 	DWORD receiveLocation(), sendLocation(), keepalive();
 	void start();
 
-	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* open_connections;
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* openConnections;
 protected:
 	std::string ip;
 

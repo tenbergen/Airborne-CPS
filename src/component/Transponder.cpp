@@ -10,7 +10,7 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	decider_ = decider;
 	aircraft = ac;
 	intrudersMap = intruders;
-	open_connections = connections;
+	openConnections = connections;
 
 	myLocation.set_id(mac_address);
 	ip = getIpAddr();
@@ -99,15 +99,15 @@ DWORD Transponder::receiveLocation()
 				intruder->positionCurrent = updated_position;
 				intruder->positionCurrentTime = ms_since_epoch;
 
-				(*intrudersMap)[intruder->id_] = intruder;
+				(*intrudersMap)[intruder->id] = intruder;
 				aircraft->lock.lock();
-				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id_, intruder->ip_, ResolutionConnection::kTcpPort_, aircraft);
-				(*open_connections)[intruder->id_] = connection;
+				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft);
+				(*openConnections)[intruder->id] = connection;
 			}
 
-			keepAliveMap[intruder->id_] = 10;
+			keepAliveMap[intruder->id] = 10;
 
-			ResolutionConnection* conn = (*open_connections)[intruder->id_];
+			ResolutionConnection* conn = (*openConnections)[intruder->id];
 
 			intruder->lock.lock();
 			aircraft->lock.lock();
@@ -140,8 +140,8 @@ DWORD Transponder::sendLocation()
 		LLA position = aircraft->positionCurrent;
 		aircraft->lock.unlock();
 
-		myLocation.set_lat(position.latitude_.toDegrees());
-		myLocation.set_lon(position.longitude_.toDegrees());
+		myLocation.set_lat(position.latitude.toDegrees());
+		myLocation.set_lon(position.longitude.toDegrees());
 		myLocation.set_alt(position.altitude.toMeters());
 
 		int size = myLocation.ByteSize();
@@ -167,7 +167,7 @@ DWORD Transponder::keepalive()
 			if (--(iter->second) == 0) {
 				intrudersMap->unsafe_erase(iter->first);
 				keepAliveMap.unsafe_erase(iter->first);
-				open_connections->unsafe_erase(iter->first);
+				openConnections->unsafe_erase(iter->first);
 			}
 		}
 		Sleep(1000);

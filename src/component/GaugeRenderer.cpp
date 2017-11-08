@@ -51,8 +51,8 @@ void GaugeRenderer::loadTextures()
 {
 	char fNameBuf[256];
 
-	for (int texId = textureconstants::GAUGE_ID; texId < textureconstants::kNumTextures; texId++) {
-		strutil::buildFilePath(fNameBuf, textureconstants::kGaugeFileNames[texId], appPath_);
+	for (int texId = textureconstants::GAUGE_ID; texId < textureconstants::K_NUM_TEXTURES; texId++) {
+		strutil::buildFilePath(fNameBuf, textureconstants::K_GAUGE_FILENAMES[texId], appPath_);
 		
 		if (strlen(fNameBuf) > 0 && !loadTexture(fNameBuf, texId)) {
 			char debugBuf[256];
@@ -66,7 +66,7 @@ void GaugeRenderer::loadTextures()
 bool GaugeRenderer::loadTexture(char* texPath, int texId) const {
 	bool loadedSuccessfully = false;
 
-	BmpLoader::IMAGEDATA sImageData;
+	BmpLoader::ImageData sImageData;
 	/// Get the bitmap from the file
 	loadedSuccessfully = BmpLoader::loadBmp(texPath, &sImageData) != 0;
 
@@ -200,7 +200,7 @@ void GaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velocit
 	Distance altitudeDifference = intruderPos->altitude - gaugeCenterPos->altitude;
 	int altDiffHundredsFtPerMin = (int) std::round(altitudeDifference.toFeet() / 100.0);
 
-	textureconstants::TexCoords const * signChar = altDiffHundredsFtPerMin < 0.0 ? &textureconstants::kCharMinusSign : &textureconstants::kCharPlusSign;
+	textureconstants::TexCoords const * signChar = altDiffHundredsFtPerMin < 0.0 ? &textureconstants::K_CHAR_MINUS_SIGN : &textureconstants::K_CHAR_PLUS_SIGN;
 	altDiffHundredsFtPerMin = abs(altDiffHundredsFtPerMin);
 	std::string altString = std::to_string(altDiffHundredsFtPerMin);
 
@@ -224,7 +224,7 @@ void GaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velocit
 		altStringRight += 6.0;
 	}
 
-	textureconstants::TexCoords const * vvelArrowCoords = intruderVvel->toFeetPerMin() < 0.0 ? &textureconstants::kVertArrowDown : &textureconstants::kVertArrowUp;
+	textureconstants::TexCoords const * vvelArrowCoords = intruderVvel->toFeetPerMin() < 0.0 ? &textureconstants::K_VERT_ARROW_DOWN : &textureconstants::K_VERT_ARROW_UP;
 	// The vertical arrow is 5 px wide by 13 px tall; the arrow is usually? centered vertically wrt to the symbol so the arrow should be drawn some amount lower than the top of the symbol
 	drawTextureRegion(vvelArrowCoords, symbolRight, symbolRight + 5.0, symbolTop - 4.0, symbolTop - 17.0);
 
@@ -234,30 +234,30 @@ void GaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velocit
 textureconstants::TexCoords const * GaugeRenderer::gaugeTexCoordsFromDigitCharacter(char c) const {
 	switch (c) {
 	case '0':
-		return &textureconstants::kCharZero;
+		return &textureconstants::K_CHAR_ZERO;
 	case '1':
-		return &textureconstants::kCharOne;
+		return &textureconstants::K_CHAR_ONE;
 	case '2':
-		return &textureconstants::kCharTwo;
+		return &textureconstants::K_CHAR_TWO;
 	case '3':
-		return &textureconstants::kCharThree;
+		return &textureconstants::K_CHAR_THREE;
 	case '4':
-		return &textureconstants::kCharFour;
+		return &textureconstants::K_CHAR_FOUR;
 	case '5':
-		return &textureconstants::kCharFive;
+		return &textureconstants::K_CHAR_FIVE;
 	case '6':
-		return &textureconstants::kCharSix;
+		return &textureconstants::K_CHAR_SIX;
 	case '7':
-		return &textureconstants::kCharSeven;
+		return &textureconstants::K_CHAR_SEVEN;
 	case '8':
-		return &textureconstants::kCharEight;
+		return &textureconstants::K_CHAR_EIGHT;
 	case '9':
-		return &textureconstants::kCharNine;
+		return &textureconstants::K_CHAR_NINE;
 	default:
 		char debugBuf[128];
 		snprintf(debugBuf, 128, "GaugeRenderer::GaugeTexCoordsFromDigitCharacter - unhandled character %c supplied\n", c);
 
-		return &textureconstants::kDebugSymbol;
+		return &textureconstants::K_DEBUG_SYMBOL;
 	}
 }
 
@@ -274,16 +274,16 @@ void GaugeRenderer::drawTextureRegion(textureconstants::TexCoords const * texCoo
 textureconstants::TexCoords const * GaugeRenderer::aircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threatClass) {
 	switch (threatClass) {
 	case Aircraft::ThreatClassification::NON_THREAT_TRAFFIC:
-		return &textureconstants::kSymbolBlueDiamondCutout;
+		return &textureconstants::K_SYMBOL_BLUE_DIAMOND_CUTOUT;
 	case Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC:
-		return &textureconstants::kSymbolBlueDiamondWhole;
+		return &textureconstants::K_SYMBOL_BLUE_DIAMOND_WHOLE;
 	case Aircraft::ThreatClassification::TRAFFIC_ADVISORY:
-		return &textureconstants::kSymbolYellowCircle;
+		return &textureconstants::K_SYMBOL_YELLOW_CIRCLE;
 	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
-		return &textureconstants::kSymbolRedSquare;
+		return &textureconstants::K_SYMBOL_RED_SQUARE;
 	default:
 		XPLMDebugString("GaugeRenderer::AircraftSymbolFromThreatClassification - Unknown threat classification.\n");
-		return &textureconstants::kDebugSymbol;
+		return &textureconstants::K_DEBUG_SYMBOL;
 	}
 }
 
@@ -291,23 +291,23 @@ textureconstants::GlRgb8Color const * GaugeRenderer::symbolColorFromThreatClassi
 	switch (threatClass) {
 	case Aircraft::ThreatClassification::NON_THREAT_TRAFFIC:
 	case Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC:
-		return &textureconstants::kSymbolBlueDiamondColor;
+		return &textureconstants::K_SYMBOL_BLUE_DIAMOND_COLOR;
 	case Aircraft::ThreatClassification::TRAFFIC_ADVISORY:
-		return &textureconstants::kSymbolYellowCircleColor;
+		return &textureconstants::K_SYMBOL_YELLOW_CIRCLE_COLOR;
 	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
-		return &textureconstants::kSymbolRedSquareColor;
+		return &textureconstants::K_SYMBOL_RED_SQUARE_COLOR;
 	default:
 		XPLMDebugString("GaugeRenderer::SymbolColorFromThreatClassification - Unknown threat classification.\n");
-		return &textureconstants::kRecommendationRangePositive;
+		return &textureconstants::K_RECOMMENDATION_RANGE_POSITIVE;
 	}
 }
 
 void GaugeRenderer::drawOuterGauge() const {
-	drawTextureRegion(&textureconstants::kOuterGauge, kGaugePosLeft_, kGaugePosRight_, kGaugePosTop_, kGaugePosBot_);
+	drawTextureRegion(&textureconstants::K_OUTER_GAUGE, kGaugePosLeft_, kGaugePosRight_, kGaugePosTop_, kGaugePosBot_);
 }
 
 void GaugeRenderer::drawInnerGaugeVelocityRing() const {
-	drawTextureRegion(&textureconstants::kInnerGauge, kGaugePosLeft_, kGaugePosRight_, kGaugePosTop_, kGaugePosBot_);
+	drawTextureRegion(&textureconstants::K_INNER_GAUGE, kGaugePosLeft_, kGaugePosRight_, kGaugePosTop_, kGaugePosBot_);
 }
 
 void GaugeRenderer::drawVerticalVelocityNeedle(Velocity const userAircraftVertVel) const {
@@ -326,13 +326,13 @@ void GaugeRenderer::drawVerticalVelocityNeedle(Velocity const userAircraftVertVe
 
 	// Draw Needle Mask
 	XPLMBindTexture2d(glTextures_[textureconstants::NEEDLE_MASK_ID], 0);
-	drawTextureRegion(&textureconstants::kNeedleMask, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
+	drawTextureRegion(&textureconstants::K_NEEDLE_MASK, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
 
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	// Draw Needle
 	XPLMBindTexture2d(glTextures_[textureconstants::NEEDLE_ID], 0);
-	drawTextureRegion(&textureconstants::kNeedle, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
+	drawTextureRegion(&textureconstants::K_NEEDLE, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
 }
 
 void GaugeRenderer::drawRecommendationRange(RecommendationRange* recRange, bool recommended) const {
@@ -377,7 +377,7 @@ void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, 
 	glDisable(GL_LIGHTING);
 
 	textureconstants::GlRgb8Color const * recRangeColor = recommended ? 
-		&textureconstants::kRecommendationRangePositive : &textureconstants::kRecommendationRangeNegative;
+		&textureconstants::K_RECOMMENDATION_RANGE_POSITIVE : &textureconstants::K_RECOMMENDATION_RANGE_NEGATIVE;
 
 	glColor4f(recRangeColor->red, recRangeColor->green, recRangeColor->blue, 1.0f);
 

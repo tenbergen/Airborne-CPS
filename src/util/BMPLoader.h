@@ -14,16 +14,16 @@ class BmpLoader {
 public:
 // These need to be aligned
 #pragma pack(push, ident, 2)
-	typedef struct tagBMPFILEHEADER
+	typedef struct TagBmpFileHeader
 	{
 		short  bfType;
 		int	   bfSize;
 		short  bfReserved1;
 		short  bfReserved2;
 		int    bfOffBits;
-	} BMPFILEHEADER;
+	} BmpFileHeader;
 
-	typedef struct tagBMPINFOHEADER
+	typedef struct TagBmpInfoHeader
 	{
 		int     biSize;
 		int     biWidth;
@@ -36,21 +36,21 @@ public:
 		int     biYPelsPerMeter;
 		int     biClrUsed;
 		int     biClrImportant;
-	} BMPINFOHEADER;
+	} BmpInfoHeader;
 
-	typedef struct	tagIMAGEDATA
+	typedef struct	TagImageData
 	{
 		unsigned char *	pData;
 		int			width;
 		int			height;
-		int			Padding;
+		int			padding;
 		short		channels;
-	} IMAGEDATA;
+	} ImageData;
 
 #pragma pack(pop, ident)
 
-	static int		loadBmp(const char *FilePath, IMAGEDATA *ImageData);
-	static void		swapRedBlue(IMAGEDATA *ImageData);
+	static int		loadBmp(const char *filePath, ImageData *imageData);
+	static void		swapRedBlue(ImageData *imageData);
 
 	/// Cross Platform Bitmap functions
 	/// Functions to handle endian differeneces between windows, linux and mac.
@@ -85,7 +85,7 @@ public:
 	}
 #else
 	/// Only the mac needs these so dummy functions for windows and linux.
-	static void SwapEndian(short *Data) {}
-	static void SwapEndian(int *Data) {}
+	static void swapEndian(short *data) {}
+	static void swapEndian(int *data) {}
 #endif
 };

@@ -2,18 +2,18 @@
 
 enum class Sense { UPWARD, DOWNWARD, UNKNOWN };
 
-namespace SenseUtil {
-	inline Sense SenseFromString(std::string sense_string) {
-		if (sense_string == "UPWARD") {
+namespace senseutil {
+	inline Sense senseFromString(std::string senseString) {
+		if (senseString == "UPWARD") {
 			return Sense::UPWARD;
-		} else if (sense_string == "DOWNWARD") {
+		} else if (senseString == "DOWNWARD") {
 			return Sense::DOWNWARD;
 		} else {
 			return Sense::UNKNOWN;
 		}
 	}
 
-	inline std::string StringFromSense(Sense sense) {
+	inline std::string stringFromSense(Sense sense) {
 		switch (sense) {
 		case Sense::UPWARD: return "UPWARD";
 		case Sense::DOWNWARD: return "DOWNWARD";
@@ -21,7 +21,7 @@ namespace SenseUtil {
 		}
 	}
 
-	inline Sense OpositeFromSense(Sense sense) {
+	inline Sense oppositeFromSense(Sense sense) {
 		switch (sense) {
 		case Sense::UPWARD: return Sense::DOWNWARD;
 		case Sense::DOWNWARD: return Sense::UPWARD;

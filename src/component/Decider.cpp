@@ -42,7 +42,7 @@ void Decider::determineActionRequired(Aircraft* intruder) {
 	Aircraft intrCopy = *(intruder);
 	intruder->lock.unlock();
 
-	ResolutionConnection* connection = (*activeConnections_)[intrCopy.id_];
+	ResolutionConnection* connection = (*activeConnections_)[intrCopy.id];
 	Aircraft::ThreatClassification threatClass = Decider::determineThreatClass(&intrCopy, connection);
 	Sense mySense = tempSense_;
 

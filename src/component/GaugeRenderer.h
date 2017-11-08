@@ -72,7 +72,7 @@ private:
 	// An OpenGL quadric (quadratic) object required for use with the GLUT library's partial disk function.
 	GLUquadricObj* quadric_;
 
-	XPLMTextureID glTextures_[textureconstants::kNumTextures];
+	XPLMTextureID glTextures_[textureconstants::K_NUM_TEXTURES];
 
 	static textureconstants::TexCoords const * aircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threatClass);
 	static textureconstants::GlRgb8Color const * GaugeRenderer::symbolColorFromThreatClassification(Aircraft::ThreatClassification threatClass);

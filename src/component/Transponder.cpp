@@ -2,17 +2,17 @@
 
 #pragma comment(lib,"WS2_32")
 
-std::string Transponder::mac_address = "";
-std::atomic<bool> Transponder::initialized = false;
+std::string Transponder::macAddress_ = "";
+std::atomic<bool> Transponder::initialized_ = false;
 
 Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruders, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* connections, Decider* decider)
 {
 	decider_ = decider;
-	aircraft = ac;
+	aircraft_ = ac;
 	intrudersMap = intruders;
 	openConnections = connections;
 
-	myLocation.set_id(mac_address);
+	myLocation.set_id(macAddress_);
 	ip = getIpAddr();
 	myLocation.set_ip(ip);
 
@@ -37,16 +37,16 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	}
 }
 
-void Transponder::createSocket(SOCKET* s, struct sockaddr_in* socket_addr, int addr, int port)
+void Transponder::createSocket(SOCKET* s, struct sockaddr_in* socketAddr, int addr, int port)
 {
-	socket_addr->sin_addr.s_addr = htonl(addr);
-	socket_addr->sin_port = htons(port);
-	socket_addr->sin_family = AF_INET;
-	int bind_success = bind(*s, (struct sockaddr *)socket_addr, sinlen);
-	if (bind_success < 0) {
-		char the_error[32];
-		sprintf(the_error, "Transponder::Failed to bind: %d\n", GetLastError());
-		XPLMDebugString(the_error);
+	socketAddr->sin_addr.s_addr = htonl(addr);
+	socketAddr->sin_port = htons(port);
+	socketAddr->sin_family = AF_INET;
+	int bindSuccess = bind(*s, (struct sockaddr *)socketAddr, sinlen);
+	if (bindSuccess < 0) {
+		char theError[32];
+		sprintf(theError, "Transponder::Failed to bind: %d\n", GetLastError());
+		XPLMDebugString(theError);
 	}
 }
 
@@ -58,9 +58,9 @@ Transponder::~Transponder()
 	WSACleanup();
 
 	// Delete all of the aircraft that the transponder created
-	for (std::vector<Aircraft*>::iterator iter = allocated_aircraft.begin(); iter != allocated_aircraft.end(); ) {
+	for (std::vector<Aircraft*>::iterator iter = allocatedAircraft_.begin(); iter != allocatedAircraft_.end(); ) {
 		delete *iter;
-		iter = allocated_aircraft.erase(iter);
+		iter = allocatedAircraft_.erase(iter);
 	}
 }
 
@@ -76,7 +76,7 @@ DWORD Transponder::receiveLocation()
 		myID = myLocation.id().c_str();
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
 
-		std::chrono::milliseconds ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+		std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
 		intruderLocation.ParseFromArray(buffer, size);
 		intruderID = intruderLocation.id().c_str();
@@ -86,43 +86,43 @@ DWORD Transponder::receiveLocation()
 			Angle longitude = { intruderLocation.lon(), Angle::AngleUnits::DEGREES };
 			Distance altitude = { intruderLocation.alt(), Distance::DistanceUnits::METERS };
 			printf("Transponder::recieveLocation - altitude = %d\n", altitude.toMeters());
-			LLA updated_position = { intruderLocation.lat(), intruderLocation.lon(), intruderLocation.alt(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
+			LLA updatedPosition = { intruderLocation.lat(), intruderLocation.lon(), intruderLocation.alt(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
 			if (!intruder) {
 				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
-				allocated_aircraft.push_back(intruder);
+				allocatedAircraft_.push_back(intruder);
 
 				// Fill in the current values so that the aircraft will not have two wildly different position values
 				// If the position current is not set, position old will get set to LLA::ZERO while position current will
 				// be some real value, so setting the position current here prevents the LLAs from being radically different
-				intruder->positionCurrent = updated_position;
-				intruder->positionCurrentTime = ms_since_epoch;
+				intruder->positionCurrent = updatedPosition;
+				intruder->positionCurrentTime = msSinceEpoch;
 
 				(*intrudersMap)[intruder->id] = intruder;
-				aircraft->lock.lock();
-				ResolutionConnection* connection = new ResolutionConnection(mac_address, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft);
+				aircraft_->lock.lock();
+				ResolutionConnection* connection = new ResolutionConnection(macAddress_, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft_);
 				(*openConnections)[intruder->id] = connection;
 			}
 
-			keepAliveMap[intruder->id] = 10;
+			keepAliveMap_[intruder->id] = 10;
 
 			ResolutionConnection* conn = (*openConnections)[intruder->id];
 
 			intruder->lock.lock();
-			aircraft->lock.lock();
+			aircraft_->lock.lock();
 			conn->lock.lock();
 			intruder->positionOld = intruder->positionCurrent;
 			conn->userPositionOld = conn->userPosition;
 			intruder->positionOldTime = intruder->positionCurrentTime;
 			conn->userPositionOldTime = conn->userPositionTime;
 
-			intruder->positionCurrent = updated_position;
-			conn->userPosition = aircraft->positionCurrent;
-			intruder->positionCurrentTime = ms_since_epoch;
-			conn->userPositionTime = ms_since_epoch;
+			intruder->positionCurrent = updatedPosition;
+			conn->userPosition = aircraft_->positionCurrent;
+			intruder->positionCurrentTime = msSinceEpoch;
+			conn->userPositionTime = msSinceEpoch;
 			intruder->lock.unlock();
-			aircraft->lock.unlock();
+			aircraft_->lock.unlock();
 			conn->lock.unlock();
 
 			decider_->analyze(intruder);
@@ -136,9 +136,9 @@ DWORD Transponder::sendLocation()
 {
 	while (communication)
 	{
-		aircraft->lock.lock();
-		LLA position = aircraft->positionCurrent;
-		aircraft->lock.unlock();
+		aircraft_->lock.lock();
+		LLA position = aircraft_->positionCurrent;
+		aircraft_->lock.unlock();
 
 		myLocation.set_lat(position.latitude.toDegrees());
 		myLocation.set_lon(position.longitude.toDegrees());
@@ -161,12 +161,12 @@ DWORD Transponder::keepalive()
 {
 	while (communication)
 	{
-		concurrency::concurrent_unordered_map<std::string, int>::iterator &iter = keepAliveMap.begin();
-		for (; iter != keepAliveMap.cend(); ++iter)
+		concurrency::concurrent_unordered_map<std::string, int>::iterator &iter = keepAliveMap_.begin();
+		for (; iter != keepAliveMap_.cend(); ++iter)
 		{
 			if (--(iter->second) == 0) {
 				intrudersMap->unsafe_erase(iter->first);
-				keepAliveMap.unsafe_erase(iter->first);
+				keepAliveMap_.unsafe_erase(iter->first);
 				openConnections->unsafe_erase(iter->first);
 			}
 		}
@@ -177,10 +177,10 @@ DWORD Transponder::keepalive()
 
 std::string Transponder::getHardwareAddress()
 {
-	if (mac_address.empty()) {
-		std::string hardware_address{};
+	if (macAddress_.empty()) {
+		std::string hardwareAddress{};
 		IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
-		char mac_addr[MAC_LENGTH];
+		char macAddr[MAC_LENGTH];
 
 		DWORD dwRetVal;
 		ULONG outBufLen = sizeof(IP_ADAPTER_INFO);
@@ -192,13 +192,13 @@ std::string Transponder::getHardwareAddress()
 
 		if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &outBufLen)) == NO_ERROR) {
 			PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
-			while (pAdapter && hardware_address.empty()) {
-				sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X",
+			while (pAdapter && hardwareAddress.empty()) {
+				sprintf(macAddr, "%02X:%02X:%02X:%02X:%02X:%02X",
 					pAdapterInfo->Address[0], pAdapterInfo->Address[1],
 					pAdapterInfo->Address[2], pAdapterInfo->Address[3],
 					pAdapterInfo->Address[4], pAdapterInfo->Address[5]);
 
-				hardware_address = mac_addr;
+				hardwareAddress = macAddr;
 				pAdapter = pAdapter->Next;
 			}
 		} else {
@@ -206,9 +206,9 @@ std::string Transponder::getHardwareAddress()
 		}
 
 		free(pAdapterInfo);
-		mac_address = hardware_address;
+		macAddress_ = hardwareAddress;
 	}
-	return mac_address;
+	return macAddress_;
 }
 
 std::string Transponder::getIpAddr()
@@ -275,8 +275,8 @@ void Transponder::start()
 
 void Transponder::initNetworking()
 {
-	if (!initialized) {
-		initialized = true;
+	if (!initialized_) {
+		initialized_ = true;
 		WSADATA w;
 		if (WSAStartup(0x0101, &w) != 0) {
 			exit(0);

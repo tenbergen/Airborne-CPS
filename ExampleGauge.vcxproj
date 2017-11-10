@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="RaAlgorithmNew.cpp" />
     <ClCompile Include="src\component\Decider.cpp" />
     <ClCompile Include="src\component\GaugeRenderer.cpp" />
     <ClCompile Include="src\component\ResolutionConnection.cpp" />

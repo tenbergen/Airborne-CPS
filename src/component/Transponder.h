@@ -51,14 +51,14 @@ protected:
 	
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
 private:
-	static std::atomic<bool> initialized;
-	static std::string mac_address;
+	static std::atomic<bool> initialized_;
+	static std::string macAddress_;
 
 	Decider * decider_;
-	Aircraft* aircraft;
+	Aircraft* aircraft_;
 
-	std::vector<Aircraft*> allocated_aircraft;
-	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap;
+	std::vector<Aircraft*> allocatedAircraft_;
+	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap_;
 
 	std::string getIpAddr();
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);

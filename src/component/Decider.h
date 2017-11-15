@@ -9,8 +9,9 @@
 
 class Decider {
 public:
+	Decider() {}
 	Decider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>*);
-	void analyze(Aircraft* intruder);
+	virtual void analyze(Aircraft* intruder);
 
 	std::mutex recommendationRangeLock;
 	RecommendationRange positiveRecommendationRange;

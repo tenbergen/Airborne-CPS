@@ -177,7 +177,7 @@ bool verticalRA(double sz, double vz) {
 }
 
 /*
-	delta (Formula 15)
+	- delta (Formula 15)
 */
 double delta(Vector2 s, Vector2 v, double d) {
 	return (std::pow(d, 2) * std::pow(v.normalize(), 2)) - s.dotProduct(v.rightPerpendicular());

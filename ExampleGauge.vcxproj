@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="NASADecider.cpp" />
     <ClCompile Include="RaAlgorithmNASA.cpp" />
+    <ClCompile Include="NASADecider.h" />
     <ClCompile Include="src\component\Decider.cpp" />
     <ClCompile Include="src\component\GaugeRenderer.cpp" />
     <ClCompile Include="src\component\ResolutionConnection.cpp" />
@@ -54,6 +56,7 @@
     <ClInclude Include="src\util\BMPLoader.h" />
     <ClInclude Include="src\util\MathUtil.h" />
     <ClInclude Include="src\util\StringUtil.h" />
+    <ClInclude Include="Vector2.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\data\location.proto" />

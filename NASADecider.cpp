@@ -37,6 +37,49 @@ void NASADecider::analyze(Aircraft* intruder) {
 	ResolutionConnection* connection = (*activeConnections_)[intrCopy.id];
 
 	Aircraft::ThreatClassification threatClass = NASADecider::determineThreatClass(&intrCopy, connection);
+	Sense mySense = tempSense_;
+
+	RecommendationRange green, red;
+
+	if (threatClass == Aircraft::ThreatClassification::RESOLUTION_ADVISORY) {
+		connection->lock.lock();
+		if (connection->consensusAchieved && (connection->currentSense == Sense::UPWARD || connection->currentSense == Sense::DOWNWARD)) {
+			mySense = connection->currentSense;
+		} else if (tempSense_ == Sense::UNKNOWN) {
+			tempSense_ = mySense = raSense()
+			connection->sendSense(mySense);
+		}
+		connection->lock.unlock();
+
+		double userDeltaPosM = connection->userPosition.range(&connection->userPositionOld).toMeters();
+		double userDeltaAltM = connection->userPosition.altitude.toMeters() - connection->userPositionOld.altitude.toMeters();
+		double intrDeltaPosM = intrCopy.positionCurrent.range(&intrCopy.positionOld).toMeters();
+		double intrDeltaAltM = intrCopy.positionCurrent.altitude.toMeters() - intrCopy.positionOld.altitude.toMeters();
+		double userElapsedTimeS = (double)(connection->userPositionTime - connection->userPositionOldTime).count() / 1000;
+		double intrElapsedTimeS = (double)(intrCopy.positionCurrentTime - intrCopy.positionOldTime).count() / 1000;
+		double slantRangeNmi = abs(connection->userPosition.range(&intrCopy.positionCurrent).toUnits(Distance::DistanceUnits::NMI));
+		double deltaDistanceM = abs(connection->userPositionOld.range(&intrCopy.positionOld).toUnits(Distance::DistanceUnits::METERS))
+			- abs(connection->userPosition.range(&intrCopy.positionCurrent).toUnits(Distance::DistanceUnits::METERS));
+		double closingSpeedKnots = Velocity(deltaDistanceM / intrElapsedTimeS, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
+		Velocity userVvel = Velocity(userDeltaAltM / userElapsedTimeS, Velocity::VelocityUnits::METERS_PER_S);
+		Velocity intrVvel = Velocity(intrDeltaAltM / intrElapsedTimeS, Velocity::VelocityUnits::METERS_PER_S);
+		double rangeTauS = getModTauS(slantRangeNmi, closingSpeedKnots, getRADmodNmi(connection->userPosition.altitude.toFeet()));
+		recRange = getRecRangePair(mySense, userVvel.toFeetPerMin(), intrVvel.toFeetPerMin(), connection->userPosition.altitude.toFeet(), intrCopy.positionCurrent.altitude.toFeet(), rangeTauS);
+
+	} else if (threatClass == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {
+		tempSense_ = Sense::UNKNOWN;
+		connection->lock.lock();
+		connection->currentSense = Sense::UNKNOWN;
+		connection->lock.unlock();
+		recRange.negative.valid = false;
+		recRange.positive.valid = false;
+	}
+
+
+	recommendationRangeLock.lock();
+	positiveRecommendationRange = recRange.positive;
+	negativeRecommendationRange = recRange.negative;
+	recommendationRangeLock.unlock();
 	
 }
 
@@ -49,32 +92,29 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 	conn->lock.unlock();
 
 	//get relative pos/vel
+	Vector2 userHorPos = getHorPos(userPosition);
+	Vector2 intrHorPos = getHorPos(intrCopy->positionCurrent);
+	Vector2 relativeHorPos = getRelativePos(userPosition, intrCopy->positionCurrent);
+	Vector2 relativeHorPosOld = getRelativePos(userPositionOld, intrCopy->positionOld);
+	double deltaTime = (double)(intrCopy->positionCurrentTime - intrCopy->positionOldTime).count() / 1000;
+	double userVSpeed = std::abs((userPosition.altitude.toFeet() - userPositionOld.altitude.toFeet()) / deltaTime);
+	double intrVSpeed = std::abs((intrCopy->positionCurrent.altitude.toFeet() - intrCopy->positionOld.altitude.toFeet()) / deltaTime);
+	Vector2 userHorVel = getHorVel(userPosition, userPositionOld, deltaTime);
+	Vector2 intrHorVel = getHorVel(intrCopy->positionCurrent, intrCopy->positionOld, deltaTime);
+	Vector2 relativeVel = getRelativeVel(relativeHorPos, relativeHorPosOld, deltaTime);
+	double modTau = tMod(relativeHorPos, relativeVel);
+	
 
 	Aircraft::ThreatClassification prevThreatClass = intrCopy->threatClassification;
-	double slantRangeNmi = abs(userPosition.range(&intrCopy->positionCurrent).toUnits(Distance::DistanceUnits::NMI));
-	double deltaDistanceM = abs(userPositionOld.range(&intrCopy->positionOld).toUnits(Distance::DistanceUnits::METERS))
-		- abs(userPosition.range(&intrCopy->positionCurrent).toUnits(Distance::DistanceUnits::METERS));
-	double elapsedTimeS = (double)(intrCopy->positionCurrentTime - intrCopy->positionOldTime).count() / 1000;
-	double closingSpeedKnots = Velocity(deltaDistanceM / elapsedTimeS, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
-	double altSepFt = abs(intrCopy->positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET) -
-		userPosition.altitude.toUnits(Distance::DistanceUnits::FEET));
-	double deltaDistance2Ft = abs(intrCopy->positionOld.altitude.toUnits(Distance::DistanceUnits::FEET) -
-		userPositionOld.altitude.toUnits(Distance::DistanceUnits::FEET)) -
-		abs(intrCopy->positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET) -
-			userPosition.altitude.toUnits(Distance::DistanceUnits::FEET));
-	double elapsedTimeMin = elapsedTimeS / 60;
-	double vertClosingSpdFtM = deltaDistance2Ft / elapsedTimeMin;
-	double rangeTauS = slantRangeNmi / closingSpeedKnots * 3600;
-	double verticalTauS = altSepFt / vertClosingSpdFtM * 60;
-	Velocity userVelocity = Velocity(userPosition.range(&userPositionOld).toMeters() / ((userPositionTime.count() - userPositionOldTime.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
-	Velocity intrVelocity = Velocity(intrCopy->positionCurrent.range(&intrCopy->positionOld).toMeters() / ((intrCopy->positionCurrentTime.count() - intrCopy->positionOldTime.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
-	Distance userDistanceByCpa = Distance(userVelocity.toMetersPerS() * rangeTauS, Distance::DistanceUnits::METERS);
-	Distance intrDistanceByCpa = Distance(intrVelocity.toMetersPerS() * rangeTauS, Distance::DistanceUnits::METERS);
-	LLA userPositionAtCpa = userPosition.translate(&userPositionOld.bearing(&userPosition), &userDistanceByCpa);
-	LLA intrPositionAtCpa = intrCopy->positionCurrent.translate(&intrCopy->positionOld.bearing(&intrCopy->positionCurrent), &intrDistanceByCpa);
-	double distanceAtCpaFt = userPositionAtCpa.range(&intrPositionAtCpa).toFeet();
-	double taModTauS = getModTauS(slantRangeNmi, closingSpeedKnots, getTADmodNmi(userPosition.altitude.toFeet()));
-	double raModTauS = getModTauS(slantRangeNmi, closingSpeedKnots, getRADmodNmi(userPosition.altitude.toFeet()));
+
+
+	double slantRangeNmi = abs(userPosition.range(&intrCopy->positionCurrent).toNmi());
+	double deltaDistanceM = abs(userPositionOld.range(&intrCopy->positionOld).toMeters())
+		- abs(userPosition.range(&intrCopy->positionCurrent).toMeters());
+	double closingSpeedKnots = Velocity(deltaDistanceM / deltaTime, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
+	double altSepFt = abs(intrCopy->positionCurrent.altitude.toFeet() - userPosition.altitude.toFeet());
+
+	bool zthrFlag = altSepFt > zthr() ? true : false;
 
 	Aircraft::ThreatClassification newThreatClass;
 	// if within proximity range
@@ -82,11 +122,12 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 		// if passes TA threshold
 		if (closingSpeedKnots > 0
 			&& (prevThreatClass >= Aircraft::ThreatClassification::TRAFFIC_ADVISORY
-				|| tauPassesTAThreshold(userPosition.altitude.toFeet(), taModTauS, verticalTauS, altSepFt))) {
+				|| (modTau < tau() && zthrFlag))) {
 			// if passes RA threshold
 			if (prevThreatClass == Aircraft::ThreatClassification::RESOLUTION_ADVISORY
-				|| tauPassesRAThreshold(userPosition.altitude.toFeet(), raModTauS, verticalTauS, altSepFt)) {
+				|| tcasIIRa(userHorPos, thisAircraftAltitude_, userHorVel, userVSpeed, intrHorPos, intrCopy->positionCurrent.altitude.toFeet(), intrHorVel, intrVSpeed)) {
 				newThreatClass = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
+				raMod_ = true;
 			} else {
 				// did not pass RA threshold -- Traffic Advisory
 				newThreatClass = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
@@ -94,6 +135,7 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 		} else {
 			// did not pass TA threshold -- just Proximity Traffic
 			newThreatClass = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
+			raMod_ = false;
 		}
 	} else {
 		// is not within proximity range
@@ -104,7 +146,9 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 }
 
 void NASADecider::setSensitivityLevel(double alt) {
-	if (alt >= 1000 && alt < 2350)
+	if (alt < 1000)
+		sensitivityLevel_ = 2;
+	else if (alt >= 1000 && alt < 2350)
 		sensitivityLevel_ = 3;
 	else if (alt >= 2350 && alt < 5000)
 		sensitivityLevel_ = 4;
@@ -119,13 +163,23 @@ void NASADecider::setSensitivityLevel(double alt) {
 }
 
 int NASADecider::tau() {
-	switch (sensitivityLevel_) {
-	case 3: return 15;
-	case 4: return 20;
-	case 5: return 25;
-	case 6: return 30;
-	case 7: return 35;
-	}
+	if (raMod_)
+		switch (sensitivityLevel_) {
+		case 3: return 15;
+		case 4: return 20;
+		case 5: return 25;
+		case 6: return 30;
+		case 7: return 35;
+		}
+	else
+		switch (sensitivityLevel_) {
+		case 2: return 20;
+		case 3: return 25;
+		case 4: return 30;
+		case 5: return 40;
+		case 6: return 45;
+		case 7: return 58;
+		}
 }
 
 int NASADecider::alim() {
@@ -134,18 +188,29 @@ int NASADecider::alim() {
 	case 4: return 300;
 	case 5: return 350;
 	case 6: return 400;
-	case 7: return 600;
+	case 7: if (thisAircraftAltitude_ < 42000) return 600;
+			else return 700;
 	}
 }
 
 double NASADecider::dmod() {
-	switch (sensitivityLevel_) {
-	case 3: return 0.20;
-	case 4: return 0.35;
-	case 5: return 0.55;
-	case 6: return 0.80;
-	case 7: return 1.10;
-	}
+	if (raMod_)
+		switch (sensitivityLevel_) {
+		case 3: return 0.20;
+		case 4: return 0.35;
+		case 5: return 0.55;
+		case 6: return 0.80;
+		case 7: return 1.10;
+		}
+	else
+		switch (sensitivityLevel_) {
+		case 2: return 0.30;
+		case 3: return 0.33;
+		case 4: return 0.48;
+		case 5: return 0.75;
+		case 6: return 1.00;
+		case 7: return 1.30;
+		}
 }
 
 double NASADecider::hmd() {
@@ -159,13 +224,33 @@ double NASADecider::hmd() {
 }
 
 double NASADecider::zthr() {
-	switch (sensitivityLevel_) {
-	case 3: return 600;
-	case 4: return 600;
-	case 5: return 600;
-	case 6: return 600;
-	case 7: return 700;
-	}
+	if (raMod_)
+		switch (sensitivityLevel_) {
+		case 3: return 600;
+		case 4: return 600;
+		case 5: return 600;
+		case 6: return 600;
+		case 7: if (thisAircraftAltitude_ < 42000) return 700;
+				else return 800;
+		}
+	else
+		switch (sensitivityLevel_) {
+		case 2: return 850;
+		case 3: return 850;
+		case 4: return 850;
+		case 5: return 850;
+		case 6: return 850;
+		case 7: if (thisAircraftAltitude_ < 42000) return 850;
+				else return 1200;
+		}
+}
+
+Vector2 NASADecider::getHorPos(LLA position) {
+	return Vector2(position.distPerDegreeLat().toFeet(), position.distPerDegreeLon().toFeet());
+}
+
+Vector2 NASADecider::getHorVel(LLA position, LLA positionOld, double deltaTime) {
+	return Vector2(position.range(&positionOld), position.bearing(&positionOld)).scalarMult(1 / deltaTime);
 }
 
 Vector2 NASADecider::getRelativePos(LLA userPos, LLA intrPos) {
@@ -174,8 +259,8 @@ Vector2 NASADecider::getRelativePos(LLA userPos, LLA intrPos) {
 	return Vector2(d, a);
 }
 
-Vector2 NASADecider::getRelativeVel(LLA userPos, LLA userPosOld, LLA intrPos, LLA intrPosOld, double deltaTime) {
-	// PICK UP HERE!
+Vector2 NASADecider::getRelativeVel(Vector2 relativePos, Vector2 relativePosOld, double deltaTime) {
+	return (relativePos - relativePosOld).scalarMult(1 / deltaTime);
 }
 
 double NASADecider::tCpa(Vector2 s, Vector2 v) {

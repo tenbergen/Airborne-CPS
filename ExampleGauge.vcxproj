@@ -39,6 +39,7 @@
     <ClCompile Include="src\util\StringUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Calculations.h" />
     <ClInclude Include="src\component\Decider.h" />
     <ClInclude Include="src\component\GaugeRenderer.h" />
     <ClInclude Include="src\component\ResolutionConnection.h" />

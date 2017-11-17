@@ -1,5 +1,7 @@
 ﻿#include "component\Decider.h"
 #include "Vector2.h"
+#include "Calculations.h"
+#include <map>
 
 class NASADecider : public Decider {
 public:
@@ -23,7 +25,11 @@ private:
 	static Distance const kAltitudeAlim400Threshold_;
 	static Distance const kAltitudeAlim600Threshold_;
 
-	int sensitivityLevel_;
+	int sensitivityLevel_ = 2;
+	bool raMod_ = false;
+	Sense tempSense_ = Sense::UNKNOWN;
+	std::map<Aircraft, Calculations> calculations_;
+
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* activeConnections_;
 	Aircraft* thisAircraft_;
 	double thisAircraftAltitude_;
@@ -41,8 +47,10 @@ private:
 	double hmd();
 	double zthr();
 
+	Vector2 getHorPos(LLA position);
+	Vector2 getHorVel(LLA position, LLA positionOld, double deltaTime);
 	Vector2 getRelativePos(LLA userPos, LLA intrPos);
-	Vector2 getRelativeVel(LLA userPos, LLA userPosOld, LLA intrPos, LLA intrPosOld, double deltaTime);
+	Vector2 getRelativeVel(Vector2 relativePos, Vector2 relativePosOld, double deltaTime);
 
 	/*
 	"Given a relative position s and velocity v, the time of horizontal closest point of approach, denoted tcpa, is

@@ -6,6 +6,8 @@ class Vector2 {
 public:
 	double x, y;
 
+	Vector2() { x = 0; y = 0; }
+
 	Vector2(double xin, double yin) {
 		x = xin; y = yin;
 	}
@@ -14,6 +16,8 @@ public:
 		x = std::cos(a.toRadians()) * d.toFeet();
 		y = std::sin(a.toRadians()) * d.toFeet();
 	}
+
+	~Vector2() {}
 
 	double dotProduct(Vector2 v2) {
 		return (x * v2.x) + (y * v2.y);

@@ -28,4 +28,13 @@ namespace senseutil {
 		default: return Sense::UNKNOWN;
 		}
 	}
+
+	inline Sense senseFromInt(int s) {
+		switch (s) {
+		case 1: return Sense::UPWARD;
+		case -1: return Sense::DOWNWARD;
+		case 0: return Sense::UNKNOWN;
+		default: return Sense::UNKNOWN;
+		}
+	}
 }

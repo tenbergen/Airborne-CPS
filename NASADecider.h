@@ -28,7 +28,12 @@ private:
 	int sensitivityLevel_ = 2;
 	bool raMod_ = false;
 	Sense tempSense_ = Sense::UNKNOWN;
-	std::map<Aircraft, Calculations> calculations_;
+
+	/*
+	Stores all calculations done in doCalculations() for each analyze() call to prevent
+	redundancy.
+	*/
+	Calculations calculations_;
 
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* activeConnections_;
 	Aircraft* thisAircraft_;
@@ -38,8 +43,15 @@ private:
 	Determines the appropriate threat classification
 	*/
 	Aircraft::ThreatClassification determineThreatClass(Aircraft* intrCopy, ResolutionConnection* conn);
+	
+	/* 
+	Returns a pair of recommendation ranges as for a Resolution Advisory
+	- Coppied from Decider.cpp
+	*/
+	RecommendationRangePair getRecRangePair(Sense sense, double userVvelFtM, double IntrVvelFtM, double userAltFt,
+		double intrAltFt, double rangeTauS);
 
-	void setSensitivityLevel(double alt);
+	void setSensitivityLevel();
 
 	int tau();
 	int alim();
@@ -52,11 +64,13 @@ private:
 	Vector2 getRelativePos(LLA userPos, LLA intrPos);
 	Vector2 getRelativeVel(Vector2 relativePos, Vector2 relativePosOld, double deltaTime);
 
+	void doCalculations(Aircraft* intrCopy, ResolutionConnection* conn);
+
 	/*
 	"Given a relative position s and velocity v, the time of horizontal closest point of approach, denoted tcpa, is
 	the time t that satisfies closureRate(t) = 0." - tcpa (Formula 8)
 	*/
-	double tCpa(Vector2 s, Vector2 v);
+	double tCpa(Vector2 relativePosition, Vector2 relativeVelocity);
 
 	/*
 	"Given a relative position s and velocity v, Formula (1) and Formula (2) can be written in a vector form
@@ -65,13 +79,13 @@ private:
 	horizontally diverging, i.e., s · v > 0, or horizontally converging, i.e., s · v < 0. It can be seen from
 	Formula (9) that when the aircraft are converging, t is positive." - t (Formula 9)
 	*/
-	double t(Vector2 s, Vector2 v);
+	double t(Vector2 relativePosition, Vector2 relativeVelocity);
 
 	/*
 	"Used in a context where the aircraft are horizontally converging. In that case, modified tau,
 	i.e., τmod, is positive when the current range is greater than DMOD." - tmod (Formula 10)
 	*/
-	double tMod(Vector2 s, Vector2 v);
+	double tMod(Vector2 relativePosition, Vector2 relativeVelocity);
 
 	/*
 	"The function Horizontal_RA(subscript Current ownership's sensitivity level) takes as
@@ -79,25 +93,25 @@ private:
 	true if, for the given input and sensitivity level the horizontal thresholds are
 	satisfied." - Horizontal_RA (Formula 11)
 	*/
-	bool horizontalRA(Vector2 s, Vector2 v);
+	bool horizontalRA(Vector2 relativePosition, Vector2 relativeVelocity);
 
 	/*
 	"In order to model the vertical check performed by the TCAS II RA logic, it is necessary to define the
 	time to co-altitude tcoa. This time satisfies sz +tcoavz = 0, where sz ≡ soz −siz and vz ≡ voz −viz. Therefore,
 	for a given relative altitude sz and relative non-zero vertical speed vz:" - tcoa (Formula 12)
 	*/
-	double tCoa(double sz, double vz);
+	double tCoa(double relativeAlt, double relativeVSpeed);
 
 	/*
 	"The function Vertical RA, which returns true when the vertical thresholds are satisfied for a sensitivity level,
 	is defined as follows." - Vertical_RA (Formula 13)
 	*/
-	bool verticalRA(double sz, double vz);
+	bool verticalRA(double relativeAlt, double relativeVSpeed);
 
 	/*
 	- delta (Formula 15)
 	*/
-	double delta(Vector2 s, Vector2 v, double d);
+	double delta(Vector2 relativePosition, Vector2 relativeVelocity, double minimumSeperationDistance);
 
 	/*
 	"CD2D is a function that takes as parameters the relative state of the aircraft, i.e., relative position s and
@@ -105,25 +119,25 @@ private:
 	the aircraft will be within horizontal distance D of one another at any time in the future along trajectories
 	which are linear projections of their current states." - CD2D (Formula 14)
 	*/
-	bool cd2d(Vector2 s, Vector2 v, double d);
+	bool cd2d(Vector2 relativePosition, Vector2 relativeVelocity, double minimumSeperationDistance);
 
 	/*
 	"The function that determines whether or not an RA will be issued for the ownship can be defined as follows."
 	- TCASII_RA (Formula 16)
 	*/
-	bool tcasIIRa(Vector2 so, double soz, Vector2 vo, double voz, Vector2 si, double siz, Vector2 vi, double viz);
+	bool tcasIIRa(Vector2 userHorPos, double userAlt, Vector2 userHorVel, double userVSpeed, Vector2 intrHorPos, double intrAlt, Vector2 intrHorVel, double intrVSpeed);
 
 	/*
 	"The function that checks if an RA will be issued for the ownship at a given future time
 	t < tcpa(s, v) can be defined as follows." - TCASII_RA_at (Formula 17)
 	*/
-	bool tcasIIRaAt(Vector2 so, double soz, Vector2 vo, double voz, Vector2 si, double siz, Vector2 vi, double viz, double t);
+	bool tcasIIRaAt(Vector2 userHorPos, double userAlt, Vector2 userHorVel, double userVSpeed, Vector2 intrHorPos, double intrAlt, Vector2 intrHorVel, double intrVSpeed, double deltaTime);
 
 	/*
 	"This function computes exactly the time t in [B, T] at which tmod(s + tv, v) attains its minimum value."
 	- Time_Min_TAUmod (Formula 18)
 	*/
-	double timeMinTauMod(Vector2 s, Vector2 v, double b, double t);
+	double timeMinTauMod(Vector2 relativePosition, Vector2 relativeVelocity, double timeBoundStart, double timeBoundEnd);
 
 	/*
 	"For a given sensitivity level, the function RA2D characterizes the set of possible relative states
@@ -136,7 +150,7 @@ private:
 	specified lookahead time T, where all vertical RAs will occur. This function is defined as follows."
 	- RATimeInterval (Formula 22)
 	*/
-	double* raTimeInterval(double sz, double vz, double lookaheadTime);
+	double* raTimeInterval(double relativeAlt, double relativeVSpeed, double lookaheadTime);
 
 	/*
 	"The function RA3D detects RAs by checking the time interval that is returned by RATimeInterval for

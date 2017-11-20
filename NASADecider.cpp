@@ -28,13 +28,15 @@ void NASADecider::analyze(Aircraft* intruder) {
 	thisAircraftAltitude_ = thisAircraft_->positionCurrent.altitude.toFeet();
 	thisAircraft_->lock.unlock();
 
-	setSensitivityLevel(thisAircraftAltitude_);
+	setSensitivityLevel();
 
 	intruder->lock.lock();
 	Aircraft intrCopy = *(intruder);
 	intruder->lock.unlock();
 
 	ResolutionConnection* connection = (*activeConnections_)[intrCopy.id];
+
+	doCalculations(&intrCopy, connection);
 
 	Aircraft::ThreatClassification threatClass = NASADecider::determineThreatClass(&intrCopy, connection);
 	Sense mySense = tempSense_;
@@ -43,89 +45,51 @@ void NASADecider::analyze(Aircraft* intruder) {
 
 	if (threatClass == Aircraft::ThreatClassification::RESOLUTION_ADVISORY) {
 		connection->lock.lock();
-		if (connection->consensusAchieved && (connection->currentSense == Sense::UPWARD || connection->currentSense == Sense::DOWNWARD)) {
+		if (connection->currentSense == Sense::UPWARD || connection->currentSense == Sense::DOWNWARD) {
 			mySense = connection->currentSense;
 		} else if (tempSense_ == Sense::UNKNOWN) {
-			tempSense_ = mySense = raSense()
+			tempSense_ = mySense = senseutil::senseFromInt(raSense(connection->userPosition.altitude.toFeet(), 
+				calculations_.userVSpeed, intrCopy.positionCurrent.altitude.toFeet(), calculations_.intrVSpeed, 
+				calculations_.userVSpeed, calculations_.userVAccel, calculations_.deltaTime)); // CHECK TARGET VERTICAL SPEED PARAMETER!!! Flight plan perhaps????
 			connection->sendSense(mySense);
 		}
 		connection->lock.unlock();
 
-		double userDeltaPosM = connection->userPosition.range(&connection->userPositionOld).toMeters();
-		double userDeltaAltM = connection->userPosition.altitude.toMeters() - connection->userPositionOld.altitude.toMeters();
-		double intrDeltaPosM = intrCopy.positionCurrent.range(&intrCopy.positionOld).toMeters();
-		double intrDeltaAltM = intrCopy.positionCurrent.altitude.toMeters() - intrCopy.positionOld.altitude.toMeters();
-		double userElapsedTimeS = (double)(connection->userPositionTime - connection->userPositionOldTime).count() / 1000;
-		double intrElapsedTimeS = (double)(intrCopy.positionCurrentTime - intrCopy.positionOldTime).count() / 1000;
-		double slantRangeNmi = abs(connection->userPosition.range(&intrCopy.positionCurrent).toUnits(Distance::DistanceUnits::NMI));
-		double deltaDistanceM = abs(connection->userPositionOld.range(&intrCopy.positionOld).toUnits(Distance::DistanceUnits::METERS))
-			- abs(connection->userPosition.range(&intrCopy.positionCurrent).toUnits(Distance::DistanceUnits::METERS));
-		double closingSpeedKnots = Velocity(deltaDistanceM / intrElapsedTimeS, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
-		Velocity userVvel = Velocity(userDeltaAltM / userElapsedTimeS, Velocity::VelocityUnits::METERS_PER_S);
-		Velocity intrVvel = Velocity(intrDeltaAltM / intrElapsedTimeS, Velocity::VelocityUnits::METERS_PER_S);
-		double rangeTauS = getModTauS(slantRangeNmi, closingSpeedKnots, getRADmodNmi(connection->userPosition.altitude.toFeet()));
-		recRange = getRecRangePair(mySense, userVvel.toFeetPerMin(), intrVvel.toFeetPerMin(), connection->userPosition.altitude.toFeet(), intrCopy.positionCurrent.altitude.toFeet(), rangeTauS);
+		RecommendationRangePair recRange = getRecRangePair(mySense, calculations_.userVvel, calculations_.intrVvel, calculations_.userPosition.altitude.toFeet(), intrCopy.positionCurrent.altitude.toFeet(), calculations_.modTau);
 
 	} else if (threatClass == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {
 		tempSense_ = Sense::UNKNOWN;
 		connection->lock.lock();
 		connection->currentSense = Sense::UNKNOWN;
 		connection->lock.unlock();
-		recRange.negative.valid = false;
-		recRange.positive.valid = false;
+		red.valid = false;
+		green.valid = false;
 	}
 
 
 	recommendationRangeLock.lock();
-	positiveRecommendationRange = recRange.positive;
-	negativeRecommendationRange = recRange.negative;
+	positiveRecommendationRange = green;
+	negativeRecommendationRange = red;
 	recommendationRangeLock.unlock();
 	
 }
 
 Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrCopy, ResolutionConnection* conn) {
-	conn->lock.lock();
-	LLA userPosition = conn->userPosition;
-	LLA userPositionOld = conn->userPositionOld;
-	std::chrono::milliseconds userPositionTime = conn->userPositionTime;
-	std::chrono::milliseconds userPositionOldTime = conn->userPositionOldTime;
-	conn->lock.unlock();
-
-	//get relative pos/vel
-	Vector2 userHorPos = getHorPos(userPosition);
-	Vector2 intrHorPos = getHorPos(intrCopy->positionCurrent);
-	Vector2 relativeHorPos = getRelativePos(userPosition, intrCopy->positionCurrent);
-	Vector2 relativeHorPosOld = getRelativePos(userPositionOld, intrCopy->positionOld);
-	double deltaTime = (double)(intrCopy->positionCurrentTime - intrCopy->positionOldTime).count() / 1000;
-	double userVSpeed = std::abs((userPosition.altitude.toFeet() - userPositionOld.altitude.toFeet()) / deltaTime);
-	double intrVSpeed = std::abs((intrCopy->positionCurrent.altitude.toFeet() - intrCopy->positionOld.altitude.toFeet()) / deltaTime);
-	Vector2 userHorVel = getHorVel(userPosition, userPositionOld, deltaTime);
-	Vector2 intrHorVel = getHorVel(intrCopy->positionCurrent, intrCopy->positionOld, deltaTime);
-	Vector2 relativeVel = getRelativeVel(relativeHorPos, relativeHorPosOld, deltaTime);
-	double modTau = tMod(relativeHorPos, relativeVel);
 	
-
 	Aircraft::ThreatClassification prevThreatClass = intrCopy->threatClassification;
 
-
-	double slantRangeNmi = abs(userPosition.range(&intrCopy->positionCurrent).toNmi());
-	double deltaDistanceM = abs(userPositionOld.range(&intrCopy->positionOld).toMeters())
-		- abs(userPosition.range(&intrCopy->positionCurrent).toMeters());
-	double closingSpeedKnots = Velocity(deltaDistanceM / deltaTime, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
-	double altSepFt = abs(intrCopy->positionCurrent.altitude.toFeet() - userPosition.altitude.toFeet());
-
-	bool zthrFlag = altSepFt > zthr() ? true : false;
+	bool zthrFlag = calculations_.altSepFt > zthr() ? true : false;
 
 	Aircraft::ThreatClassification newThreatClass;
 	// if within proximity range
-	if (slantRangeNmi < 6 && abs(altSepFt) < 1200) {
+	if (calculations_.slantRangeNmi < 6 && abs(calculations_.altSepFt) < 1200) {
 		// if passes TA threshold
-		if (closingSpeedKnots > 0
+		if (calculations_.closingSpeedKnots > 0
 			&& (prevThreatClass >= Aircraft::ThreatClassification::TRAFFIC_ADVISORY
-				|| (modTau < tau() && zthrFlag))) {
+				|| (calculations_.modTau < tau() && zthrFlag))) {
 			// if passes RA threshold
 			if (prevThreatClass == Aircraft::ThreatClassification::RESOLUTION_ADVISORY
-				|| tcasIIRa(userHorPos, thisAircraftAltitude_, userHorVel, userVSpeed, intrHorPos, intrCopy->positionCurrent.altitude.toFeet(), intrHorVel, intrVSpeed)) {
+				|| tcasIIRa(calculations_.userHorPos, thisAircraftAltitude_, calculations_.userHorVel, calculations_.userVSpeed, calculations_.intrHorPos, intrCopy->positionCurrent.altitude.toFeet(), calculations_.intrHorVel, calculations_.intrVSpeed)) {
 				newThreatClass = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 				raMod_ = true;
 			} else {
@@ -145,18 +109,59 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 	return newThreatClass;
 }
 
-void NASADecider::setSensitivityLevel(double alt) {
-	if (alt < 1000)
+RecommendationRangePair Decider::getRecRangePair(Sense sense, double userVvelFtPerM, double intrVvelFtPerM, double userAltFt,
+	double intrAltFt, double rangeTauS) {
+
+	RecommendationRange positive, negative;
+
+	if (sense != Sense::UNKNOWN && rangeTauS > 0.0) {
+		double alimFt = getAlimFt(userAltFt);
+		double intrProjectedAltAtCpa = intrAltFt + intrVvelFtPerM * (rangeTauS / 60.0);
+		double userProjectedAltAtCpa = userAltFt + userVvelFtPerM * (rangeTauS / 60.0);
+		double vsepAtCpaFt = abs(intrProjectedAltAtCpa - userProjectedAltAtCpa);
+
+		// Corrective RA
+		Velocity absoluteMinVvelToAchieveAlim = Velocity(getVvelForAlim(sense, userAltFt, vsepAtCpaFt, intrProjectedAltAtCpa, rangeTauS), Velocity::VelocityUnits::FEET_PER_MIN);
+		char toPrint[100];
+		sprintf(toPrint, "result f/m = %f\n", absoluteMinVvelToAchieveAlim.toFeetPerMin());
+		XPLMDebugString(toPrint);
+
+		if (sense == Sense::UPWARD) {
+			// upward
+			positive.maxVerticalSpeed = kMaxGaugeVerticalVelocity_;
+			positive.minVerticalSpeed = absoluteMinVvelToAchieveAlim;
+			negative.maxVerticalSpeed = absoluteMinVvelToAchieveAlim;
+			negative.minVerticalSpeed = kMinGaugeVerticalVelocity_;
+		} else {
+			// downward
+			negative.maxVerticalSpeed = kMaxGaugeVerticalVelocity_;
+			negative.minVerticalSpeed = absoluteMinVvelToAchieveAlim;
+			positive.maxVerticalSpeed = absoluteMinVvelToAchieveAlim;
+			positive.minVerticalSpeed = kMinGaugeVerticalVelocity_;
+		}
+
+		positive.valid = true;
+		negative.valid = true;
+	} else {
+		positive.valid = false;
+		negative.valid = false;
+	}
+
+	return RecommendationRangePair{ positive, negative };
+}
+
+void NASADecider::setSensitivityLevel() {
+	if (thisAircraftAltitude_ < 1000)
 		sensitivityLevel_ = 2;
-	else if (alt >= 1000 && alt < 2350)
+	else if (thisAircraftAltitude_ >= 1000 && thisAircraftAltitude_ < 2350)
 		sensitivityLevel_ = 3;
-	else if (alt >= 2350 && alt < 5000)
+	else if (thisAircraftAltitude_ >= 2350 && thisAircraftAltitude_ < 5000)
 		sensitivityLevel_ = 4;
-	else if (alt >= 5000 && alt < 10000)
+	else if (thisAircraftAltitude_ >= 5000 && thisAircraftAltitude_ < 10000)
 		sensitivityLevel_ = 5;
-	else if (alt >= 10000 && alt < 20000)
+	else if (thisAircraftAltitude_ >= 10000 && thisAircraftAltitude_ < 20000)
 		sensitivityLevel_ = 6;
-	else if (alt >= 20000 && alt < 42000)
+	else if (thisAircraftAltitude_ >= 20000 && thisAircraftAltitude_ < 42000)
 		sensitivityLevel_ = 7;
 	else
 		sensitivityLevel_ = 0;
@@ -263,52 +268,88 @@ Vector2 NASADecider::getRelativeVel(Vector2 relativePos, Vector2 relativePosOld,
 	return (relativePos - relativePosOld).scalarMult(1 / deltaTime);
 }
 
-double NASADecider::tCpa(Vector2 s, Vector2 v) {
-	return -1 * (s.dotProduct(v) / std::pow(v.normalize(), 2));
+void NASADecider::doCalculations(Aircraft* intrCopy, ResolutionConnection* conn) {
+	conn->lock.lock();
+	calculations_.userPosition = conn->userPosition;
+	calculations_.userPositionOld = conn->userPositionOld;
+	std::chrono::milliseconds userPositionTime = conn->userPositionTime;
+	std::chrono::milliseconds userPositionOldTime = conn->userPositionOldTime;
+	conn->lock.unlock();
+
+	//get relative pos/vel
+	calculations_.userHorPos = getHorPos(calculations_.userPosition);
+	calculations_.intrHorPos = getHorPos(intrCopy->positionCurrent);
+	calculations_.relativeHorPos = getRelativePos(calculations_.userPosition, intrCopy->positionCurrent);
+	calculations_.relativeHorPosOld = getRelativePos(calculations_.userPositionOld, intrCopy->positionOld);
+	calculations_.deltaTime = (double)(intrCopy->positionCurrentTime - intrCopy->positionOldTime).count() / 1000;
+	calculations_.userVSpeed = std::abs((calculations_.userPosition.altitude.toFeet() - calculations_.userPositionOld.altitude.toFeet()) / calculations_.deltaTime);
+	calculations_.intrVSpeed = std::abs((intrCopy->positionCurrent.altitude.toFeet() - intrCopy->positionOld.altitude.toFeet()) / calculations_.deltaTime);
+	calculations_.userHorVel = getHorVel(calculations_.userPosition, calculations_.userPositionOld, calculations_.deltaTime);
+	calculations_.intrHorVel = getHorVel(intrCopy->positionCurrent, intrCopy->positionOld, calculations_.deltaTime);
+	calculations_.relativeVel = getRelativeVel(calculations_.relativeHorPos, calculations_.relativeHorPosOld, calculations_.deltaTime);
+	calculations_.modTau = tMod(calculations_.relativeHorPos, calculations_.relativeVel);
+
+	calculations_.slantRangeNmi = abs(calculations_.userPosition.range(&intrCopy->positionCurrent).toNmi());
+	calculations_.deltaDistanceM = abs(calculations_.userPositionOld.range(&intrCopy->positionOld).toMeters())
+		- abs(calculations_.userPosition.range(&intrCopy->positionCurrent).toMeters());
+	calculations_.closingSpeedKnots = Velocity(calculations_.deltaDistanceM / calculations_.deltaTime, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
+	calculations_.altSepFt = abs(intrCopy->positionCurrent.altitude.toFeet() - calculations_.userPosition.altitude.toFeet());
+
+	double userDeltaAlt = calculations_.userPosition.altitude.toFeet() - calculations_.userPositionOld.altitude.toFeet();
+	double intrDeltaAlt = intrCopy->positionCurrent.altitude.toFeet() - intrCopy->positionOld.altitude.toFeet();
+	calculations_.userVvelOld = calculations_.userVvel;
+	calculations_.userVvel = userDeltaAlt / calculations_.deltaTime;
+	calculations_.intrVvel = intrDeltaAlt / calculations_.deltaTime;
+	calculations_.userVAccel = (calculations_.userVvel - calculations_.userVvelOld) / calculations_.deltaTime;
+
 }
 
-double NASADecider::t(Vector2 s, Vector2 v) {
-	return -1 * (std::pow(s.normalize(), 2) / s.dotProduct(v));
+double NASADecider::tCpa(Vector2 relativePosition, Vector2 relativeVelocity) {
+	return -1 * (relativePosition.dotProduct(relativeVelocity) / std::pow(relativeVelocity.normalize(), 2));
 }
 
-double NASADecider::tMod(Vector2 s, Vector2 v) {
-	return (((std::pow(dmod(), 2)) - (s.normalize() * s.normalize())) / (s.dotProduct(v)));
+double NASADecider::t(Vector2 relativePosition, Vector2 relativeVelocity) {
+	return -1 * (std::pow(relativePosition.normalize(), 2) / relativePosition.dotProduct(relativeVelocity));
 }
 
-bool NASADecider::horizontalRA(Vector2 s, Vector2 v) {
-	if (s.dotProduct(v) >= 0)
-		return s.normalize() < dmod();
+double NASADecider::tMod(Vector2 relativePosition, Vector2 relativeVelocity) {
+	return (((std::pow(dmod(), 2)) - (relativePosition.normalize() * relativePosition.normalize())) / (relativePosition.dotProduct(relativeVelocity)));
+}
+
+bool NASADecider::horizontalRA(Vector2 relativePosition, Vector2 relativeVelocity) {
+	if (relativePosition.dotProduct(relativeVelocity) >= 0)
+		return relativePosition.normalize() < dmod();
 	else
-		return tMod(s, v) <= tau();
+		return tMod(relativePosition, relativeVelocity) <= tau();
 }
 
-double NASADecider::tCoa(double sz, double vz) {
-	return -1 * (sz / vz);
+double NASADecider::tCoa(double relativeAlt, double relativeVSpeed) {
+	return -1 * (relativeAlt / relativeVSpeed);
 }
 
-bool NASADecider::verticalRA(double sz, double vz) {
-	if (sz * vz >= 0) {
-		return std::abs(sz) < zthr();
+bool NASADecider::verticalRA(double relativeAlt, double relativeVSpeed) {
+	if (relativeAlt * relativeVSpeed >= 0) {
+		return std::abs(relativeAlt) < zthr();
 	} else
-		return tCoa(sz, vz) <= tau();
+		return tCoa(relativeAlt, relativeVSpeed) <= tau();
 }
 
-double NASADecider::delta(Vector2 s, Vector2 v, double d) {
-	return (std::pow(d, 2) * std::pow(v.normalize(), 2)) - s.dotProduct(v.rightPerpendicular());
+double NASADecider::delta(Vector2 relativePosition, Vector2 relativeVelocity, double minimumSeperationDistance) {
+	return (std::pow(minimumSeperationDistance, 2) * std::pow(relativeVelocity.normalize(), 2)) - relativePosition.dotProduct(relativeVelocity.rightPerpendicular());
 }
 
-bool NASADecider::cd2d(Vector2 s, Vector2 v, double d) {
-	if (s.normalize() < d)
+bool NASADecider::cd2d(Vector2 relativePosition, Vector2 relativeVelocity, double minimumSeperationDistance) {
+	if (relativePosition.normalize() < minimumSeperationDistance)
 		return true;
 	else
-		return delta(s, v, d) > 0 && s.dotProduct(v) < 0;
+		return delta(relativePosition, relativeVelocity, minimumSeperationDistance) > 0 && relativePosition.dotProduct(relativeVelocity) < 0;
 }
 
-bool NASADecider::tcasIIRa(Vector2 so, double soz, Vector2 vo, double voz, Vector2 si, double siz, Vector2 vi, double viz) {
-	Vector2 s = so - si;
-	Vector2 v = vo - vi;
-	double sz = soz - siz;
-	double vz = voz - viz;
+bool NASADecider::tcasIIRa(Vector2 userHorPos, double userAlt, Vector2 userHorVel, double userVSpeed, Vector2 intrHorPos, double intrAlt, Vector2 intrHorVel, double intrVSpeed) {
+	Vector2 s = userHorPos - intrHorPos;
+	Vector2 v = userHorVel - intrHorVel;
+	double sz = userAlt - intrAlt;
+	double vz = userVSpeed - intrVSpeed;
 	if (!horizontalRA(s, v))
 		return false;
 	else if (!verticalRA(sz, vz))
@@ -317,31 +358,31 @@ bool NASADecider::tcasIIRa(Vector2 so, double soz, Vector2 vo, double voz, Vecto
 		return cd2d(s, v, hmd());
 }
 
-bool NASADecider::tcasIIRaAt(Vector2 so, double soz, Vector2 vo, double voz, Vector2 si, double siz, Vector2 vi, double viz, double t) {
-	Vector2 s = so - si;
-	Vector2 v = vo - vi;
-	double sz = soz - siz;
-	double vz = voz - viz;
-	if (!horizontalRA(s + v.scalarMult(t), v))
+bool NASADecider::tcasIIRaAt(Vector2 userHorPos, double userAlt, Vector2 userHorVel, double userVSpeed, Vector2 intrHorPos, double intrAlt, Vector2 intrHorVel, double intrVSpeed, double deltaTime) {
+	Vector2 s = userHorPos - intrHorPos;
+	Vector2 v = userHorVel - intrHorVel;
+	double sz = userAlt - intrAlt;
+	double vz = userVSpeed - intrVSpeed;
+	if (!horizontalRA(s + v.scalarMult(deltaTime), v))
 		return false;
-	else if (!verticalRA(sz + (t*vz), vz))
+	else if (!verticalRA(sz + (deltaTime*vz), vz))
 		return false;
 	else
-		return cd2d(s + v.scalarMult(t), v, hmd());
+		return cd2d(s + v.scalarMult(deltaTime), v, hmd());
 }
 
-double NASADecider::timeMinTauMod(Vector2 s, Vector2 v, double b, double t) {
-	if ((s + v.scalarMult(b)).dotProduct(v) >= 0) {
-		return b;
-	} else if (delta(s, v, dmod()) < 0) {
-		double tmin = 2 * ((std::sqrt(-1 * delta(s, v, dmod())) / (std::pow(v.normalize(), 2)))); // (Formula 19)
-		double min = t < (tCpa(s, v) - (tmin / 2)) ? tmin : (tCpa(s, v) - (tmin / 2)); // next two lines (Formula 20)
-		return b > min ? b : min;
-	} else if ((s + v.scalarMult(t)).dotProduct(v) < 0) {
-		return t;
+double NASADecider::timeMinTauMod(Vector2 relativePosition, Vector2 relativeVelocity, double timeBoundStart, double timeBoundEnd) {
+	if ((relativePosition + relativeVelocity.scalarMult(timeBoundStart)).dotProduct(relativeVelocity) >= 0) {
+		return timeBoundStart;
+	} else if (delta(relativePosition, relativeVelocity, dmod()) < 0) {
+		double tmin = 2 * ((std::sqrt(-1 * delta(relativePosition, relativeVelocity, dmod())) / (std::pow(relativeVelocity.normalize(), 2)))); // (Formula 19)
+		double min = timeBoundEnd < (tCpa(relativePosition, relativeVelocity) - (tmin / 2)) ? tmin : (tCpa(relativePosition, relativeVelocity) - (tmin / 2)); // next two lines (Formula 20)
+		return timeBoundStart > min ? timeBoundStart : min;
+	} else if ((relativePosition + relativeVelocity.scalarMult(timeBoundEnd)).dotProduct(relativeVelocity) < 0) {
+		return timeBoundEnd;
 	} else {
-		double min = t < tCpa(s, v) ? 0 : tCpa(s, v); // next two lines (Formula 20)
-		return b > min ? b : min;
+		double min = timeBoundEnd < tCpa(relativePosition, relativeVelocity) ? 0 : tCpa(relativePosition, relativeVelocity); // next two lines (Formula 20)
+		return timeBoundStart > min ? timeBoundStart : min;
 	}
 }
 
@@ -352,14 +393,14 @@ bool NASADecider::ra2d(Vector2 horizontalRelativePos, Vector2 horizontalRelative
 	return horizontalRA(horizontalRelativePos + horizontalRelativeVel.scalarMult(t2), horizontalRelativeVel);
 }
 
-double* NASADecider::raTimeInterval(double sz, double vz, double lookaheadTime) {
+double* NASADecider::raTimeInterval(double relativeAlt, double relativeVSpeed, double lookaheadTime) {
 	double* returnVal = new double[2];
-	if (vz == 0) {
+	if (relativeVSpeed == 0) {
 		returnVal[0] = 0; returnVal[1] = lookaheadTime;
 	} else {
-		double h = zthr() > tau() * std::abs(vz) ? zthr() : tau() * std::abs(vz);
-		returnVal[0] = (-1 * std::signbit(vz) * h) / vz;
-		returnVal[1] = (std::signbit(vz) * h) / vz;
+		double h = zthr() > tau() * std::abs(relativeVSpeed) ? zthr() : tau() * std::abs(relativeVSpeed);
+		returnVal[0] = (-1 * std::signbit(relativeVSpeed) * h) / relativeVSpeed;
+		returnVal[1] = (std::signbit(relativeVSpeed) * h) / relativeVSpeed;
 	}
 	return returnVal;
 }

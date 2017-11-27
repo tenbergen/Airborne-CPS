@@ -19,11 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NASADecider.cpp" />
-    <ClCompile Include="RaAlgorithmNASA.cpp" />
-    <ClCompile Include="NASADecider.h" />
     <ClCompile Include="src\component\Decider.cpp" />
     <ClCompile Include="src\component\GaugeRenderer.cpp" />
+    <ClCompile Include="src\component\NASADecider.cpp" />
     <ClCompile Include="src\component\ResolutionConnection.cpp" />
     <ClCompile Include="src\component\Transponder.cpp" />
     <ClCompile Include="src\data\Aircraft.cpp" />
@@ -33,18 +31,20 @@
     <ClCompile Include="src\units\Distance.cpp" />
     <ClCompile Include="src\units\LLA.cpp" />
     <ClCompile Include="src\units\Vec2.cpp" />
+    <ClCompile Include="src\units\Vector2.cpp" />
     <ClCompile Include="src\units\Velocity.cpp" />
     <ClCompile Include="src\util\BMPLoader.cpp" />
     <ClCompile Include="src\util\MathUtil.cpp" />
     <ClCompile Include="src\util\StringUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Calculations.h" />
     <ClInclude Include="src\component\Decider.h" />
     <ClInclude Include="src\component\GaugeRenderer.h" />
+    <ClInclude Include="src\component\NASADecider.h" />
     <ClInclude Include="src\component\ResolutionConnection.h" />
     <ClInclude Include="src\component\Transponder.h" />
     <ClInclude Include="src\data\Aircraft.h" />
+    <ClInclude Include="src\data\Calculations.h" />
     <ClInclude Include="src\data\location.pb.h" />
     <ClInclude Include="src\data\RecommendationRange.h" />
     <ClInclude Include="src\data\Sense.h" />
@@ -53,11 +53,11 @@
     <ClInclude Include="src\units\Distance.h" />
     <ClInclude Include="src\units\LLA.h" />
     <ClInclude Include="src\units\Vec2.h" />
+    <ClInclude Include="src\units\Vector2.h" />
     <ClInclude Include="src\units\Velocity.h" />
     <ClInclude Include="src\util\BMPLoader.h" />
     <ClInclude Include="src\util\MathUtil.h" />
     <ClInclude Include="src\util\StringUtil.h" />
-    <ClInclude Include="Vector2.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\data\location.proto" />

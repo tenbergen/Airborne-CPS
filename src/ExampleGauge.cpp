@@ -39,6 +39,8 @@ Added the define IBM 1 thing because you have to specify it before doing
 
 #include "component/Transponder.h"
 
+#include "component/NASADecider.h"
+
 XPLMDataRef latitudeRef, longitudeRef, altitudeRef;
 XPLMDataRef headingTrueNorthDegRef, headingTrueMagDegRef;
 XPLMDataRef vertSpeedRef, trueAirspeedRef, indAirspeedRef;
@@ -155,7 +157,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	userAircraft->positionCurrentTime = msSinceEpoch;
 	userAircraft->positionOldTime = msSinceEpoch;
 
-	decider = new Decider(userAircraft, &openConnections);
+	decider = new NASADecider(userAircraft, &openConnections);
 
 	gaugeRenderer = new GaugeRenderer(gPluginDataFile, decider, userAircraft, &intrudingAircraft);
 	gaugeRenderer->loadTextures();
@@ -305,80 +307,25 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 		intruder->lock.lock();
 		LLA const intruderPos = intruder->positionCurrent;
 		LLA const intruderPosOld = intruder->positionOld;
-		Aircraft intrCopy = *intruder;
 		intruder->lock.unlock();
-		ResolutionConnection* conn = (*transponder->openConnections)[intrCopy.id];
-		conn->lock.lock();
-		LLA const userPosition = conn->userPosition;
-		LLA const userPositionOld = conn->userPositionOld;
-		std::chrono::milliseconds userPositionTime = conn->userPositionTime;
-		std::chrono::milliseconds userPositionOldTime = conn->userPositionOldTime;
-		conn->lock.unlock();
 
-		double slantRangeNmi = abs(userPosition.range(&intrCopy.positionCurrent).toUnits(Distance::DistanceUnits::NMI));
-		double deltaDistanceM = abs(userPositionOld.range(&intrCopy.positionOld).toUnits(Distance::DistanceUnits::METERS))
-			- abs(userPosition.range(&intrCopy.positionCurrent).toUnits(Distance::DistanceUnits::METERS));
-		double elapsedTimeS = (double)(intrCopy.positionCurrentTime - intrCopy.positionOldTime).count() / 1000;
-		double closingSpeedKnots = Velocity(deltaDistanceM / elapsedTimeS, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
-		double altSepFt = abs(intrCopy.positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET) -
-			userPosition.altitude.toUnits(Distance::DistanceUnits::FEET));
-		double deltaDistance2Ft = abs(intrCopy.positionOld.altitude.toUnits(Distance::DistanceUnits::FEET) -
-			userPositionOld.altitude.toUnits(Distance::DistanceUnits::FEET)) -
-			abs(intrCopy.positionCurrent.altitude.toUnits(Distance::DistanceUnits::FEET) -
-				userPosition.altitude.toUnits(Distance::DistanceUnits::FEET));
-		double elapsedTimeMin = elapsedTimeS / 60;
-		double vertClosingSpdFtPerMin = deltaDistance2Ft / elapsedTimeMin;
-		double rangeTauS = slantRangeNmi / closingSpeedKnots * 3600;
-		double verticalTauS = altSepFt / vertClosingSpdFtPerMin * 60;
-		Velocity userVelocity = Velocity(userPosition.range(&userPositionOld).toMeters() / ((userPositionTime.count() - userPositionOldTime.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
-		Velocity intrVelocity = Velocity(intruderPos.range(&intruderPosOld).toMeters() / ((intrCopy.positionCurrentTime.count() - intrCopy.positionOldTime.count()) / 1000), Velocity::VelocityUnits::METERS_PER_S);
-		Distance userDistanceByCpa = Distance(userVelocity.toMetersPerS() * rangeTauS, Distance::DistanceUnits::METERS);
-		Distance intrDistanceByCpa = Distance(intrVelocity.toMetersPerS() * rangeTauS, Distance::DistanceUnits::METERS);
-		LLA userPositionAtCpa = userPosition.translate(&userPositionOld.bearing(&userPosition), &userDistanceByCpa);
-		LLA intrPositionAtCpa = intruderPos.translate(&intruderPosOld.bearing(&intruderPos), &intrDistanceByCpa);
-		double distanceAtCpaFt = userPositionAtCpa.range(&intrPositionAtCpa).toFeet();
-		double taModTauS = Decider::getModTauS(slantRangeNmi, closingSpeedKnots, Decider::getTADmodNmi(userPosition.altitude.toFeet()));
-		double raModTauS = Decider::getModTauS(slantRangeNmi, closingSpeedKnots, Decider::getRADmodNmi(userPosition.altitude.toFeet()));
+		Calculations c = ((NASADecider*)decider)->getCalculations();
 
 		positionBuf[0] = '\0';
-		snprintf(positionBuf, 128, "intr_pos: (%.3f, %.3f, %3f)", intruderPos.latitude.toDegrees(), intruderPos.longitude.toDegrees(), intruderPos.altitude.toMeters());
+		snprintf(positionBuf, 128, "intrPos: (%.3f, %.3f, %3f)", intruderPos.latitude.toDegrees(), intruderPos.longitude.toDegrees(), intruderPos.altitude.toMeters());
 		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 		offsetYPxls += 20;
 
-		if (rangeTauS > 0) {
-			positionBuf[0] = '\0';
-			snprintf(positionBuf, 128, "range_tau_s: %.3f", rangeTauS);
-			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
-			offsetYPxls += 20;
-		}
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "modTauS: %.3f", c.modTau);
+		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+		offsetYPxls += 20;
 
-		if (taModTauS > 0) {
-			positionBuf[0] = '\0';
-			snprintf(positionBuf, 128, "ta_mod_tau_s: %.3f", taModTauS);
-			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
-			offsetYPxls += 20;
-		}
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "altSepFt: %.3f", c.altSepFt);
+		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+		offsetYPxls += 20;
 
-		if (raModTauS > 0) {
-			positionBuf[0] = '\0';
-			snprintf(positionBuf, 128, "ra_mod_tau_s: %.3f", raModTauS);
-			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
-			offsetYPxls += 20;
-		}
-
-		if (verticalTauS > 0) {
-			positionBuf[0] = '\0';
-			snprintf(positionBuf, 128, "vertical_tau_s: %.3f", verticalTauS);
-			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
-			offsetYPxls += 20;
-		}
-
-		if (rangeTauS > 0 && distanceAtCpaFt > 0) {
-			positionBuf[0] = '\0';
-			snprintf(positionBuf, 128, "distance_at_cpa_ft: %.3f", distanceAtCpaFt);
-			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
-			offsetYPxls += 20;
-		}
 	}
 }
 

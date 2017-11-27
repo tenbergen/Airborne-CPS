@@ -1,4 +1,6 @@
-#include "Vector2.h"
+#pragma once
+
+#include "units\Vector2.h"
 
 class Calculations {
 public:

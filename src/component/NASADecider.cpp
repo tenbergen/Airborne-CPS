@@ -1,24 +1,7 @@
 #include "NASADecider.h"
 
-Velocity const Decider::kMinGaugeVerticalVelocity_ = { -4000.0, Velocity::VelocityUnits::FEET_PER_MIN };
-Velocity const Decider::kMaxGaugeVerticalVelocity_ = { 4000.0, Velocity::VelocityUnits::FEET_PER_MIN };
-
-Distance const Decider::kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUnits::NMI };
-
-Distance const Decider::kAlim350_ = { 350.0, Distance::DistanceUnits::FEET };
-Distance const Decider::kAlim400_ = { 400.0, Distance::DistanceUnits::FEET };
-Distance const Decider::kAlim600_ = { 600.0, Distance::DistanceUnits::FEET };
-Distance const Decider::kAlim700_ = { 700.0, Distance::DistanceUnits::FEET };
-
-Distance const Decider::kAltitudeAlim350Threshold_ = { 5000.0, Distance::DistanceUnits::FEET };
-Distance const Decider::kAltitudeAlim400Threshold_ = { 10000.0, Distance::DistanceUnits::FEET };
-Distance const Decider::kAltitudeAlim600Threshold_ = { 20000.0, Distance::DistanceUnits::FEET };
-
-Velocity const Decider::kVerticalVelocityClimbDescendDelta_ = { 1500.0, Velocity::VelocityUnits::FEET_PER_MIN };
-
 NASADecider::NASADecider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* connections) {
 	thisAircraft_ = thisAircraft; activeConnections_ = connections;
-	thisAircraft_->lock.lock();
 }
 
 NASADecider::~NASADecider() {}
@@ -56,6 +39,8 @@ void NASADecider::analyze(Aircraft* intruder) {
 		connection->lock.unlock();
 
 		RecommendationRangePair recRange = getRecRangePair(mySense, calculations_.userVvel, calculations_.intrVvel, calculations_.userPosition.altitude.toFeet(), intrCopy.positionCurrent.altitude.toFeet(), calculations_.modTau);
+		green = recRange.positive;
+		red = recRange.negative;
 
 	} else if (threatClass == Aircraft::ThreatClassification::NON_THREAT_TRAFFIC) {
 		tempSense_ = Sense::UNKNOWN;
@@ -71,6 +56,10 @@ void NASADecider::analyze(Aircraft* intruder) {
 	positiveRecommendationRange = green;
 	negativeRecommendationRange = red;
 	recommendationRangeLock.unlock();
+
+	intruder->lock.lock();
+	intruder->threatClassification = threatClass;
+	intruder->lock.unlock();
 	
 }
 
@@ -78,7 +67,7 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 	
 	Aircraft::ThreatClassification prevThreatClass = intrCopy->threatClassification;
 
-	bool zthrFlag = calculations_.altSepFt > zthr() ? true : false;
+	bool zthrFlag = calculations_.altSepFt < zthr() ? true : false;
 
 	Aircraft::ThreatClassification newThreatClass;
 	// if within proximity range
@@ -109,7 +98,7 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 	return newThreatClass;
 }
 
-RecommendationRangePair Decider::getRecRangePair(Sense sense, double userVvelFtPerM, double intrVvelFtPerM, double userAltFt,
+RecommendationRangePair NASADecider::getRecRangePair(Sense sense, double userVvelFtPerM, double intrVvelFtPerM, double userAltFt,
 	double intrAltFt, double rangeTauS) {
 
 	RecommendationRange positive, negative;
@@ -122,9 +111,6 @@ RecommendationRangePair Decider::getRecRangePair(Sense sense, double userVvelFtP
 
 		// Corrective RA
 		Velocity absoluteMinVvelToAchieveAlim = Velocity(getVvelForAlim(sense, userAltFt, vsepAtCpaFt, intrProjectedAltAtCpa, rangeTauS), Velocity::VelocityUnits::FEET_PER_MIN);
-		char toPrint[100];
-		sprintf(toPrint, "result f/m = %f\n", absoluteMinVvelToAchieveAlim.toFeetPerMin());
-		XPLMDebugString(toPrint);
 
 		if (sense == Sense::UPWARD) {
 			// upward

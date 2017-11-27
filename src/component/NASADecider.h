@@ -1,6 +1,9 @@
-﻿#include "component\Decider.h"
-#include "Vector2.h"
-#include "Calculations.h"
+﻿#pragma once
+
+#include "component\Decider.h"
+#include "units\Vector2.h"
+#include "data\Calculations.h"
+#include "data/RecommendationRange.h"
 #include <map>
 
 class NASADecider : public Decider {
@@ -10,20 +13,24 @@ public:
 
 	void analyze(Aircraft* intruder);
 
+	Calculations getCalculations() { return calculations_; }
+
 private:
-	static Velocity const kMinGaugeVerticalVelocity_;
-	static Velocity const kMaxGaugeVerticalVelocity_;
+	Velocity const kMinGaugeVerticalVelocity_ = { -4000.0, Velocity::VelocityUnits::FEET_PER_MIN };
+	Velocity const kMaxGaugeVerticalVelocity_ = { 4000.0, Velocity::VelocityUnits::FEET_PER_MIN };
 
-	static Distance const kProtectionVolumeRadius_;
+	Distance const kProtectionVolumeRadius_ = { 30.0, Distance::DistanceUnits::NMI };
 
-	static Distance const kAlim350_;
-	static Distance const kAlim400_;
-	static Distance const kAlim600_;
-	static Distance const kAlim700_;
+	Distance const kAlim350_ = { 350.0, Distance::DistanceUnits::FEET };
+	Distance const kAlim400_ = { 400.0, Distance::DistanceUnits::FEET };
+	Distance const kAlim600_ = { 600.0, Distance::DistanceUnits::FEET };
+	Distance const kAlim700_ = { 700.0, Distance::DistanceUnits::FEET };
 
-	static Distance const kAltitudeAlim350Threshold_;
-	static Distance const kAltitudeAlim400Threshold_;
-	static Distance const kAltitudeAlim600Threshold_;
+	Distance const kAltitudeAlim350Threshold_ = { 5000.0, Distance::DistanceUnits::FEET };
+	Distance const kAltitudeAlim400Threshold_ = { 10000.0, Distance::DistanceUnits::FEET };
+	Distance const kAltitudeAlim600Threshold_ = { 20000.0, Distance::DistanceUnits::FEET };
+
+	Velocity const kVerticalVelocityClimbDescendDelta_ = { 1500.0, Velocity::VelocityUnits::FEET_PER_MIN };
 
 	int sensitivityLevel_ = 2;
 	bool raMod_ = false;
@@ -33,7 +40,7 @@ private:
 	Stores all calculations done in doCalculations() for each analyze() call to prevent
 	redundancy.
 	*/
-	Calculations calculations_;
+	Calculations calculations_ = Calculations::Calculations();
 
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* activeConnections_;
 	Aircraft* thisAircraft_;

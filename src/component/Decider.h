@@ -38,6 +38,10 @@ public:
 	/* Calculates modified tau */
 	static double getModTauS(double rangeNmi, double closureRateKnots, double dmodNmi);
 
+protected:
+	/* Returns the vertical velocity necessary to achieve ALIM */
+	double getVvelForAlim(Sense sense, double altFt, double vsepAtCpaFt, double intrProjAltFt, double rangeTauS);
+
 private:
 	static Velocity const kMinGaugeVerticalVelocity_;
 	static Velocity const kMaxGaugeVerticalVelocity_;
@@ -81,9 +85,6 @@ private:
 	Sense determineResolutionSense(double userAltFt, double intrAltFt);
 
 	/* Returns a pair of recommendation ranges as for a Resolution Advisory */
-	RecommendationRangePair getRecRangePair(Sense sense, double userVvelFtM, double IntrVvelFtM, double userAltFt,
+	virtual RecommendationRangePair getRecRangePair(Sense sense, double userVvelFtM, double IntrVvelFtM, double userAltFt,
 		double intrAltFt, double rangeTauS);
-
-	/* Returns the vertical velocity necessary to achieve ALIM */
-	double getVvelForAlim(Sense sense, double altFt, double vsepAtCpaFt, double intrProjAltFt, double rangeTauS);
 };

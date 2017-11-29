@@ -33,7 +33,7 @@ private:
 	Velocity const kVerticalVelocityClimbDescendDelta_ = { 1500.0, Velocity::VelocityUnits::FEET_PER_MIN };
 
 	int sensitivityLevel_ = 2;
-	bool raMod_ = false;
+	bool taMod_ = false;
 	Sense tempSense_ = Sense::UNKNOWN;
 
 	/*

@@ -76,11 +76,12 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 		if (calculations_.closingSpeedKnots > 0
 			&& (prevThreatClass >= Aircraft::ThreatClassification::TRAFFIC_ADVISORY
 				|| (calculations_.modTau < tau() && zthrFlag))) {
+			taMod_ = true;
+			zthrFlag = calculations_.altSepFt < zthr() ? true : false;
 			// if passes RA threshold
 			if (prevThreatClass == Aircraft::ThreatClassification::RESOLUTION_ADVISORY
-				|| tcasIIRa(calculations_.userHorPos, thisAircraftAltitude_, calculations_.userHorVel, calculations_.userVSpeed, calculations_.intrHorPos, intrCopy->positionCurrent.altitude.toFeet(), calculations_.intrHorVel, calculations_.intrVSpeed)) {
+				|| (calculations_.modTau < tau() && zthrFlag)) {
 				newThreatClass = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
-				raMod_ = true;
 			} else {
 				// did not pass RA threshold -- Traffic Advisory
 				newThreatClass = Aircraft::ThreatClassification::TRAFFIC_ADVISORY;
@@ -88,7 +89,7 @@ Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrC
 		} else {
 			// did not pass TA threshold -- just Proximity Traffic
 			newThreatClass = Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC;
-			raMod_ = false;
+			taMod_ = false;
 		}
 	} else {
 		// is not within proximity range
@@ -154,7 +155,7 @@ void NASADecider::setSensitivityLevel() {
 }
 
 int NASADecider::tau() {
-	if (raMod_)
+	if (taMod_)
 		switch (sensitivityLevel_) {
 		case 3: return 15;
 		case 4: return 20;
@@ -185,7 +186,7 @@ int NASADecider::alim() {
 }
 
 double NASADecider::dmod() {
-	if (raMod_)
+	if (taMod_)
 		switch (sensitivityLevel_) {
 		case 3: return 0.20;
 		case 4: return 0.35;
@@ -215,7 +216,7 @@ double NASADecider::hmd() {
 }
 
 double NASADecider::zthr() {
-	if (raMod_)
+	if (taMod_)
 		switch (sensitivityLevel_) {
 		case 3: return 600;
 		case 4: return 600;

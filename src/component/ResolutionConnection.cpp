@@ -1,5 +1,7 @@
 #include "ResolutionConnection.h"
 
+int ResolutionConnection::number_of_connections_ = 0;
+
 static DWORD WINAPI startResolutionReceiver(void* param)
 {
 	ResolutionConnection* rc = (ResolutionConnection*)param;
@@ -50,11 +52,12 @@ SOCKET ResolutionConnection::acceptIncomingIntruder(int port)
 	memset(&myAddr_, 0, sizeof myAddr_);
 	memset(&intruderAddr_, 0, sizeof intruderAddr_);
 
-	sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP + number_of_connections_);
 	if (sock_ == INVALID_SOCKET) {
 		socketDebug("ResolutionConnection::acceptIncomingIntruder - socket failed to open\n", false);
 		return NULL;
 	}
+	number_of_connections_++;
 
 	myAddr_.sin_family = AF_INET;
 	myAddr_.sin_addr.s_addr = INADDR_ANY;

@@ -46,6 +46,8 @@ public:
 	DWORD senseReceiver();
 	int sendSense(Sense);
 private:
+	static int number_of_connections_;
+
 	std::atomic<bool> running_;
 	std::atomic<bool> threadStopped_;
 	std::atomic<bool> connected_;

@@ -307,9 +307,10 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 		intruder->lock.lock();
 		LLA const intruderPos = intruder->positionCurrent;
 		LLA const intruderPosOld = intruder->positionOld;
+		std::string intrId = intruder->id;
 		intruder->lock.unlock();
 
-		Calculations c = ((NASADecider*)decider)->getCalculations();
+		Calculations c = ((NASADecider*)decider)->getCalculations(intrId);
 
 		positionBuf[0] = '\0';
 		snprintf(positionBuf, 128, "intrPos: (%.3f, %.3f, %3f)", intruderPos.latitude.toDegrees(), intruderPos.longitude.toDegrees(), intruderPos.altitude.toMeters());

@@ -90,6 +90,11 @@ DWORD Transponder::receiveLocation()
 
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
 			if (!intruder) {
+
+				// Debug Statement to output Intruder MAC and IP addresses to Log
+				std::string debugString = "Intruder MAC : " + intruderLocation.id() + "\nIntruder IP : " + intruderLocation.ip() + "\n";
+				XPLMDebugString(debugString.c_str());
+
 				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
 				allocatedAircraft_.push_back(intruder);
 

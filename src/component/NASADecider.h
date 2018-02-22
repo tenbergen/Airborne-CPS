@@ -13,7 +13,8 @@ public:
 
 	void analyze(Aircraft* intruder);
 
-	Calculations getCalculations() { return calculations_; }
+	/*Calculations getCalculations() { return calculations_; }*/
+	Calculations getCalculations(std::string id) { return calculationsMap_[id]; }
 
 private:
 	Velocity const kMinGaugeVerticalVelocity_ = { -4000.0, Velocity::VelocityUnits::FEET_PER_MIN };
@@ -40,7 +41,7 @@ private:
 	Stores all calculations done in doCalculations() for each analyze() call to prevent
 	redundancy.
 	*/
-	Calculations calculations_ = Calculations::Calculations();
+	concurrency::concurrent_unordered_map<std::string, Calculations> calculationsMap_;
 
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* activeConnections_;
 	Aircraft* thisAircraft_;

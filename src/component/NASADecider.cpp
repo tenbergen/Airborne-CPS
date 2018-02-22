@@ -31,14 +31,14 @@ void NASADecider::analyze(Aircraft* intruder) {
 		if (connection->currentSense == Sense::UPWARD || connection->currentSense == Sense::DOWNWARD) {
 			mySense = connection->currentSense;
 		} else if (tempSense_ == Sense::UNKNOWN) {
-			tempSense_ = mySense = senseutil::senseFromInt(raSense(connection->userPosition.altitude.toFeet(), 
-				calculations_.userVSpeed, intrCopy.positionCurrent.altitude.toFeet(), calculations_.intrVSpeed, 
-				calculations_.userVSpeed, calculations_.userVAccel, calculations_.deltaTime)); // CHECK TARGET VERTICAL SPEED PARAMETER!!! Flight plan perhaps????
+			tempSense_ = mySense = senseutil::senseFromInt(raSense(connection->userPosition.altitude.toFeet(),
+				calculationsMap_[intruder->id].userVSpeed, intrCopy.positionCurrent.altitude.toFeet(), calculationsMap_[intruder->id].intrVSpeed,
+				calculationsMap_[intruder->id].userVSpeed, calculationsMap_[intruder->id].userVAccel, calculationsMap_[intruder->id].deltaTime)); // CHECK TARGET VERTICAL SPEED PARAMETER!!! Flight plan perhaps????
 			connection->sendSense(mySense);
 		}
 		connection->lock.unlock();
 
-		RecommendationRangePair recRange = getRecRangePair(mySense, calculations_.userVvel, calculations_.intrVvel, calculations_.userPosition.altitude.toFeet(), intrCopy.positionCurrent.altitude.toFeet(), calculations_.modTau);
+		RecommendationRangePair recRange = getRecRangePair(mySense, calculationsMap_[intruder->id].userVvel, calculationsMap_[intruder->id].intrVvel, calculationsMap_[intruder->id].userPosition.altitude.toFeet(), intrCopy.positionCurrent.altitude.toFeet(), calculationsMap_[intruder->id].modTau);
 		green = recRange.positive;
 		red = recRange.negative;
 
@@ -60,27 +60,27 @@ void NASADecider::analyze(Aircraft* intruder) {
 	intruder->lock.lock();
 	intruder->threatClassification = threatClass;
 	intruder->lock.unlock();
-	
+
 }
 
 Aircraft::ThreatClassification NASADecider::determineThreatClass(Aircraft* intrCopy, ResolutionConnection* conn) {
-	
+
 	Aircraft::ThreatClassification prevThreatClass = intrCopy->threatClassification;
 
-	bool zthrFlag = calculations_.altSepFt < zthr() ? true : false;
+	bool zthrFlag = calculationsMap_[intrCopy->id].altSepFt < zthr() ? true : false;
 
 	Aircraft::ThreatClassification newThreatClass;
 	// if within proximity range
-	if (calculations_.slantRangeNmi < 6 && abs(calculations_.altSepFt) < 1200) {
+	if (calculationsMap_[intrCopy->id].slantRangeNmi < 6 && abs(calculationsMap_[intrCopy->id].altSepFt) < 1200) {
 		// if passes TA threshold
-		if (calculations_.closingSpeedKnots > 0
+		if (calculationsMap_[intrCopy->id].closingSpeedKnots > 0
 			&& (prevThreatClass >= Aircraft::ThreatClassification::TRAFFIC_ADVISORY
-				|| (calculations_.modTau < tau() && zthrFlag))) {
+				|| (calculationsMap_[intrCopy->id].modTau < tau() && zthrFlag))) {
 			taMod_ = true;
-			zthrFlag = calculations_.altSepFt < zthr() ? true : false;
+			zthrFlag = calculationsMap_[intrCopy->id].altSepFt < zthr() ? true : false;
 			// if passes RA threshold
 			if (prevThreatClass == Aircraft::ThreatClassification::RESOLUTION_ADVISORY
-				|| (calculations_.modTau < tau() && zthrFlag)) {
+				|| (calculationsMap_[intrCopy->id].modTau < tau() && zthrFlag)) {
 				newThreatClass = Aircraft::ThreatClassification::RESOLUTION_ADVISORY;
 			} else {
 				// did not pass RA threshold -- Traffic Advisory
@@ -257,37 +257,37 @@ Vector2 NASADecider::getRelativeVel(Vector2 relativePos, Vector2 relativePosOld,
 
 void NASADecider::doCalculations(Aircraft* intrCopy, ResolutionConnection* conn) {
 	conn->lock.lock();
-	calculations_.userPosition = conn->userPosition;
-	calculations_.userPositionOld = conn->userPositionOld;
+	calculationsMap_[intrCopy->id].userPosition = conn->userPosition;
+	calculationsMap_[intrCopy->id].userPositionOld = conn->userPositionOld;
 	std::chrono::milliseconds userPositionTime = conn->userPositionTime;
 	std::chrono::milliseconds userPositionOldTime = conn->userPositionOldTime;
 	conn->lock.unlock();
 
 	//get relative pos/vel
-	calculations_.userHorPos = getHorPos(calculations_.userPosition);
-	calculations_.intrHorPos = getHorPos(intrCopy->positionCurrent);
-	calculations_.relativeHorPos = getRelativePos(calculations_.userPosition, intrCopy->positionCurrent);
-	calculations_.relativeHorPosOld = getRelativePos(calculations_.userPositionOld, intrCopy->positionOld);
-	calculations_.deltaTime = (double)(intrCopy->positionCurrentTime - intrCopy->positionOldTime).count() / 1000;
-	calculations_.userVSpeed = std::abs((calculations_.userPosition.altitude.toFeet() - calculations_.userPositionOld.altitude.toFeet()) / calculations_.deltaTime);
-	calculations_.intrVSpeed = std::abs((intrCopy->positionCurrent.altitude.toFeet() - intrCopy->positionOld.altitude.toFeet()) / calculations_.deltaTime);
-	calculations_.userHorVel = getHorVel(calculations_.userPosition, calculations_.userPositionOld, calculations_.deltaTime);
-	calculations_.intrHorVel = getHorVel(intrCopy->positionCurrent, intrCopy->positionOld, calculations_.deltaTime);
-	calculations_.relativeVel = getRelativeVel(calculations_.relativeHorPos, calculations_.relativeHorPosOld, calculations_.deltaTime);
-	calculations_.modTau = tMod(calculations_.relativeHorPos, calculations_.relativeVel);
+	calculationsMap_[intrCopy->id].userHorPos = getHorPos(calculationsMap_[intrCopy->id].userPosition);
+	calculationsMap_[intrCopy->id].intrHorPos = getHorPos(intrCopy->positionCurrent);
+	calculationsMap_[intrCopy->id].relativeHorPos = getRelativePos(calculationsMap_[intrCopy->id].userPosition, intrCopy->positionCurrent);
+	calculationsMap_[intrCopy->id].relativeHorPosOld = getRelativePos(calculationsMap_[intrCopy->id].userPositionOld, intrCopy->positionOld);
+	calculationsMap_[intrCopy->id].deltaTime = (double)(intrCopy->positionCurrentTime - intrCopy->positionOldTime).count() / 1000;
+	calculationsMap_[intrCopy->id].userVSpeed = std::abs((calculationsMap_[intrCopy->id].userPosition.altitude.toFeet() - calculationsMap_[intrCopy->id].userPositionOld.altitude.toFeet()) / calculationsMap_[intrCopy->id].deltaTime);
+	calculationsMap_[intrCopy->id].intrVSpeed = std::abs((intrCopy->positionCurrent.altitude.toFeet() - intrCopy->positionOld.altitude.toFeet()) / calculationsMap_[intrCopy->id].deltaTime);
+	calculationsMap_[intrCopy->id].userHorVel = getHorVel(calculationsMap_[intrCopy->id].userPosition, calculationsMap_[intrCopy->id].userPositionOld, calculationsMap_[intrCopy->id].deltaTime);
+	calculationsMap_[intrCopy->id].intrHorVel = getHorVel(intrCopy->positionCurrent, intrCopy->positionOld, calculationsMap_[intrCopy->id].deltaTime);
+	calculationsMap_[intrCopy->id].relativeVel = getRelativeVel(calculationsMap_[intrCopy->id].relativeHorPos, calculationsMap_[intrCopy->id].relativeHorPosOld, calculationsMap_[intrCopy->id].deltaTime);
+	calculationsMap_[intrCopy->id].modTau = tMod(calculationsMap_[intrCopy->id].relativeHorPos, calculationsMap_[intrCopy->id].relativeVel);
 
-	calculations_.slantRangeNmi = abs(calculations_.userPosition.range(&intrCopy->positionCurrent).toNmi());
-	calculations_.deltaDistanceM = abs(calculations_.userPositionOld.range(&intrCopy->positionOld).toMeters())
-		- abs(calculations_.userPosition.range(&intrCopy->positionCurrent).toMeters());
-	calculations_.closingSpeedKnots = Velocity(calculations_.deltaDistanceM / calculations_.deltaTime, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
-	calculations_.altSepFt = abs(intrCopy->positionCurrent.altitude.toFeet() - calculations_.userPosition.altitude.toFeet());
+	calculationsMap_[intrCopy->id].slantRangeNmi = abs(calculationsMap_[intrCopy->id].userPosition.range(&intrCopy->positionCurrent).toNmi());
+	calculationsMap_[intrCopy->id].deltaDistanceM = abs(calculationsMap_[intrCopy->id].userPositionOld.range(&intrCopy->positionOld).toMeters())
+		- abs(calculationsMap_[intrCopy->id].userPosition.range(&intrCopy->positionCurrent).toMeters());
+	calculationsMap_[intrCopy->id].closingSpeedKnots = Velocity(calculationsMap_[intrCopy->id].deltaDistanceM / calculationsMap_[intrCopy->id].deltaTime, Velocity::VelocityUnits::METERS_PER_S).toUnits(Velocity::VelocityUnits::KNOTS);
+	calculationsMap_[intrCopy->id].altSepFt = abs(intrCopy->positionCurrent.altitude.toFeet() - calculationsMap_[intrCopy->id].userPosition.altitude.toFeet());
 
-	double userDeltaAlt = calculations_.userPosition.altitude.toFeet() - calculations_.userPositionOld.altitude.toFeet();
+	double userDeltaAlt = calculationsMap_[intrCopy->id].userPosition.altitude.toFeet() - calculationsMap_[intrCopy->id].userPositionOld.altitude.toFeet();
 	double intrDeltaAlt = intrCopy->positionCurrent.altitude.toFeet() - intrCopy->positionOld.altitude.toFeet();
-	calculations_.userVvelOld = calculations_.userVvel;
-	calculations_.userVvel = userDeltaAlt / calculations_.deltaTime;
-	calculations_.intrVvel = intrDeltaAlt / calculations_.deltaTime;
-	calculations_.userVAccel = (calculations_.userVvel - calculations_.userVvelOld) / calculations_.deltaTime;
+	calculationsMap_[intrCopy->id].userVvelOld = calculationsMap_[intrCopy->id].userVvel;
+	calculationsMap_[intrCopy->id].userVvel = userDeltaAlt / calculationsMap_[intrCopy->id].deltaTime;
+	calculationsMap_[intrCopy->id].intrVvel = intrDeltaAlt / calculationsMap_[intrCopy->id].deltaTime;
+	calculationsMap_[intrCopy->id].userVAccel = (calculationsMap_[intrCopy->id].userVvel - calculationsMap_[intrCopy->id].userVvelOld) / calculationsMap_[intrCopy->id].deltaTime;
 
 }
 

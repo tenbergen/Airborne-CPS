@@ -13,7 +13,6 @@ public:
 
 	void analyze(Aircraft* intruder);
 
-	/*Calculations getCalculations() { return calculations_; }*/
 	Calculations getCalculations(std::string id) { return calculationsMap_[id]; }
 
 private:
@@ -34,8 +33,12 @@ private:
 	Velocity const kVerticalVelocityClimbDescendDelta_ = { 1500.0, Velocity::VelocityUnits::FEET_PER_MIN };
 
 	int sensitivityLevel_ = 2;
-	bool taMod_ = false;
-	Sense tempSense_ = Sense::UNKNOWN;
+	concurrency::concurrent_unordered_map<std::string, bool> taModMap_;
+	concurrency::concurrent_unordered_map<std::string, Sense> tempSenseMap_;
+
+	bool hasRA_;
+	std::string raIntruderId_;
+	RecommendationRange strictestRA_;
 
 	/*
 	Stores all calculations done in doCalculations() for each analyze() call to prevent
@@ -59,13 +62,19 @@ private:
 	RecommendationRangePair getRecRangePair(Sense sense, double userVvelFtM, double IntrVvelFtM, double userAltFt,
 		double intrAltFt, double rangeTauS);
 
+	/*
+	Compares the strength of an intruder's RA to the currently observed RA
+	Returns 1 if greater, 0 if equal, -1 if less
+	*/
+	int compareRA(RecommendationRange intrRange);
+
 	void setSensitivityLevel();
 
-	int tau();
+	int tau(std::string id);
 	int alim();
-	double dmod();
+	double dmod(std::string id);
 	double hmd();
-	double zthr();
+	double zthr(std::string id);
 
 	Vector2 getHorPos(LLA position);
 	Vector2 getHorVel(LLA position, LLA positionOld, double deltaTime);
@@ -93,7 +102,7 @@ private:
 	"Used in a context where the aircraft are horizontally converging. In that case, modified tau,
 	i.e., τmod, is positive when the current range is greater than DMOD." - tmod (Formula 10)
 	*/
-	double tMod(Vector2 relativePosition, Vector2 relativeVelocity);
+	double tMod(std::string id, Vector2 relativePosition, Vector2 relativeVelocity);
 
 	/*
 	"The function Horizontal_RA(subscript Current ownership's sensitivity level) takes as
@@ -101,7 +110,7 @@ private:
 	true if, for the given input and sensitivity level the horizontal thresholds are
 	satisfied." - Horizontal_RA (Formula 11)
 	*/
-	bool horizontalRA(Vector2 relativePosition, Vector2 relativeVelocity);
+	bool horizontalRA(std::string id, Vector2 relativePosition, Vector2 relativeVelocity);
 
 	/*
 	"In order to model the vertical check performed by the TCAS II RA logic, it is necessary to define the
@@ -114,7 +123,7 @@ private:
 	"The function Vertical RA, which returns true when the vertical thresholds are satisfied for a sensitivity level,
 	is defined as follows." - Vertical_RA (Formula 13)
 	*/
-	bool verticalRA(double relativeAlt, double relativeVSpeed);
+	bool verticalRA(std::string id, double relativeAlt, double relativeVSpeed);
 
 	/*
 	- delta (Formula 15)
@@ -133,38 +142,38 @@ private:
 	"The function that determines whether or not an RA will be issued for the ownship can be defined as follows."
 	- TCASII_RA (Formula 16)
 	*/
-	bool tcasIIRa(Vector2 userHorPos, double userAlt, Vector2 userHorVel, double userVSpeed, Vector2 intrHorPos, double intrAlt, Vector2 intrHorVel, double intrVSpeed);
+	bool tcasIIRa(std::string id, Vector2 userHorPos, double userAlt, Vector2 userHorVel, double userVSpeed, Vector2 intrHorPos, double intrAlt, Vector2 intrHorVel, double intrVSpeed);
 
 	/*
 	"The function that checks if an RA will be issued for the ownship at a given future time
 	t < tcpa(s, v) can be defined as follows." - TCASII_RA_at (Formula 17)
 	*/
-	bool tcasIIRaAt(Vector2 userHorPos, double userAlt, Vector2 userHorVel, double userVSpeed, Vector2 intrHorPos, double intrAlt, Vector2 intrHorVel, double intrVSpeed, double deltaTime);
+	bool tcasIIRaAt(std::string id, Vector2 userHorPos, double userAlt, Vector2 userHorVel, double userVSpeed, Vector2 intrHorPos, double intrAlt, Vector2 intrHorVel, double intrVSpeed, double deltaTime);
 
 	/*
 	"This function computes exactly the time t in [B, T] at which tmod(s + tv, v) attains its minimum value."
 	- Time_Min_TAUmod (Formula 18)
 	*/
-	double timeMinTauMod(Vector2 relativePosition, Vector2 relativeVelocity, double timeBoundStart, double timeBoundEnd);
+	double timeMinTauMod(std::string id, Vector2 relativePosition, Vector2 relativeVelocity, double timeBoundStart, double timeBoundEnd);
 
 	/*
 	"For a given sensitivity level, the function RA2D characterizes the set of possible relative states
 	that lead to a horizontal RA within a lookahead time interval." - RA2D (Formula 21)
 	*/
-	bool ra2d(Vector2 horizontalRelativePos, Vector2 horizontalRelativeVel, double lookaheadTimeStart, double lookaheadTimeEnd);
+	bool ra2d(std::string id, Vector2 horizontalRelativePos, Vector2 horizontalRelativeVel, double lookaheadTimeStart, double lookaheadTimeEnd);
 
 	/*
 	"A function can be defined that analytically computes the specific time interval, before a
 	specified lookahead time T, where all vertical RAs will occur. This function is defined as follows."
 	- RATimeInterval (Formula 22)
 	*/
-	double* raTimeInterval(double relativeAlt, double relativeVSpeed, double lookaheadTime);
+	double* raTimeInterval(std::string id, double relativeAlt, double relativeVSpeed, double lookaheadTime);
 
 	/*
 	"The function RA3D detects RAs by checking the time interval that is returned by RATimeInterval for
 	horizontal RAs using the algorithm RA2D" - RA3D (Formula 23)
 	*/
-	bool ra3d(Vector2 userHorizontalPos, double userAlt, Vector2 userHorizontalVel, double userVSpeed, Vector2 intrHorizontalPos, double intrAlt, Vector2 intrHorizontalVel,
+	bool ra3d(std::string id, Vector2 userHorizontalPos, double userAlt, Vector2 userHorizontalVel, double userVSpeed, Vector2 intrHorizontalPos, double intrAlt, Vector2 intrHorizontalVel,
 		double intrVSpeed, double lookaheadTime);
 
 	/*
@@ -202,5 +211,5 @@ private:
 	sense. The Boolean function corrective specifies an algorithm that returns true when a given RA is corrective."
 	- corrective (Formula 28)
 	*/
-	bool corrective(Vector2 userHorizontalPos, double userAlt, Vector2 userHorizontalVel, double userVSpeed, Vector2 intrHorizontalPos, double intrAlt, Vector2 intrHorizontalVel, double intrVSpeed, double targetVSpeed, double userVAccel);
+	bool corrective(std::string id, Vector2 userHorizontalPos, double userAlt, Vector2 userHorizontalVel, double userVSpeed, Vector2 intrHorizontalPos, double intrAlt, Vector2 intrHorizontalVel, double intrVSpeed, double targetVSpeed, double userVAccel);
 };

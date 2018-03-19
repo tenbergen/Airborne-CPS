@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <sstream>
 #include <unordered_map>
+#include <limits>
 
 #include "component/GaugeRenderer.h"
 #include "data/location.pb.h"
@@ -34,6 +35,15 @@ public:
 	~Transponder();
 	DWORD receiveLocation(), sendLocation(), keepalive();
 	void start();
+
+	/*
+	Changes Cooperation Mode to supplied number
+	*/
+	void changeCooperationMode(int mode);
+	/*
+	Returns Cooperation mode in effect
+	*/
+	int getCooperationMode();
 
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* openConnections;
 protected:
@@ -56,6 +66,8 @@ private:
 
 	Decider * decider_;
 	Aircraft* aircraft_;
+
+	int cooperationMode_;
 
 	std::vector<Aircraft*> allocatedAircraft_;
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap_;

@@ -11,6 +11,7 @@ Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std
 	aircraft_ = ac;
 	intrudersMap = intruders;
 	openConnections = connections;
+	cooperationMode_ = 1; // CHANGE BACK TO 0 WHEN MENU IS IMPLEMENTED TO CHANGE
 
 	myLocation.set_id(macAddress_);
 	ip = getIpAddr();
@@ -106,7 +107,7 @@ DWORD Transponder::receiveLocation()
 
 				(*intrudersMap)[intruder->id] = intruder;
 				aircraft_->lock.lock();
-				ResolutionConnection* connection = new ResolutionConnection(macAddress_, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft_);
+				ResolutionConnection* connection = new ResolutionConnection(this, macAddress_, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft_);
 				(*openConnections)[intruder->id] = connection;
 			}
 
@@ -149,14 +150,34 @@ DWORD Transponder::sendLocation()
 		myLocation.set_lon(position.longitude.toDegrees());
 		myLocation.set_alt(position.altitude.toMeters());
 
-		int size = myLocation.ByteSize();
-		void * buffer = malloc(size);
+		//Full Cooperation
+		if (cooperationMode_ == 0) {
 
-		myLocation.SerializeToArray(buffer, size);
+			int size = myLocation.ByteSize();
+			void * buffer = malloc(size);
 
-		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
+			myLocation.SerializeToArray(buffer, size);
 
-		free(buffer);
+			sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
+
+			free(buffer);
+
+		// No Cooperation, No TCAS ability, no change in course or altitude
+		// Will only send latitude and longitude data (simulating what the TCAS equipped plane would pick up with its transponder), not altitude
+		} else if (cooperationMode_ == 1) {
+
+			// NaN for no altitude data
+			myLocation.set_alt(std::numeric_limits<double>::quiet_NaN());
+			int size = myLocation.ByteSize();
+			void * buffer = malloc(size);
+
+			myLocation.SerializeToArray(buffer, size);
+
+			sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
+
+			free(buffer);
+
+		}
 		Sleep(1000);
 	}
 	return 0;
@@ -214,6 +235,14 @@ std::string Transponder::getHardwareAddress()
 		macAddress_ = hardwareAddress;
 	}
 	return macAddress_;
+}
+
+void Transponder::changeCooperationMode(int mode) {
+	cooperationMode_ = mode;
+}
+
+int Transponder::getCooperationMode() {
+	return cooperationMode_;
 }
 
 std::string Transponder::getIpAddr()

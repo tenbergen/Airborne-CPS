@@ -4,8 +4,8 @@
 #include <math.h>
 
 // @author nstemmle
-namespace math_util {
+namespace mathutil {
 	float clampf(float val, float min, float max);
 	double clampd(double val, double min, double max);
-	double RoundToNearest(double val, double multiple);
+	double roundToNearest(double val, double multiple);
 };

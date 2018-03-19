@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <sstream>
 #include <unordered_map>
+#include <limits>
 
 #include "component/GaugeRenderer.h"
 #include "data/location.pb.h"
@@ -34,6 +35,17 @@ public:
 	~Transponder();
 	DWORD receiveLocation(), sendLocation(), keepalive();
 	void start();
+
+	/*
+	Changes Cooperation Mode to supplied number
+	*/
+	void changeCooperationMode(int mode);
+	/*
+	Returns Cooperation mode in effect
+	*/
+	int getCooperationMode();
+
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* openConnections;
 protected:
 	std::string ip;
 
@@ -46,18 +58,20 @@ protected:
 	std::atomic<int> communication;
 	xplane::Location intruderLocation, myLocation;
 
-	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* open_connections;
+	
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
 private:
-	static std::atomic<bool> initialized;
-	static std::string mac_address;
+	static std::atomic<bool> initialized_;
+	static std::string macAddress_;
 
 	Decider * decider_;
-	Aircraft* aircraft;
+	Aircraft* aircraft_;
 
-	std::vector<Aircraft*> allocated_aircraft;
-	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap;
-	
+	int cooperationMode_;
+
+	std::vector<Aircraft*> allocatedAircraft_;
+	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap_;
+
 	std::string getIpAddr();
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);
 };

@@ -135,7 +135,7 @@ enum {
     ,xplm_Phase_Panel                         = 40
 
      /* The moving parts of the aircraft panel.                                     */
-    ,xplm_Phase_Gauges                        = 45
+    ,XPLM_PHASE_GAUGES                        = 45
 
      /* Floating windows from plugins.                                              */
     ,xplm_Phase_Window                        = 50
@@ -299,9 +299,9 @@ XPLM_API int                  XPLMUnregisterKeySniffer(
  *
  */
 enum {
-     xplm_MouseDown                           = 1
+     XPLM_MOUSE_DOWN                           = 1
 
-    ,xplm_MouseDrag                           = 2
+    ,XPLM_MOUSE_DRAG                           = 2
 
     ,xplm_MouseUp                             = 3
 

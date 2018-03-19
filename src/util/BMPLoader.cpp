@@ -1,70 +1,70 @@
 #include "BMPLoader.h"
 
-int BmpLoader::LoadBmp(const char * FilePath, IMAGEDATA * ImageData)
+int BmpLoader::loadBmp(const char * filePath, ImageData * imageData)
 {
 	char debugStringBuf[256];
-	sprintf(debugStringBuf, "ExampleGuage::BitmapLoader - FilePath: %s\n", FilePath);
+	sprintf(debugStringBuf, "ExampleGuage::BitmapLoader - FilePath: %s\n", filePath);
 	XPLMDebugString(debugStringBuf);
-	BMPFILEHEADER   Header;
-	BMPINFOHEADER	ImageInfo;
-	int						Padding;
-	FILE *					BitmapFile = NULL;
-	int RetCode = 0;
+	BmpFileHeader   header;
+	BmpInfoHeader	imageInfo;
+	int						padding;
+	FILE *					bitmapFile = NULL;
+	int retCode = 0;
 
-	ImageData->pData = NULL;
+	imageData->pData = NULL;
 
-	BitmapFile = fopen(FilePath, "rb");
-	if (BitmapFile != NULL)
+	bitmapFile = fopen(filePath, "rb");
+	if (bitmapFile != NULL)
 	{
-		if (fread(&Header, sizeof(Header), 1, BitmapFile) == 1)
+		if (fread(&header, sizeof(header), 1, bitmapFile) == 1)
 		{
-			if (fread(&ImageInfo, sizeof(ImageInfo), 1, BitmapFile) == 1)
+			if (fread(&imageInfo, sizeof(imageInfo), 1, bitmapFile) == 1)
 			{
 				/// Handle Header endian.
-				SwapEndian(&Header.bfSize);
-				SwapEndian(&Header.bfOffBits);
+				swapEndian(&header.bfSize);
+				swapEndian(&header.bfOffBits);
 
 				/// Handle ImageInfo endian.
-				SwapEndian(&ImageInfo.biWidth);
-				SwapEndian(&ImageInfo.biHeight);
-				SwapEndian(&ImageInfo.biBitCount);
+				swapEndian(&imageInfo.biWidth);
+				swapEndian(&imageInfo.biHeight);
+				swapEndian(&imageInfo.biBitCount);
 
-				short channels = ImageInfo.biBitCount / 8;
+				short channels = imageInfo.biBitCount / 8;
 
 				/// Make sure that it is a bitmap.
 #if APL && defined(__POWERPC__)
 				if (((Header.bfType & 0xff) == 'M') &&
 					(((Header.bfType >> 8) & 0xff) == 'B') &&
 #else
-				if (((Header.bfType & 0xff) == 'B') &&
-					(((Header.bfType >> 8) & 0xff) == 'M') &&
+				if (((header.bfType & 0xff) == 'B') &&
+					(((header.bfType >> 8) & 0xff) == 'M') &&
 #endif
-					(ImageInfo.biBitCount == 24 || ImageInfo.biBitCount == 32) &&
-					(ImageInfo.biWidth > 0) &&
-					(ImageInfo.biHeight > 0))
+					(imageInfo.biBitCount == 24 || imageInfo.biBitCount == 32) &&
+					(imageInfo.biWidth > 0) &&
+					(imageInfo.biHeight > 0))
 				{
 					/// "Header.bfSize" does not always agree
 					/// with the actual file size and can sometimes be "ImageInfo.biSize"	 smaller.
 					/// So add it in for good measure
-					if ((Header.bfSize + ImageInfo.biSize - Header.bfOffBits) >= (ImageInfo.biWidth * ImageInfo.biHeight * channels))
+					if ((header.bfSize + imageInfo.biSize - header.bfOffBits) >= (imageInfo.biWidth * imageInfo.biHeight * channels))
 					{
-						Padding = (ImageInfo.biWidth * channels + channels) & ~channels;
-						Padding -= ImageInfo.biWidth * channels;
+						padding = (imageInfo.biWidth * channels + channels) & ~channels;
+						padding -= imageInfo.biWidth * channels;
 
-						ImageData->Width = ImageInfo.biWidth;
-						ImageData->Height = ImageInfo.biHeight;
-						ImageData->Padding = Padding;
+						imageData->width = imageInfo.biWidth;
+						imageData->height = imageInfo.biHeight;
+						imageData->padding = padding;
 
 						/// Allocate memory for the actual image.
-						ImageData->Channels = channels;
-						ImageData->pData = (unsigned char *)malloc(ImageInfo.biWidth * ImageInfo.biHeight * ImageData->Channels + ImageInfo.biHeight * Padding);
+						imageData->channels = channels;
+						imageData->pData = (unsigned char *)malloc(imageInfo.biWidth * imageInfo.biHeight * imageData->channels + imageInfo.biHeight * padding);
 
-						if (ImageData->pData != NULL)
+						if (imageData->pData != NULL)
 						{
 							/// Get the actual image.
-							if (fread(ImageData->pData, ImageInfo.biWidth * ImageInfo.biHeight * ImageData->Channels + ImageInfo.biHeight * Padding, 1, BitmapFile) == 1)
+							if (fread(imageData->pData, imageInfo.biWidth * imageInfo.biHeight * imageData->channels + imageInfo.biHeight * padding, 1, bitmapFile) == 1)
 							{
-								RetCode = 1;
+								retCode = 1;
 							}
 							else {
 								XPLMDebugString("Failed to load bitmap - failed to read image data\n");
@@ -93,31 +93,31 @@ int BmpLoader::LoadBmp(const char * FilePath, IMAGEDATA * ImageData)
 	else {
 		XPLMDebugString("Bitmap file was null\n");
 	}
-	if (BitmapFile != NULL)
-		fclose(BitmapFile);
-	return RetCode;
+	if (bitmapFile != NULL)
+		fclose(bitmapFile);
+	return retCode;
 }
 /// Swap the red and blue pixels.
-void BmpLoader::SwapRedBlue(IMAGEDATA *ImageData)
+void BmpLoader::swapRedBlue(ImageData *imageData)
 {
 	unsigned char  * srcPixel;
 	int		x, y;
 	unsigned char sTemp;
-	short channels = ImageData->Channels;
+	short channels = imageData->channels;
 
 	/// Do the swap
-	srcPixel = ImageData->pData;
+	srcPixel = imageData->pData;
 
-	for (y = 0; y < ImageData->Height; ++y) {
-		for (x = 0; x < ImageData->Width; ++x)
+	for (y = 0; y < imageData->height; ++y) {
+		for (x = 0; x < imageData->width; ++x)
 		{
 			sTemp = srcPixel[0];
 			srcPixel[0] = srcPixel[2];
 			srcPixel[2] = sTemp;
 
 			srcPixel += channels;
-			if (x == (ImageData->Width - 1))
-				srcPixel += ImageData->Padding;
+			if (x == (imageData->width - 1))
+				srcPixel += imageData->padding;
 		}
 	}
 }

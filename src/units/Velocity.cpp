@@ -10,10 +10,10 @@ double const Velocity::kKnotsToFtPerMin_ = 101.269;
 
 Velocity const Velocity::ZERO = {0.0, VelocityUnits::FEET_PER_MIN};
 
-Velocity::Velocity(double val, VelocityUnits units) : val_ft_per_min_(FeetPerMinFromUnits(val, units)) {}
+Velocity::Velocity(double val, VelocityUnits units) : valFtPerMin_(feetPerMinFromUnits(val, units)) {}
 
-double Velocity::FeetPerMinFromUnits(double val, VelocityUnits from_units) {
-	switch (from_units) {
+double Velocity::feetPerMinFromUnits(double val, VelocityUnits fromUnits) {
+	switch (fromUnits) {
 	case VelocityUnits::MPH:
 		return val * kMphToFtPerMin_;
 	case VelocityUnits::METERS_PER_S:
@@ -25,8 +25,8 @@ double Velocity::FeetPerMinFromUnits(double val, VelocityUnits from_units) {
 	}
 }
 
-double Velocity::UnitsFromFeetPerMin(double val, VelocityUnits to_units) {
-	switch (to_units) {
+double Velocity::unitsFromFeetPerMin(double val, VelocityUnits toUnits) {
+	switch (toUnits) {
 	case VelocityUnits::MPH:
 		return val * kFtPerMinToMph_;
 	case VelocityUnits::METERS_PER_S:
@@ -38,42 +38,42 @@ double Velocity::UnitsFromFeetPerMin(double val, VelocityUnits to_units) {
 	}
 }
 
-double Velocity::ToUnits(VelocityUnits units) const {
-	return UnitsFromFeetPerMin(val_ft_per_min_, units);
+double Velocity::toUnits(VelocityUnits units) const {
+	return unitsFromFeetPerMin(valFtPerMin_, units);
 }
 
-double Velocity::to_feet_per_min() const {
-	return val_ft_per_min_;
+double Velocity::toFeetPerMin() const {
+	return valFtPerMin_;
 }
 
-double Velocity::to_mph() const {
-	return val_ft_per_min_ * kFtPerMinToMph_;
+double Velocity::toMph() const {
+	return valFtPerMin_ * kFtPerMinToMph_;
 }
 
-double Velocity::to_meters_per_s() const {
-	return val_ft_per_min_ * kFtPerMinToMetersPerSec_;
+double Velocity::toMetersPerS() const {
+	return valFtPerMin_ * kFtPerMinToMetersPerSec_;
 }
 
-double Velocity::to_knots() const {
-	return val_ft_per_min_ * kFtPerMinToKnots_;
+double Velocity::toKnots() const {
+	return valFtPerMin_ * kFtPerMinToKnots_;
 }
 
 void Velocity::operator = (Velocity const & that) {
-	val_ft_per_min_ = that.val_ft_per_min_;
+	valFtPerMin_ = that.valFtPerMin_;
 }
 
 Velocity Velocity::operator + (Velocity const & that) const {
-	return Velocity(val_ft_per_min_ + that.val_ft_per_min_, Velocity::VelocityUnits::FEET_PER_MIN);
+	return Velocity(valFtPerMin_ + that.valFtPerMin_, Velocity::VelocityUnits::FEET_PER_MIN);
 }
 
 Velocity Velocity::operator - (Velocity const & that) const {
-	return Velocity(val_ft_per_min_ - that.val_ft_per_min_, Velocity::VelocityUnits::FEET_PER_MIN);
+	return Velocity(valFtPerMin_ - that.valFtPerMin_, Velocity::VelocityUnits::FEET_PER_MIN);
 }
 
 bool Velocity::operator > (Velocity const & that) const {
-	return val_ft_per_min_ > that.val_ft_per_min_;
+	return valFtPerMin_ > that.valFtPerMin_;
 }
 
 bool Velocity::operator < (Velocity const & that) const {
-	return val_ft_per_min_ < that.val_ft_per_min_;
+	return valFtPerMin_ < that.valFtPerMin_;
 }

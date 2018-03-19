@@ -267,7 +267,7 @@ XPLM_API void                 XPLMDrawTranslucentDarkBox(
  */
 enum {
      /* Mono-spaced font for user interface.  Available in all versions of the SDK. */
-     xplmFont_Basic                           = 0
+     XPLM_FONT_BASIC                           = 0
 
      /* Deprecated, do not use.                                                     */
     ,xplmFont_Menus                           = 1

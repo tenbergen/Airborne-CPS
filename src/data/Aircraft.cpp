@@ -1,13 +1,13 @@
 #include "Aircraft.h"
 
-Aircraft::Aircraft(std::string const id, std::string const ip) : id_(id), ip_(ip), heading_(Angle::ZERO), 
-	vertical_velocity_(Velocity::ZERO), true_airspeed_(Velocity::ZERO) {}
+Aircraft::Aircraft(std::string const id, std::string const ip) : id(id), ip(ip), heading(Angle::ZERO), 
+	verticalVelocity(Velocity::ZERO), trueAirspeed(Velocity::ZERO) {}
 
-Aircraft::Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity vert_vel) : 
-	id_(id), ip_(ip), position_current_(position), position_old_(position), heading_(heading), vertical_velocity_(vert_vel), 
-	true_airspeed_(Velocity::ZERO) {}
+Aircraft::Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity vertVel) : 
+	id(id), ip(ip), positionCurrent(position), positionOld(position), heading(heading), verticalVelocity(vertVel), 
+	trueAirspeed(Velocity::ZERO) {}
 
-Aircraft::Aircraft(Aircraft const & that) : id_(that.id_), ip_(that.ip_), position_current_time_(that.position_current_time_), 
-position_current_(that.position_current_), position_old_time_(that.position_old_time_), position_old_(that.position_old_),
-vertical_velocity_(that.vertical_velocity_), true_airspeed_(that.true_airspeed_), heading_(that.heading_), threat_classification_(that.threat_classification_)
+Aircraft::Aircraft(Aircraft const & that) : id(that.id), ip(that.ip), positionCurrentTime(that.positionCurrentTime), 
+positionCurrent(that.positionCurrent), positionOldTime(that.positionOldTime), positionOld(that.positionOld),
+verticalVelocity(that.verticalVelocity), trueAirspeed(that.trueAirspeed), heading(that.heading), threatClassification(that.threatClassification)
 {}

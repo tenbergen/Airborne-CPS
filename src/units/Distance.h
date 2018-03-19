@@ -6,19 +6,19 @@ class Distance
 public:
 	enum class DistanceUnits {FEET, METERS, NMI, MILES};
 	
-	static double UnitsFromFeet(double val, DistanceUnits units);
-	static double FeetFromUnits(double val, DistanceUnits units);
+	static double unitsFromFeet(double val, DistanceUnits units);
+	static double feetFromUnits(double val, DistanceUnits units);
 
 	static Distance const ZERO;
 
 	Distance(double val, DistanceUnits units);
 
-	double ToUnits(DistanceUnits units) const;
+	double toUnits(DistanceUnits units) const;
 
-	double to_feet() const;
-	double to_meters() const;
-	double to_miles() const;
-	double to_nmi() const;
+	double toFeet() const;
+	double toMeters() const;
+	double toMiles() const;
+	double toNmi() const;
 
 	Distance operator + (Distance const & that) const;
 	Distance operator - (Distance const & that) const;
@@ -39,5 +39,5 @@ private:
 	static double const kNmiPerFt_;
 	static double const kMilesPerFt_;
 
-	double value_ft_;
+	double valueFt_;
 };

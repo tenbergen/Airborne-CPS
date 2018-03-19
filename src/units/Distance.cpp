@@ -10,9 +10,9 @@ const double Distance::kMilesPerFt_ = 0.0001893939;
 
 const Distance Distance::ZERO = Distance(0.0, DistanceUnits::FEET);
 
-Distance::Distance(double val, Distance::DistanceUnits units) : value_ft_{ FeetFromUnits(val, units) } {};
+Distance::Distance(double val, Distance::DistanceUnits units) : valueFt_{ feetFromUnits(val, units) } {};
 
-double Distance::UnitsFromFeet(double val, Distance::DistanceUnits units) {
+double Distance::unitsFromFeet(double val, Distance::DistanceUnits units) {
 	switch (units) {
 	case DistanceUnits::MILES:
 		return val * kMilesPerFt_;
@@ -25,7 +25,7 @@ double Distance::UnitsFromFeet(double val, Distance::DistanceUnits units) {
 	}
 }
 
-double Distance::FeetFromUnits(double val, Distance::DistanceUnits units) {
+double Distance::feetFromUnits(double val, Distance::DistanceUnits units) {
 	switch (units) {
 	case DistanceUnits::MILES:
 		return val * kFtPerMile_;
@@ -38,41 +38,41 @@ double Distance::FeetFromUnits(double val, Distance::DistanceUnits units) {
 	}
 }
 
-double Distance::to_feet() const {
-	return value_ft_;
+double Distance::toFeet() const {
+	return valueFt_;
 }
 
-double Distance::to_meters() const {
-	return value_ft_ * kMetersPerFt_;
+double Distance::toMeters() const {
+	return valueFt_ * kMetersPerFt_;
 }
 
-double Distance::to_miles() const {
-	return value_ft_ * kMilesPerFt_;
+double Distance::toMiles() const {
+	return valueFt_ * kMilesPerFt_;
 }
 
-double Distance::to_nmi() const {
-	return value_ft_ * kNmiPerFt_;
+double Distance::toNmi() const {
+	return valueFt_ * kNmiPerFt_;
 }
 
-double Distance::ToUnits(Distance::DistanceUnits units) const {
-	return UnitsFromFeet(value_ft_, units);
+double Distance::toUnits(Distance::DistanceUnits units) const {
+	return unitsFromFeet(valueFt_, units);
 }
 
 Distance Distance::operator + (Distance const & d) const { 
-	return Distance(value_ft_ + d.value_ft_, DistanceUnits::FEET);
+	return Distance(valueFt_ + d.valueFt_, DistanceUnits::FEET);
 }
 
 Distance Distance::operator - (Distance const & d) const {
-	return Distance(value_ft_ - d.value_ft_, DistanceUnits::FEET);
+	return Distance(valueFt_ - d.valueFt_, DistanceUnits::FEET);
 }
 
 Distance Distance::operator * (Distance const & d) const {
-	return Distance(value_ft_ * d.value_ft_, DistanceUnits::FEET);
+	return Distance(valueFt_ * d.valueFt_, DistanceUnits::FEET);
 }
 
 Distance Distance::operator / (Distance const & d) const {
-	if (d.value_ft_ != 0.0) {
-		return Distance(value_ft_ / d.value_ft_, DistanceUnits::FEET);
+	if (d.valueFt_ != 0.0) {
+		return Distance(valueFt_ / d.valueFt_, DistanceUnits::FEET);
 	}
 	else {
 		return Distance::ZERO;
@@ -80,13 +80,13 @@ Distance Distance::operator / (Distance const & d) const {
 }
 
 void Distance::operator = (Distance const & d) {
-	value_ft_ = d.value_ft_;
+	valueFt_ = d.valueFt_;
 }
 
 bool Distance::operator < (Distance const & that) const {
-	return value_ft_ < that.value_ft_;
+	return valueFt_ < that.valueFt_;
 }
 
 bool Distance::operator > (Distance const & that) const {
-	return value_ft_ > that.value_ft_;
+	return valueFt_ > that.valueFt_;
 }

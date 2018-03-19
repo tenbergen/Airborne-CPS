@@ -13,7 +13,6 @@
 #include "units/LLA.h"
 #include "data/Sense.h"
 #include <data/Aircraft.h>
-#include "Transponder.h"
 
 #define MAC_LENGTH 18
 
@@ -22,7 +21,7 @@ class ResolutionConnection
 public:
 	static unsigned short const K_TCP_PORT = 21218;
 
-	ResolutionConnection(Transponder* constructingTransponder, std::string const userMac, std::string const intruderMac, std::string const ip, int const port, Aircraft* userAc);
+	ResolutionConnection(std::string const userMac, std::string const intruderMac, std::string const ip, int const port, Aircraft* userAc);
 	~ResolutionConnection();
 
 	std::string const intruderMac;
@@ -48,7 +47,6 @@ public:
 	int sendSense(Sense);
 private:
 	static int number_of_connections_;
-	Transponder* transponder_;
 
 	std::atomic<bool> running_;
 	std::atomic<bool> threadStopped_;

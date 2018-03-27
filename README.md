@@ -26,5 +26,6 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
   * Resolution Advisory(RA)
 - RA action consensus and action suggestion.
 - Drawing of recommended action(vertical velocity) to gauge.
-  
+- Suport for at least 3 client connections.
+- Strength-Based RA Selection Algorithm for 3+ aircraft RA scenarios.
 

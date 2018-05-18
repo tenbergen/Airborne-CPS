@@ -34,3 +34,7 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
 - Suport for at least 3 client connections.
 - Strength-Based RA Selection Algorithm for 3+ aircraft RA scenarios.
 
+
+### Builds
+
+x32 - https://github.com/tenbergen/Airborne-CPS/blob/master/AirborneCPS-x32.zip

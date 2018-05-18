@@ -38,4 +38,5 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
 ### Builds
 
 Extract to Plugins folder of X-Plane 10
--x32 - https://github.com/tenbergen/Airborne-CPS/raw/master/AirborneCPS-x32.zip
+
+-x32 https://github.com/tenbergen/Airborne-CPS/raw/master/AirborneCPS-x32.zip

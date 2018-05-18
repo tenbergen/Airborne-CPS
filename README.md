@@ -6,16 +6,21 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
 
 - The plugin was written in C++ in Microsoft Visual Studio 15 Community.
 
-- The SDK for the plugin can be found [here](http://www.xsquawkbox.net/xpsdk/mediawiki/Main_Page).
+- The SDK for the plugin is included in the codebase, and can also be found [here](http://www.xsquawkbox.net/xpsdk/mediawiki/Main_Page).
 
-- On Windows, you will need to add these to the linker/input/AdditionalDependencies settings:
+- On Windows, you will need these linker/input/AdditionalDependencies settings:
   * glu32.lib
   * glaux.lib
+  They should already be included.
 
-- You will also need to get Google's serialization protocol buffers from [here](https://github.com/google/protobuf/releases/tag/v3.0.0).
-  * For this project you'll need either protobuf-cpp-3.0.0.tar.gz or protobuf-cpp-3.0.0.zip
-  * To build this library you'll also need [CMake](https://cmake.org/).
-  * You'll have to run the CMake on the CMake file, which will result in a Visual Studio project you can build.
+- You need Google's serialization protocol buffers from [here](https://github.com/google/protobuf/releases/tag/v3.0.0).
+  * These are included in the codebase.
+  
+- Open the Visual Studio project ExampleGauge, and change the project's C++ Linker folder locations, Dependency folder locations, and build   path to reflect your project's path structure.
+
+- Copy the included Images folder from the repository to the Plugins folder of X-Plane.
+
+- Build plugin.
   
   
 ### Current Functionality

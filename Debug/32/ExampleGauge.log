@@ -1,6 +1,2 @@
-﻿  ExampleGauge.cpp
-  Transponder.cpp
-  Generating Code...
-     Creating library .\Debug\32\ExampleGauge.lib and object .\Debug\32\ExampleGauge.exp
-  ExampleGauge.vcxproj -> C:\Users\Steve\Documents\Visual Studio 2015\Projects\Airborne-CPS\..\..\..\..\Desktop\Desktop\X-Plane 10\Resources\plugins\AirborneCPS.xpl
-  ExampleGauge.vcxproj -> ..\..\..\..\Desktop\Desktop\X-Plane 10\Resources\plugins\AirborneCPS.pdb (Full PDB)
+﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(368,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
+cl : Command line error D8016: '/O2' and '/RTC1' command-line options are incompatible

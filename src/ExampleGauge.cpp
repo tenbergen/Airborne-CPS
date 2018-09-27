@@ -36,6 +36,7 @@ Added the define IBM 1 thing because you have to specify it before doing
 #include "XPLMDisplay.h"
 #include "XPLMNavigation.h"
 #include "XPLMDataAccess.h"
+#include "XPLMMenus.h"
 
 #include "component/Transponder.h"
 
@@ -50,7 +51,19 @@ XPLMDataRef	cockpitLightingRed, cockpitLightingGreen, cockpitLightingBlue;
 
 static XPLMWindowID	gExampleGaugePanelDisplayWindow = NULL;
 static int exampleGaugeDisplayPanelWindow = 1;
+static bool debug = true;
+
+// Declares Hotkey Toggles
 static XPLMHotKeyID gExampleGaugeHotKey = NULL;
+static XPLMHotKeyID debugWindowToggle = NULL;
+static XPLMHotKeyID tcasToggle = NULL;
+static XPLMHotKeyID hostileGauge = NULL;
+
+//Menu Declarations
+int menuContainer;
+XPLMMenuID menuID;
+void menuHandler(void *, void *);
+
 
 // The plugin application path
 static char gPluginDataFile[255];
@@ -76,6 +89,7 @@ static void drawGLScene();
 
 static int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
 static void exampleGaugeHotKey(void * refCon);
+static void debugToggle(void * refCon);
 static void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
 static void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
 static int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
@@ -119,7 +133,12 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	strcpy(outSig, "AirborneCPS");
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
 
-	//test();
+	/*Start of Plugin Menu Creation*/
+	menuContainer = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Airborne CPS", 0, 0);
+	menuID = XPLMCreateMenu("Airborne CPS", XPLMFindPluginsMenu(), menuContainer, menuHandler, NULL);
+	XPLMAppendMenuItem(menuID, "Toggle CPS", (void *) "exampleGaugeHotkey", 1);
+
+	/*End of Plugin Menu Creation*/
 
 	/* Now we create a window.  We pass in a rectangle in left, top, right, bottom screen coordinates.  We pass in three callbacks. */
 	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, myDrawWindowCallback, myHandleKeyCallback, myHandleMouseClickCallback, NULL);
@@ -146,7 +165,9 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	cockpitLightingGreen = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
 	cockpitLightingBlue = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
+	//Assign keybinds for hotkeys
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", exampleGaugeHotKey, NULL);
+	debugWindowToggle = XPLMRegisterHotKey(XPLM_VK_F9, xplm_DownFlag, "F9", debugToggle, NULL);
 
 	Transponder::initNetworking();
 	std::string myMac = Transponder::getHardwareAddress();
@@ -272,6 +293,10 @@ void exampleGaugeHotKey(void * refCon) {
 	exampleGaugeDisplayPanelWindow = !exampleGaugeDisplayPanelWindow;
 }
 
+void debugToggle(void * refCon) {
+	debug = !debug;
+}
+
 /// Draws the textures that make up the gauge
 void drawGLScene() {
 	textureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpitLightingRed), XPLMGetDataf(cockpitLightingGreen), XPLMGetDataf(cockpitLightingBlue) };
@@ -287,46 +312,48 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int		left, top, right, bottom;
 	static float color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
 
-												/* First we get the location of the window passed in to us. */
-	XPLMGetWindowGeometry(inWindowID, &left, &top, &right, &bottom);
+	if (debug) {
+		/* First we get the location of the window passed in to us. */
+		XPLMGetWindowGeometry(inWindowID, &left, &top, &right, &bottom);
 
-	/* We now use an XPLMGraphics routine to draw a translucent dark rectangle that is our window's shape. */
-	XPLMDrawTranslucentDarkBox(left, top, right, bottom);
+		/* We now use an XPLMGraphics routine to draw a translucent dark rectangle that is our window's shape. */
+		XPLMDrawTranslucentDarkBox(left, top, right, bottom);
 
-	/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
-	char positionBuf[128];
-	snprintf(positionBuf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitudeRef), XPLMGetDataf(longitudeRef), XPLMGetDataf(altitudeRef));
-	XPLMDrawString(color, left + 5, top - 20, positionBuf, NULL, XPLM_FONT_BASIC);
+		/* Finally we draw the text into the window, also using XPLMGraphics routines.  The NULL indicates no word wrapping. */
+		char positionBuf[128];
+		snprintf(positionBuf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitudeRef), XPLMGetDataf(longitudeRef), XPLMGetDataf(altitudeRef));
+		XPLMDrawString(color, left + 5, top - 20, positionBuf, NULL, XPLM_FONT_BASIC);
 
-	/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
-	int offsetYPxls = 40;
+		/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
+		int offsetYPxls = 40;
 
-	for (auto & iter = intrudingAircraft.cbegin(); iter != intrudingAircraft.cend(); ++iter) {
-		Aircraft* intruder = iter->second;
+		for (auto & iter = intrudingAircraft.cbegin(); iter != intrudingAircraft.cend(); ++iter) {
+			Aircraft* intruder = iter->second;
 
-		intruder->lock.lock();
-		LLA const intruderPos = intruder->positionCurrent;
-		LLA const intruderPosOld = intruder->positionOld;
-		std::string intrId = intruder->id;
-		intruder->lock.unlock();
+			intruder->lock.lock();
+			LLA const intruderPos = intruder->positionCurrent;
+			LLA const intruderPosOld = intruder->positionOld;
+			std::string intrId = intruder->id;
+			intruder->lock.unlock();
 
-		Calculations c = ((NASADecider*)decider)->getCalculations(intrId);
+			Calculations c = ((NASADecider*)decider)->getCalculations(intrId);
 
-		positionBuf[0] = '\0';
-		snprintf(positionBuf, 128, "intrPos: (%.3f, %.3f, %3f)", intruderPos.latitude.toDegrees(), intruderPos.longitude.toDegrees(), intruderPos.altitude.toMeters());
-		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
-		offsetYPxls += 20;
+			positionBuf[0] = '\0';
+			snprintf(positionBuf, 128, "intrPos: (%.3f, %.3f, %3f)", intruderPos.latitude.toDegrees(), intruderPos.longitude.toDegrees(), intruderPos.altitude.toMeters());
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			offsetYPxls += 20;
 
-		positionBuf[0] = '\0';
-		snprintf(positionBuf, 128, "modTauS: %.3f", c.modTau);
-		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
-		offsetYPxls += 20;
+			positionBuf[0] = '\0';
+			snprintf(positionBuf, 128, "modTauS: %.3f", c.modTau);
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			offsetYPxls += 20;
 
-		positionBuf[0] = '\0';
-		snprintf(positionBuf, 128, "altSepFt: %.3f", c.altSepFt);
-		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
-		offsetYPxls += 20;
+			positionBuf[0] = '\0';
+			snprintf(positionBuf, 128, "altSepFt: %.3f", c.altSepFt);
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			offsetYPxls += 20;
 
+		}
 	}
 }
 
@@ -351,4 +378,8 @@ int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseS
 	* out of our window's box as long as the click started in our window's
 	* box. */
 	return 1;
+}
+
+void menuHandler(void * in_menu_ref, void * in_item_rif) {
+
 }

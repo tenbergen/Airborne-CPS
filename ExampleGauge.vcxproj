@@ -115,7 +115,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\..\..\..\..\X-Plane 10\Resources\plugins\</OutDir>
+    <OutDir>..\..\..\..\..\X-Plane 10\Resources\plugins\AirborneCPS</OutDir>
     <IntDir>.\Release\32\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -131,7 +131,7 @@
     <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>C:\X-Plane 10\Resources\plugins</OutDir>
+    <OutDir>..\..\..\..\..\X-Plane 10\Resources\plugins\AirborneCPS</OutDir>
     <IntDir>.\Release\32\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -155,7 +155,7 @@
       <Optimization>MinSpace</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>C:\Users\Andrew\Source\Repos\Airborne-CPS\SDK\CHeaders;C:\Users\Andrew\Source\Repos\Airborne-CPS\SDK\CHeaders\Widgets;C:\Users\Andrew\Source\Repos\Airborne-CPS\SDK\CHeaders\XPLM;C:\Users\Andrew\Source\Repos\Airborne-CPS\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Oswego\Source\Repos\Airborne-CPS\src;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders\XPLM;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders\Widgets;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\Delphi\XPLM;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\Delphi\Widgets</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;SIMDATA_EXPORTS;IBM=1;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Release\32\</AssemblerListingLocation>
       <PrecompiledHeaderOutputFile>.\Release\32\ExampleGauge.pch</PrecompiledHeaderOutputFile>
@@ -185,7 +185,7 @@
       <LinkDLL>true</LinkDLL>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Release\32\ExampleGauge.lib</ImportLibrary>
-      <AdditionalLibraryDirectories>C:\Users\Andrew\Source\Repos\Airborne-CPS\SDK\Libraries\Win;C:\Users\Andrew\Source\Repos\Airborne-CPS\Release\32</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\Libraries\Win;C:\Users\Oswego\Source\Repos\Airborne-CPS\Release\32</AdditionalLibraryDirectories>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;libprotobuf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -239,7 +239,7 @@
       <Optimization>MaxSpeed</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders\Widgets;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders\XPLM;C:\Users\Oswego\Source\Repos\Airborne-CPS\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Oswego\Source\Repos\Airborne-CPS\src;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders\XPLM;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\CHeaders\Widgets;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\Delphi\XPLM;C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\Delphi\Widgets</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;SIMDATA_EXPORTS;IBM=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Debug\32\</AssemblerListingLocation>
       <PrecompiledHeaderOutputFile>.\Debug\32\ExampleGauge.pch</PrecompiledHeaderOutputFile>
@@ -272,7 +272,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Debug\32\ExampleGauge.lib</ImportLibrary>
-      <AdditionalLibraryDirectories>C:\Users\Andrew\Source\Repos\Airborne-CPS\SDK\Libraries\Win;C:\Users\Andrew\Source\Repos\Airborne-CPS\Release\32</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\Oswego\Source\Repos\Airborne-CPS\SDK\Libraries\Win;C:\Users\Oswego\Source\Repos\Airborne-CPS\Release\32</AdditionalLibraryDirectories>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;libprotobuf.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Link>

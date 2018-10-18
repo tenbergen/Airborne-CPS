@@ -38,6 +38,8 @@ Added the define IBM 1 thing because you have to specify it before doing
 #include "XPLMDataAccess.h"
 #include "XPLMMenus.h"
 
+#include "component/GaugeRenderer.h"
+
 #include "component/Transponder.h"
 
 #include "component/NASADecider.h"
@@ -90,6 +92,7 @@ static void drawGLScene();
 static int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
 static void exampleGaugeHotKey(void * refCon);
 static void debugToggle(void * refCon);
+static void hostileGaugeToggle(void * refCon);
 static void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
 static void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
 static int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
@@ -166,8 +169,9 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	cockpitLightingBlue = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
 	//Assign keybinds for hotkeys
-	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", exampleGaugeHotKey, NULL);
-	debugWindowToggle = XPLMRegisterHotKey(XPLM_VK_F9, xplm_DownFlag, "F9", debugToggle, NULL);
+	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F9, xplm_DownFlag, "F9", exampleGaugeHotKey, NULL);
+	debugWindowToggle = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", debugToggle, NULL);
+	hostileGauge = XPLMRegisterHotKey(XPLM_VK_F10, xplm_DownFlag, "F10", hostileGaugeToggle, NULL);
 
 	Transponder::initNetworking();
 	std::string myMac = Transponder::getHardwareAddress();
@@ -195,6 +199,7 @@ PLUGIN_API void	XPluginStop(void) {
 	XPLMUnregisterDrawCallback(gaugeDrawingCallback, XPLM_PHASE_GAUGES, 0, NULL);
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
+	//TODO: Unregister Hotkeys
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
 
 	delete gaugeRenderer;
@@ -297,6 +302,10 @@ void debugToggle(void * refCon) {
 	debug = !debug;
 }
 
+void hostileGaugeToggle(void * refCon) {
+	//TODO: Figure out why this isn't working
+}
+
 /// Draws the textures that make up the gauge
 void drawGLScene() {
 	textureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpitLightingRed), XPLMGetDataf(cockpitLightingGreen), XPLMGetDataf(cockpitLightingBlue) };
@@ -383,3 +392,4 @@ int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseS
 void menuHandler(void * in_menu_ref, void * in_item_rif) {
 
 }
+

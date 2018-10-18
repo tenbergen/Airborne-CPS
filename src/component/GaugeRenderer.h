@@ -99,6 +99,7 @@ private:
 
 	void drawTextureRegion(textureconstants::TexCoords const * texCoords, double vertLeft, double vertRight, double vertTop, double vertBot) const;
 
+
 	textureconstants::TexCoords const * GaugeRenderer::gaugeTexCoordsFromDigitCharacter(char) const;
 
 	// No copy constructor or copy-assignment 

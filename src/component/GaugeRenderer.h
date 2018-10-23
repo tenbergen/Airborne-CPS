@@ -10,6 +10,7 @@
 #include "util/StringUtil.h"
 
 // @author nstemmle
+
 class GaugeRenderer
 {
 public:
@@ -18,6 +19,10 @@ public:
 
 	void loadTextures();
 	void render(textureconstants::GlRgb8Color cockpitLighting);
+	void markHostile(boolean h);
+
+	// Boolean to mark hostile
+	bool hostile;
 
 	// The minimum and maximum vertical speed values in units of feet per minute
 	static double const kMinVertSpeed, kMaxVertSpeed;

@@ -66,6 +66,10 @@ int menuContainer;
 XPLMMenuID menuID;
 void menuHandler(void *, void *);
 
+// This Global is used to activate hostile mode. This is TEMPORARY
+//TODO: Turn on Hostile TA/RA without Globals.
+static bool hostile = false;
+
 
 // The plugin application path
 static char gPluginDataFile[255];
@@ -199,7 +203,8 @@ PLUGIN_API void	XPluginStop(void) {
 	XPLMUnregisterDrawCallback(gaugeDrawingCallback, XPLM_PHASE_GAUGES, 0, NULL);
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
-	//TODO: Unregister Hotkeys
+	XPLMUnregisterHotKey(debugWindowToggle);
+	XPLMUnregisterHotKey(hostileGauge);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
 
 	delete gaugeRenderer;
@@ -303,12 +308,14 @@ void debugToggle(void * refCon) {
 }
 
 void hostileGaugeToggle(void * refCon) {
-	//TODO: Figure out why this isn't working
+	//TODO: Toggle Hostile Mode.
+	hostile = !hostile;
 }
 
 /// Draws the textures that make up the gauge
 void drawGLScene() {
 	textureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpitLightingRed), XPLMGetDataf(cockpitLightingGreen), XPLMGetDataf(cockpitLightingBlue) };
+	gaugeRenderer->markHostile(hostile);
 	gaugeRenderer->render(cockpit_lighting);
 }
 
@@ -332,6 +339,11 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 		char positionBuf[128];
 		snprintf(positionBuf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitudeRef), XPLMGetDataf(longitudeRef), XPLMGetDataf(altitudeRef));
 		XPLMDrawString(color, left + 5, top - 20, positionBuf, NULL, XPLM_FONT_BASIC);
+
+		//TODO: Display in Debug.
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "Hostile Global: %d", hostile);
+		XPLMDrawString(color, left + 5, top - 100, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 
 		/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
 		int offsetYPxls = 40;
@@ -363,6 +375,7 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 			offsetYPxls += 20;
 
 		}
+
 	}
 }
 

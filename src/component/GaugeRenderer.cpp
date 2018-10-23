@@ -115,7 +115,7 @@ void GaugeRenderer::render(textureconstants::GlRgb8Color cockpitLighting) {
 	drawOuterGauge();
 
 	decider_->recommendationRangeLock.lock();
-	RecommendationRange positive = decider_->positiveRecommendationRange;  //TODO: Look into this for turning hostile
+	RecommendationRange positive = decider_->positiveRecommendationRange;
 	RecommendationRange neg = decider_->negativeRecommendationRange;
 	decider_->recommendationRangeLock.unlock();
 
@@ -376,8 +376,15 @@ void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, 
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
 
-	textureconstants::GlRgb8Color const * recRangeColor = recommended ? 
-		&textureconstants::K_RECOMMENDATION_RANGE_POSITIVE : &textureconstants::K_RECOMMENDATION_RANGE_NEGATIVE;  //TODO: Write Hostile Mode here
+	textureconstants::GlRgb8Color const * recRangeColor;
+
+	if (!hostile) {
+		 recRangeColor= recommended ?
+			&textureconstants::K_RECOMMENDATION_RANGE_POSITIVE : &textureconstants::K_RECOMMENDATION_RANGE_NEGATIVE;  
+	} else {
+		recRangeColor = recommended ?
+			&textureconstants::K_RECOMMENDATION_RANGE_POSITIVE_INVERTED : &textureconstants::K_RECOMMENDATION_RANGE_NEGATIVE_INVERTED; 
+	}
 
 	glColor4f(recRangeColor->red, recRangeColor->green, recRangeColor->blue, 1.0f);
 
@@ -389,4 +396,8 @@ void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, 
 	glEnable(GL_LIGHTING);
 
 	glPopMatrix();
+}
+
+void GaugeRenderer::markHostile(boolean h) {
+	hostile = !hostile;
 }

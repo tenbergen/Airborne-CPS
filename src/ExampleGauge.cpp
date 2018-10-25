@@ -175,7 +175,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	//Assign keybinds for hotkeys
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F9, xplm_DownFlag, "F9", exampleGaugeHotKey, NULL);
 	debugWindowToggle = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", debugToggle, NULL);
-	hostileGauge = XPLMRegisterHotKey(XPLM_VK_F10, xplm_DownFlag, "F10", hostileGaugeToggle, NULL);
+	hostileGauge = XPLMRegisterHotKey(XPLM_VK_F12, xplm_DownFlag, "F12", hostileGaugeToggle, NULL);
 
 	Transponder::initNetworking();
 	std::string myMac = Transponder::getHardwareAddress();
@@ -309,13 +309,12 @@ void debugToggle(void * refCon) {
 
 void hostileGaugeToggle(void * refCon) {
 	//TODO: Toggle Hostile Mode.
-	hostile = !hostile;
+	gaugeRenderer->markHostile();
 }
 
 /// Draws the textures that make up the gauge
 void drawGLScene() {
 	textureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpitLightingRed), XPLMGetDataf(cockpitLightingGreen), XPLMGetDataf(cockpitLightingBlue) };
-	gaugeRenderer->markHostile(hostile);
 	gaugeRenderer->render(cockpit_lighting);
 }
 
@@ -327,6 +326,7 @@ void drawGLScene() {
 void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int		left, top, right, bottom;
 	static float color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
+	bool hostileValue;
 
 	if (debug) {
 		/* First we get the location of the window passed in to us. */
@@ -339,11 +339,6 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 		char positionBuf[128];
 		snprintf(positionBuf, 128, "Position: (%.3f, %.3f, %.3f)", XPLMGetDataf(latitudeRef), XPLMGetDataf(longitudeRef), XPLMGetDataf(altitudeRef));
 		XPLMDrawString(color, left + 5, top - 20, positionBuf, NULL, XPLM_FONT_BASIC);
-
-		//TODO: Display in Debug.
-		positionBuf[0] = '\0';
-		snprintf(positionBuf, 128, "Hostile Global: %d", hostile);
-		XPLMDrawString(color, left + 5, top - 100, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 
 		/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
 		int offsetYPxls = 40;
@@ -365,16 +360,23 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 			offsetYPxls += 20;
 
 			positionBuf[0] = '\0';
-			snprintf(positionBuf, 128, "modTauS: %.3f", c.modTau);
-			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+		//	snprintf(positionBuf, 128, "modTauS: %.3f", c.modTau);
+		//	XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 			offsetYPxls += 20;
 
 			positionBuf[0] = '\0';
 			snprintf(positionBuf, 128, "altSepFt: %.3f", c.altSepFt);
 			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 			offsetYPxls += 20;
-
+		//TODO: Display in Debug.
+		//TODO: Why did this make everything dissapear!!! 
+		hostileValue = gaugeRenderer->returnHostileValue();
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "Hostile Global: %s", &hostileValue ?  "true" : "false");
+		XPLMDrawString(color, left + 5, top - 100, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 		}
+
+
 
 	}
 }

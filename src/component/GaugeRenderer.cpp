@@ -33,6 +33,9 @@ double const GaugeRenderer::kDiskOuterRadius_ = 105.0;
 int const GaugeRenderer::kDiskSlices_ = 32;
 int const GaugeRenderer::kDiskLoops_ = 2;
 
+// Boolean to mark hostile
+static bool hostile = false;
+
 GaugeRenderer::GaugeRenderer(char const * const appPath, Decider * const decider, Aircraft * const userAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intrudingAircraft) : 
 	appPath_(appPath), decider_(decider), userAircraft_(userAircraft), intruders_(intrudingAircraft) {
 	quadric_ = gluNewQuadric();
@@ -367,7 +370,7 @@ void GaugeRenderer::drawRecommendationRangeStartStop(Angle start, Angle stop, bo
 	drawRecommendationRangeStartSweep(start, sweepSize, recommended);
 }
 
-void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const {
+void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const { //Recommended appears to be true for pull up, false for go down
 	start.normalize();
 	sweep.normalize();
 	
@@ -377,11 +380,10 @@ void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, 
 	glDisable(GL_LIGHTING);
 
 	textureconstants::GlRgb8Color const * recRangeColor;
-
 	if (!hostile) {
 		 recRangeColor= recommended ?
 			&textureconstants::K_RECOMMENDATION_RANGE_POSITIVE : &textureconstants::K_RECOMMENDATION_RANGE_NEGATIVE;  
-	} else {
+	} if (hostile) {
 		recRangeColor = recommended ?
 			&textureconstants::K_RECOMMENDATION_RANGE_POSITIVE_INVERTED : &textureconstants::K_RECOMMENDATION_RANGE_NEGATIVE_INVERTED; 
 	}
@@ -398,6 +400,10 @@ void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, 
 	glPopMatrix();
 }
 
-void GaugeRenderer::markHostile(boolean h) {
+void GaugeRenderer::markHostile() {
 	hostile = !hostile;
+}
+
+bool GaugeRenderer::returnHostileValue() {
+	return hostile;
 }

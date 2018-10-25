@@ -19,10 +19,8 @@ public:
 
 	void loadTextures();
 	void render(textureconstants::GlRgb8Color cockpitLighting);
-	void markHostile(boolean h);
-
-	// Boolean to mark hostile
-	bool hostile;
+	void markHostile();
+	bool returnHostileValue();
 
 	// The minimum and maximum vertical speed values in units of feet per minute
 	static double const kMinVertSpeed, kMaxVertSpeed;

@@ -33,8 +33,6 @@ double const GaugeRenderer::kDiskOuterRadius_ = 105.0;
 int const GaugeRenderer::kDiskSlices_ = 32;
 int const GaugeRenderer::kDiskLoops_ = 2;
 
-// Boolean to mark hostile
-static bool hostile = false;
 
 GaugeRenderer::GaugeRenderer(char const * const appPath, Decider * const decider, Aircraft * const userAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intrudingAircraft) : 
 	appPath_(appPath), decider_(decider), userAircraft_(userAircraft), intruders_(intrudingAircraft) {

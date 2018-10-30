@@ -57,9 +57,10 @@ static bool debug = true;
 
 // Declares Hotkey Toggles
 static XPLMHotKeyID gExampleGaugeHotKey = NULL;
-static XPLMHotKeyID debugWindowToggle = NULL;
+static XPLMHotKeyID debugToggle = NULL;
+static XPLMHotKeyID hostileToggle = NULL;
 static XPLMHotKeyID tcasToggle = NULL;
-static XPLMHotKeyID hostileGauge = NULL;
+
 
 //Menu Declarations
 int menuContainer;
@@ -95,8 +96,8 @@ static void drawGLScene();
 
 static int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
 static void exampleGaugeHotKey(void * refCon);
-static void debugToggle(void * refCon);
-static void hostileGaugeToggle(void * refCon);
+static void debugWindow(void * refCon);
+static void hostileGauge(void * refCon);
 static void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
 static void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
 static int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
@@ -173,9 +174,9 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	cockpitLightingBlue = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_b");
 
 	//Assign keybinds for hotkeys
+	debugToggle = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", debugWindow, NULL);
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F9, xplm_DownFlag, "F9", exampleGaugeHotKey, NULL);
-	debugWindowToggle = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", debugToggle, NULL);
-	hostileGauge = XPLMRegisterHotKey(XPLM_VK_F12, xplm_DownFlag, "F12", hostileGaugeToggle, NULL);
+	hostileToggle = XPLMRegisterHotKey(XPLM_VK_F10, xplm_DownFlag, "F10", hostileGauge, NULL);
 
 	Transponder::initNetworking();
 	std::string myMac = Transponder::getHardwareAddress();
@@ -185,7 +186,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 	userAircraft->positionCurrentTime = msSinceEpoch;
 	userAircraft->positionOldTime = msSinceEpoch;
-
+	
 	decider = new NASADecider(userAircraft, &openConnections);
 
 	gaugeRenderer = new GaugeRenderer(gPluginDataFile, decider, userAircraft, &intrudingAircraft);
@@ -203,8 +204,8 @@ PLUGIN_API void	XPluginStop(void) {
 	XPLMUnregisterDrawCallback(gaugeDrawingCallback, XPLM_PHASE_GAUGES, 0, NULL);
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
-	XPLMUnregisterHotKey(debugWindowToggle);
-	XPLMUnregisterHotKey(hostileGauge);
+	XPLMUnregisterHotKey(debugToggle);
+	XPLMUnregisterHotKey(hostileToggle);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
 
 	delete gaugeRenderer;
@@ -303,11 +304,11 @@ void exampleGaugeHotKey(void * refCon) {
 	exampleGaugeDisplayPanelWindow = !exampleGaugeDisplayPanelWindow;
 }
 
-void debugToggle(void * refCon) {
+void debugWindow(void * refCon) {
 	debug = !debug;
 }
 
-void hostileGaugeToggle(void * refCon) {
+void hostileGauge(void * refCon) {
 	//TODO: Toggle Hostile Mode.
 	gaugeRenderer->markHostile();
 }
@@ -326,7 +327,6 @@ void drawGLScene() {
 void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 	int		left, top, right, bottom;
 	static float color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
-	bool hostileValue;
 
 	if (debug) {
 		/* First we get the location of the window passed in to us. */
@@ -360,23 +360,19 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 			offsetYPxls += 20;
 
 			positionBuf[0] = '\0';
-		//	snprintf(positionBuf, 128, "modTauS: %.3f", c.modTau);
-		//	XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+			snprintf(positionBuf, 128, "modTauS: %.3f", c.modTau);
+			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 			offsetYPxls += 20;
 
 			positionBuf[0] = '\0';
 			snprintf(positionBuf, 128, "altSepFt: %.3f", c.altSepFt);
 			XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 			offsetYPxls += 20;
-		//TODO: Display in Debug.
-		//TODO: Why did this make everything dissapear!!! 
-		hostileValue = gaugeRenderer->returnHostileValue();
-		positionBuf[0] = '\0';
-		snprintf(positionBuf, 128, "Hostile Global: %s", &hostileValue ?  "true" : "false");
-		XPLMDrawString(color, left + 5, top - 100, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 		}
 
-
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "Hostile Global: %s", gaugeRenderer->hostile ? "true" : "false");
+		XPLMDrawString(color, left + 5, top - 100, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 
 	}
 }

@@ -22,6 +22,8 @@ public:
 	void markHostile();
 	bool returnHostileValue();
 
+	bool hostile = false;
+
 	// The minimum and maximum vertical speed values in units of feet per minute
 	static double const kMinVertSpeed, kMaxVertSpeed;
 

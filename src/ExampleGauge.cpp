@@ -44,6 +44,8 @@ Added the define IBM 1 thing because you have to specify it before doing
 
 #include "component/NASADecider.h"
 
+
+
 XPLMDataRef latitudeRef, longitudeRef, altitudeRef;
 XPLMDataRef headingTrueNorthDegRef, headingTrueMagDegRef;
 XPLMDataRef vertSpeedRef, trueAirspeedRef, indAirspeedRef;
@@ -63,7 +65,7 @@ static XPLMHotKeyID tcasToggle = NULL;
 
 
 //Menu Declarations
-int menuContainer;
+int menuContainerID;
 XPLMMenuID menuID;
 void menuHandler(void *, void *);
 
@@ -142,9 +144,11 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
 
 	/*Start of Plugin Menu Creation*/
-	menuContainer = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Airborne CPS", 0, 0);
-	menuID = XPLMCreateMenu("Airborne CPS", XPLMFindPluginsMenu(), menuContainer, menuHandler, NULL);
+	menuContainerID = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Airborne-CPS", 0, 0);
+	menuID = XPLMCreateMenu("Airborne CPS", XPLMFindPluginsMenu(), menuContainerID, menuHandler, NULL);
 	XPLMAppendMenuItem(menuID, "Toggle CPS", (void *) "exampleGaugeHotkey", 1);
+	XPLMAppendMenuItem(menuID, "Toggle Hostile", (void *) "hostileToggle", 1);
+	XPLMAppendMenuItem(menuID, "Toggle Debug", (void *) "debugToggle", 1);
 
 	/*End of Plugin Menu Creation*/
 
@@ -400,7 +404,9 @@ int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseS
 	return 1;
 }
 
-void menuHandler(void * in_menu_ref, void * in_item_rif) {
-
+void menuHandler(void * in_menu_ref, void * in_item_ref) {
+	if (!strcmp((const char*)in_item_ref, "Toggle CPS")) {
+		XPLMCommandKeyStroke(XPLM_VK_F8);
+	}
 }
 

@@ -28,6 +28,9 @@ namespace textureconstants {
 	GlRgb8Color constexpr K_RECOMMENDATION_RANGE_POSITIVE = { 0.141f, 0.647f, 0.059f };
 	GlRgb8Color constexpr K_RECOMMENDATION_RANGE_NEGATIVE = { 0.602f, 0.102f, 0.09f };
 
+	GlRgb8Color constexpr K_RECOMMENDATION_RANGE_NEGATIVE_INVERTED = { 0.141f, 0.647f, 0.059f };
+	GlRgb8Color constexpr K_RECOMMENDATION_RANGE_POSITIVE_INVERTED = { 0.602f, 0.102f, 0.09f };
+
 	GlRgb8Color constexpr K_SYMBOL_RED_SQUARE_COLOR = { 217.0f / 255.0f, 42.0f / 255.0f, 59.0f / 255.0f};
 	GlRgb8Color constexpr K_SYMBOL_YELLOW_CIRCLE_COLOR = { 246.0f / 255.0f, 226.0f / 255.0f, 32.0f / 255.0f };
 	GlRgb8Color constexpr K_SYMBOL_BLUE_DIAMOND_COLOR = { 0.0f, 171.0f / 255.0f, 222.0f / 255.0f };

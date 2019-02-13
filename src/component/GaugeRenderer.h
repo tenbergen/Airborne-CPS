@@ -10,6 +10,7 @@
 #include "util/StringUtil.h"
 
 // @author nstemmle
+
 class GaugeRenderer
 {
 public:
@@ -18,6 +19,10 @@ public:
 
 	void loadTextures();
 	void render(textureconstants::GlRgb8Color cockpitLighting);
+	void markHostile();
+	bool returnHostileValue();
+
+	bool hostile = false;
 
 	// The minimum and maximum vertical speed values in units of feet per minute
 	static double const kMinVertSpeed, kMaxVertSpeed;
@@ -98,6 +103,7 @@ private:
 	void drawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const;
 
 	void drawTextureRegion(textureconstants::TexCoords const * texCoords, double vertLeft, double vertRight, double vertTop, double vertBot) const;
+
 
 	textureconstants::TexCoords const * GaugeRenderer::gaugeTexCoordsFromDigitCharacter(char) const;
 

@@ -1,6 +1,17 @@
 # Airborne-CPS
 Building a Software Simulator for Airborne Cyber Physical Systems using X-Plane
 
+### Current Functionality
+
+- Threat detection within a protection volume.
+- Threat classifications:
+  * Traffic Advisory(TA)
+  * Resolution Advisory(RA)
+- RA action consensus and action suggestion.
+- Drawing of recommended action(vertical velocity) to gauge.
+- Suport for at least 3 client connections.
+- Strength-Based RA Selection Algorithm for 3+ aircraft RA scenarios.
+
 ### Description / Setup
 This project is a plugin for the Microsoft X-Plane flight simulator, and is an implementation of a [Traffic Collision Avoidance System](https://www.faa.gov/documentLibrary/media/Advisory_Circular/TCAS%20II%20V7.1%20Intro%20booklet.pdf).
 
@@ -38,22 +49,3 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
 
 - Build plugin
     * Use Release and x86 currently.
-  
-  
-### Current Functionality
-
-- Threat detection within a protection volume.
-- Threat classifications:
-  * Traffic Advisory(TA)
-  * Resolution Advisory(RA)
-- RA action consensus and action suggestion.
-- Drawing of recommended action(vertical velocity) to gauge.
-- Suport for at least 3 client connections.
-- Strength-Based RA Selection Algorithm for 3+ aircraft RA scenarios.
-
-
-### Builds
-
-Extract to Plugins folder of X-Plane 10
-
--x32 https://github.com/tenbergen/Airborne-CPS/raw/master/AirborneCPS-x32.zip

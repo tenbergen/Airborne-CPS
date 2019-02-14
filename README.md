@@ -18,21 +18,21 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
   
 - Open the Visual Studio project ExampleGauge, and change the project's C++ Linker folder locations, Dependency folder locations, and build   path to reflect your project's path structure. Browse to where respository is located and add the following to the project settings.
 
-  * General -> Output Direcotry
-    X-Plane 10\Resources\plugins
+  * General -> Output Directory
+    - X-Plane 10\Resources\plugins
     
-  * C++ -> Additional Include Directories
-    Airborne-CPS\src
-    Airborne-CPS\SDK\CHeaders
-    Airborne-CPS\SDK\CHeaders\XPLM
-    Airborne-CPS\SDK\CHeaders\Widgets
-    Airborne-CPS\SDK\Delphi\XPLM
-    Airborne-CPS\SDK\Delphi\Widgets
+  * C++ -> Additional Include Directories  
+    - Airborne-CPS\src
+    - Airborne-CPS\SDK\CHeaders
+    - Airborne-CPS\SDK\CHeaders\XPLM
+    - Airborne-CPS\SDK\CHeaders\Widgets
+    - Airborne-CPS\SDK\Delphi\XPLM
+    - Airborne-CPS\SDK\Delphi\Widgets
     
   * Linker -> Additional Library Dependencies
-    Airborne-CPS\SDK\Libraries\Win
-    Airborne-CPS\SDK\CHeaders\google\protobuf
-    Airborne-CPS\Release\32
+    - Airborne-CPS\SDK\Libraries\Win
+    - Airborne-CPS\SDK\CHeaders\google\protobuf
+    - Airborne-CPS\Release\32
 
 - Copy the included Images folder from the repository to the Plugins folder of X-Plane. Rename the folder to AirborneCPS
 

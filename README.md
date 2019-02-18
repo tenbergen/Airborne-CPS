@@ -45,7 +45,8 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
     - Airborne-CPS\SDK\CHeaders\google\protobuf
     - Airborne-CPS\Release\32
 
-- Copy the included Images folder from the repository to the Plugins folder of X-Plane. Rename the folder to AirborneCPS
+- Copy the included Images folder located in Specification to X-Plane 10\Resources\plugins and rename the Images folder to AirborneCPS
+- Copy the included situations folder located in Specification and replace the situation folder located at X-Plane 10\Output
 
 - Build plugin
     * Use Release and x86 currently.

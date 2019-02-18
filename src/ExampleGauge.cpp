@@ -309,6 +309,7 @@ void exampleGaugeHotKey(void * refCon) {
 }
 
 void debugWindow(void * refCon) {
+	//TODO: Start Debug window off
 	debug = !debug;
 }
 

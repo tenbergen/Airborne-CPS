@@ -2,7 +2,7 @@
 
 // @author nstemmle
 /* Constants that are specific to textures and their attributes.*/
-namespace textureconstants {
+namespace vsitextureconstants {
 	typedef struct TexCoords {
 		double const left;
 		double const right;

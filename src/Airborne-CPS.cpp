@@ -1,35 +1,42 @@
-#pragma warning(disable: 4996) 
+#pragma warning(disable: 4996)
 
 /*
-NOTES:
-1. On windows you will need to add these to the linker/input/AdditionalDependencies settings
-glu32.lib
-glaux.lib
-
-2. If you want to have the xpl go directly to the plugin directory you need to
-set path variables. Currently I set it to build in the top directory of the
-project.
-
-3. Networking might be easier to do with UDP through the menu options as it is
-available. There are options for things like reading inputs from the network
-and also saving to the local disk. These are found under the settings menu ->
-data input and output, and network options. This is called the Data Set in
-x-plane. info here:
-http://www.x-plane.com/manuals/desktop/#datainputandoutputfromx-plane
-http://www.x-plane.com/?article=data-set-output-table
-http://www.nuclearprojects.com/xplane/info.shtml
-
-Added the define IBM 1 thing because you have to specify it before doing
-// compiling. It is system specific. For Macs you must use 'define APL 1' and
-// set the ibm to 0. Info about this is here:
-// http://www.xsquawkbox.net/xpsdk/docs/macbuild.html
-//
-// Also added the header file for using the data refs. I might need to add other
-// header files for the navigation "XPLMNavigation". "XPLMDataAccess" is to
-// read plane info and set other options. Navigation has lookups for gps and
-// fms, while the data access is the api for reading and writing plane/sensor
-// info. DataRefs:
-// http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
+* NOTES:
+* 1. On windows you will need to add these to the linker/input/AdditionalDependencies settings
+* glu32.lib
+* glaux.lib
+*
+* 2. If you want to have the xpl go directly to the plugin directory you need to
+* set path variables. Currently I set it to build in the top directory of the
+* project.
+*
+* 3. Networking might be easier to do with UDP through the menu options as it is
+* available. There are options for things like reading inputs from the network
+* and also saving to the local disk. These are found under the settings menu ->
+* data input and output, and network options. This is called the Data Set in
+* x-plane. info here:
+* http://www.x-plane.com/manuals/desktop/#datainputandoutputfromx-plane
+* http://www.x-plane.com/?article=data-set-output-table
+* http://www.nuclearprojects.com/xplane/info.shtml
+*
+* Added the define IBM 1 thing because you have to specify it before doing
+* compiling. It is system specific. For Macs you must use 'define APL 1' and
+* set the ibm to 0. Info about this is here:
+* http://www.xsquawkbox.net/xpsdk/docs/macbuild.html
+*
+* Also added the header file for using the data refs. I might need to add other
+* header files for the navigation "XPLMNavigation". "XPLMDataAccess" is to
+* read plane info and set other options. Navigation has lookups for gps and
+* fms, while the data access is the api for reading and writing plane/sensor
+* info. DataRefs:
+* http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
+*
+*
+* Notes added by Michael K.:
+* Information on data references for obtaining variable information may be found here:
+* http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
+*
+*
 */
 
 #include "XPLMDefs.h"
@@ -38,23 +45,43 @@ Added the define IBM 1 thing because you have to specify it before doing
 #include "XPLMDataAccess.h"
 #include "XPLMMenus.h"
 
-#include "component/GaugeRenderer.h"
-
+#include "component/VSpeedIndicatorGaugeRenderer.h"
+#include "component/ArtHorizGaugeRenderer.h"
+#include "component/ArtHorizGaugeRenderer.h"
 #include "component/Transponder.h"
-
 #include "component/NASADecider.h"
 
 
+/*
+* These variables are used in the toggling of gauges during the simulation.
+* Currently, there are two Gauges (NUMBER_OF_GAUGES) in development:
+* 1) Vertical Speed Indicator Gauge (VSI_GAUGE)
+* 2) Artificial Horizon Gauge (AH_GAUGE)
+*
+* Note that while toggling, the gauges may also be turned off. So there
+* will effectively be NUMBER_OF_GAUGES + 1 options.
+* */
+static const int NUMBER_OF_GAUGES = 2;
+static const int NO_GAUGE = 0;
+static const int VSI_GAUGE = 1;
+static const int AH_GAUGE = 2;
 
+/*
+* From http://www.xsquawkbox.net/xpsdk/docs/DataRefs.html
+*
+* thetaRef: References theta, the pitch relative to the plane normal to the Y axis in degrees - OpenGL coordinates
+* phiRef:   References phi, the roll of the aircraft in degrees - OpenGL coordinates
+* */
 XPLMDataRef latitudeRef, longitudeRef, altitudeRef;
 XPLMDataRef headingTrueNorthDegRef, headingTrueMagDegRef;
 XPLMDataRef vertSpeedRef, trueAirspeedRef, indAirspeedRef;
+XPLMDataRef thetaRef, phiRef;
 
 // These datarefs represent the RGB color of the lighting inside the cockpit
 XPLMDataRef	cockpitLightingRed, cockpitLightingGreen, cockpitLightingBlue;
 
 static XPLMWindowID	gExampleGaugePanelDisplayWindow = NULL;
-static int exampleGaugeDisplayPanelWindow = 1;
+static int gaugeOnDisplay = 1;
 static bool debug = true;
 
 // Declares Hotkey Toggles
@@ -74,12 +101,14 @@ void menuHandler(void *, void *);
 static bool hostile = false;
 
 
-// The plugin application path
-static char gPluginDataFile[255];
+// The plugin application paths
+static char gVSIPluginDataFile[255];
+static char gAHPluginDataFile[255];
 
 Aircraft* userAircraft;
 
-GaugeRenderer* gaugeRenderer;
+VSIGaugeRenderer* vsiGaugeRenderer;
+AHGaugeRenderer* ahGaugeRenderer;
 
 concurrency::concurrent_unordered_map<std::string, Aircraft*> intrudingAircraft;
 concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> openConnections;
@@ -94,7 +123,8 @@ static int	coordInRect(int x, int y, int l, int t, int r, int b) {
 }
 
 /// Prototypes for callbacks etc.
-static void drawGLScene();
+static void drawGLSceneForVSI();
+static void drawGLSceneForAH();
 
 static int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
 static void exampleGaugeHotKey(void * refCon);
@@ -129,19 +159,26 @@ static int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPL
 PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	/// Handle cross platform differences
 #if IBM
-	char *pFileName = "Resources\\Plugins\\AirborneCPS\\";
+	char *pVSIFileName = "Resources\\Plugins\\AirborneCPS\\Vertical_Speed_Indicator\\";
+	char *pAHFileName = "Resources\\Plugins\\AirborneCPS\\Artificial_Horizon\\";
 #elif LIN
-	char *pFileName = "Resources/plugins/AirborneCPS/";
+	char *pVSIFileName = "Resources/plugins/AirborneCPS/Vertical_Speed_Indicator/";
+	char *pAHFileName = "Resources/plugins/AirborneCPS/Artificial_Horizon/";
 #else
-	char *pFileName = "Resources:Plugins:AirborneCPS:";
+	char *pVSIFileName = "Resources:Plugins:AirborneCPS:Vertical_Speed_Indicator:";
+	char *pAHFileName = "Resources:Plugins:AirborneCPS:Artificial_Horizon:";
 #endif
 	/// Setup texture file locations
-	XPLMGetSystemPath(gPluginDataFile);
-	strcat(gPluginDataFile, pFileName);
+	XPLMGetSystemPath(gVSIPluginDataFile);
+	strcat(gVSIPluginDataFile, pVSIFileName);
+
+	XPLMGetSystemPath(gAHPluginDataFile);
+	strcat(gAHPluginDataFile, pAHFileName);
+
 
 	strcpy(outName, "AirborneCPS");
 	strcpy(outSig, "AirborneCPS");
-	strcpy(outDesc, "A plug-in for displaying a TCAS gauge.");
+	strcpy(outDesc, "A plug-in for displaying several TCAS gauges.");
 
 	/*Start of Plugin Menu Creation*/
 	menuContainerID = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Airborne-CPS", 0, 0);
@@ -170,8 +207,11 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	headingTrueMagDegRef = XPLMFindDataRef("sim/flightmodel/position/mag_psi");
 	headingTrueNorthDegRef = XPLMFindDataRef("sim/flightmodel/position/true_psi");
 
-	trueAirspeedRef = XPLMFindDataRef("sim/flightmodel/position/airspeed_true");
+	trueAirspeedRef = XPLMFindDataRef("sim/flightmodel/position/true_airspeed");
 	indAirspeedRef = XPLMFindDataRef("sim/flightmodel/position/indicated_airspeed");
+
+	thetaRef = XPLMFindDataRef("sim/flightmodel/position/theta");
+	phiRef = XPLMFindDataRef("sim/flightmodel/position/phi");
 
 	cockpitLightingRed = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_r");
 	cockpitLightingGreen = XPLMFindDataRef("sim/graphics/misc/cockpit_light_level_g");
@@ -186,15 +226,18 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	std::string myMac = Transponder::getHardwareAddress();
 
 	LLA currentPos = LLA::ZERO;
-	userAircraft = new Aircraft(myMac, "127.0.0.1", currentPos, Angle::ZERO, Velocity::ZERO);
+	userAircraft = new Aircraft(myMac, "127.0.0.1", currentPos, Angle::ZERO, Velocity::ZERO, Angle::ZERO, Angle::ZERO);
 	std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 	userAircraft->positionCurrentTime = msSinceEpoch;
 	userAircraft->positionOldTime = msSinceEpoch;
-	
+
 	decider = new NASADecider(userAircraft, &openConnections);
 
-	gaugeRenderer = new GaugeRenderer(gPluginDataFile, decider, userAircraft, &intrudingAircraft);
-	gaugeRenderer->loadTextures();
+	vsiGaugeRenderer = new VSIGaugeRenderer(gVSIPluginDataFile, decider, userAircraft, &intrudingAircraft);
+	vsiGaugeRenderer->loadTextures();
+
+	ahGaugeRenderer = new AHGaugeRenderer(gAHPluginDataFile, decider, userAircraft, &intrudingAircraft);
+	ahGaugeRenderer->loadTextures();
 
 	// start broadcasting location, and listening for aircraft
 	transponder = new Transponder(userAircraft, &intrudingAircraft, &openConnections, decider);
@@ -212,7 +255,8 @@ PLUGIN_API void	XPluginStop(void) {
 	XPLMUnregisterHotKey(hostileToggle);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
 
-	delete gaugeRenderer;
+	delete vsiGaugeRenderer;
+	delete ahGaugeRenderer;
 	delete transponder;
 }
 
@@ -225,7 +269,13 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, voi
 /* The callback responsible for drawing the gauge during the X-Plane gauge drawing phase. */
 int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon) {
 	// Do the actual drawing, but only if the window is active
-	if (exampleGaugeDisplayPanelWindow) {
+	if (gaugeOnDisplay == NO_GAUGE) {
+		/*
+		* Do nothing. The display window is not active.
+		* */
+
+	}
+	else if (gaugeOnDisplay == VSI_GAUGE) {
 		LLA updated = { Angle{ XPLMGetDatad(latitudeRef), Angle::AngleUnits::DEGREES },
 			Angle{ XPLMGetDatad(longitudeRef), Angle::AngleUnits::DEGREES },
 			Distance{ XPLMGetDatad(altitudeRef), Distance::DistanceUnits::METERS } };
@@ -243,9 +293,39 @@ int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefc
 		userAircraft->heading = Angle(XPLMGetDataf(headingTrueMagDegRef), Angle::AngleUnits::DEGREES);
 		userAircraft->trueAirspeed = Velocity(XPLMGetDataf(trueAirspeedRef), Velocity::VelocityUnits::METERS_PER_S);
 
+		userAircraft->theta = Angle(XPLMGetDataf(thetaRef), Angle::AngleUnits::DEGREES);
+		userAircraft->phi = Angle(XPLMGetDataf(phiRef), Angle::AngleUnits::DEGREES);
+
 		userAircraft->lock.unlock();
 
-		drawGLScene();
+		drawGLSceneForVSI();
+
+	}
+	else if (gaugeOnDisplay == AH_GAUGE) {
+		LLA updated = { Angle{ XPLMGetDatad(latitudeRef), Angle::AngleUnits::DEGREES },
+			Angle{ XPLMGetDatad(longitudeRef), Angle::AngleUnits::DEGREES },
+			Distance{ XPLMGetDatad(altitudeRef), Distance::DistanceUnits::METERS } };
+		Velocity updatedVvel = Velocity(XPLMGetDataf(vertSpeedRef), Velocity::VelocityUnits::FEET_PER_MIN);
+		std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+
+		userAircraft->lock.lock();
+		userAircraft->positionOld = userAircraft->positionCurrent;
+		userAircraft->positionOldTime = userAircraft->positionCurrentTime;
+
+		userAircraft->positionCurrent = updated;
+		userAircraft->positionCurrentTime = msSinceEpoch;
+
+		userAircraft->verticalVelocity = updatedVvel;
+		userAircraft->heading = Angle(XPLMGetDataf(headingTrueMagDegRef), Angle::AngleUnits::DEGREES);
+		userAircraft->trueAirspeed = Velocity(XPLMGetDataf(trueAirspeedRef), Velocity::VelocityUnits::METERS_PER_S);
+
+		userAircraft->theta = Angle(XPLMGetDataf(thetaRef), Angle::AngleUnits::DEGREES);
+		userAircraft->phi = Angle(XPLMGetDataf(phiRef), Angle::AngleUnits::DEGREES);
+
+		userAircraft->lock.unlock();
+
+		drawGLSceneForAH();
+
 	}
 	return 1;
 }
@@ -269,7 +349,7 @@ int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, X
 
 	int	gDragging = 0;
 
-	if (!exampleGaugeDisplayPanelWindow)
+	if (gaugeOnDisplay == NO_GAUGE)
 		return 0;
 
 	/// Get the windows current position
@@ -303,25 +383,35 @@ int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, X
 	return 1;
 }
 
-/// Toggle between display and non display
+/**
+* Toggle between displaying one of the N NUMBER_OF_GAUGES, or no gauge.
+* */
 void exampleGaugeHotKey(void * refCon) {
-	exampleGaugeDisplayPanelWindow = !exampleGaugeDisplayPanelWindow;
+	gaugeOnDisplay = ((gaugeOnDisplay + 1) % (NUMBER_OF_GAUGES + 1));
 }
 
 void debugWindow(void * refCon) {
-	//TODO: Start Debug window off
 	debug = !debug;
 }
 
 void hostileGauge(void * refCon) {
 	//TODO: Toggle Hostile Mode.
-	gaugeRenderer->markHostile();
+	vsiGaugeRenderer->markHostile();
+	ahGaugeRenderer->markHostile();
 }
 
-/// Draws the textures that make up the gauge
-void drawGLScene() {
-	textureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpitLightingRed), XPLMGetDataf(cockpitLightingGreen), XPLMGetDataf(cockpitLightingBlue) };
-	gaugeRenderer->render(cockpit_lighting);
+/// Draws the textures that make up the gauge for the Vertical Speed Indicator
+void drawGLSceneForVSI() {
+	vsitextureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpitLightingRed), XPLMGetDataf(cockpitLightingGreen), XPLMGetDataf(cockpitLightingBlue) };
+	vsiGaugeRenderer->render(cockpit_lighting);
+}
+
+/**
+* Draws the textures that make up the gauge for the Artificial Horizon
+* */
+void drawGLSceneForAH() {
+	ahtextureconstants::GlRgb8Color cockpit_lighting = { XPLMGetDataf(cockpitLightingRed), XPLMGetDataf(cockpitLightingGreen), XPLMGetDataf(cockpitLightingBlue) };
+	ahGaugeRenderer->render(cockpit_lighting);
 }
 
 /* This callback does the work of drawing our window once per sim cycle each time
@@ -376,8 +466,34 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 		}
 
 		positionBuf[0] = '\0';
-		snprintf(positionBuf, 128, "Hostile Global: %s", gaugeRenderer->hostile ? "true" : "false");
-		XPLMDrawString(color, left + 5, top - 100, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+		snprintf(positionBuf, 128, "Theta (degrees): %.3f", XPLMGetDataf(thetaRef));
+		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+		offsetYPxls += 20;
+
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "Phi (degrees): %.3f", XPLMGetDataf(phiRef));
+		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+		offsetYPxls += 20;
+
+		decider->recommendationRangeLock.lock();
+		RecommendationRange positive = decider->positiveRecommendationRange;
+		RecommendationRange neg = decider->negativeRecommendationRange;
+		decider->recommendationRangeLock.unlock();
+
+		float vMin = 1.0f*mathutil::clampd(positive.minVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
+		float vMax = 1.0f*mathutil::clampd(positive.maxVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
+
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "Decider (+) vMin, vMax : %.3f, %.3f", vMin, vMax);
+		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
+		offsetYPxls += 20;
+
+		vMin = 1.0f*mathutil::clampd(neg.minVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
+		vMax = 1.0f*mathutil::clampd(neg.maxVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
+
+		positionBuf[0] = '\0';
+		snprintf(positionBuf, 128, "Decider (-) vMin, vMax : %.3f, %.3f", vMin, vMax);
+		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 
 	}
 }

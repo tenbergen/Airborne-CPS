@@ -21,7 +21,7 @@ public:
 
 	Aircraft(Aircraft const & that);
 	Aircraft(std::string const id, std::string const ip);
-	Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity verticalVelocity);
+	Aircraft(std::string const id, std::string const ip, LLA position, Angle heading, Velocity verticalVelocity, Angle theta, Angle phi);
 
 	// The ID of each aircraft is the MAC Address of the network adapter of the machine for the x-plane instance that runs that aircraft
 	std::string const id;
@@ -48,6 +48,13 @@ public:
 	*/
 	Velocity trueAirspeed;
 	Angle heading;
+
+	/*
+	* Note that here, theta refers to the pitch of the aircraft, or the inclination above a horizontal axis parallel
+	* to sea level. The roll of the aircraft is denoted by phi.
+	* */
+	Angle theta;
+	Angle phi;
 
 	ThreatClassification threatClassification = Aircraft::ThreatClassification::NON_THREAT_TRAFFIC;
 

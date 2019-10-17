@@ -1,40 +1,40 @@
-#include "GaugeRenderer.h"
+#include "VSpeedIndicatorGaugeRenderer.h"
 
-const double GaugeRenderer::kMillisecondsPerSecond_ = 60000.0;
+const double VSIGaugeRenderer::kMillisecondsPerSecond_ = 60000.0;
 
-const double GaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 150.0;
-Distance const GaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::DistanceUnits::NMI };
-Distance const GaugeRenderer::kAircraftToGaugeCenterOffset_ { (28.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.toFeet() * 2.0, Distance::DistanceUnits::FEET};
+const double VSIGaugeRenderer::kGaugeInnerCircleRadiusPxls_ = 150.0;
+Distance const VSIGaugeRenderer::kGaugeInnerCircleRadius_ { 30.0 , Distance::DistanceUnits::NMI };
+Distance const VSIGaugeRenderer::kAircraftToGaugeCenterOffset_ { (28.0 / (2.0 * kGaugeInnerCircleRadiusPxls_)) * kGaugeInnerCircleRadius_.toFeet() * 2.0, Distance::DistanceUnits::FEET};
 
-float const GaugeRenderer::kGaugePosLeft_ = 1024.0f;
-float const GaugeRenderer::kGaugePosRight_ = 1280.0f;
-float const GaugeRenderer::kGaugePosBot_ = 0.0f;
-float const GaugeRenderer::kGaugePosTop_ = 256.0f;
+float const VSIGaugeRenderer::kGaugePosLeft_ = 1024.0f;
+float const VSIGaugeRenderer::kGaugePosRight_ = 1280.0f;
+float const VSIGaugeRenderer::kGaugePosBot_ = 0.0f;
+float const VSIGaugeRenderer::kGaugePosTop_ = 256.0f;
 
-float const GaugeRenderer::kGaugeCenterX_ = (kGaugePosRight_ + kGaugePosLeft_) / 2.0f;
-float const GaugeRenderer::kGaugeCenterY_ = (kGaugePosTop_ + kGaugePosBot_) / 2.0f;
+float const VSIGaugeRenderer::kGaugeCenterX_ = (kGaugePosRight_ + kGaugePosLeft_) / 2.0f;
+float const VSIGaugeRenderer::kGaugeCenterY_ = (kGaugePosTop_ + kGaugePosBot_) / 2.0f;
 
-float const GaugeRenderer::kNeedlePosLeft_ = kGaugePosLeft_ + 125.0f;
-float const GaugeRenderer::kNeedlePosRight_ = kNeedlePosLeft_ + 8.0f;
-float const GaugeRenderer::kNeedlePosBot_ = kGaugePosBot_ + 123.0f;
-float const GaugeRenderer::kNeedlePosTop_ = kNeedlePosBot_ + 80.0f;
+float const VSIGaugeRenderer::kNeedlePosLeft_ = kGaugePosLeft_ + 125.0f;
+float const VSIGaugeRenderer::kNeedlePosRight_ = kNeedlePosLeft_ + 8.0f;
+float const VSIGaugeRenderer::kNeedlePosBot_ = kGaugePosBot_ + 123.0f;
+float const VSIGaugeRenderer::kNeedlePosTop_ = kNeedlePosBot_ + 80.0f;
 
-double const GaugeRenderer::kMinVertSpeed = -4000.0;
-double const GaugeRenderer::kMaxVertSpeed = 4000.0;
+double const VSIGaugeRenderer::kMinVertSpeed = -4000.0;
+double const VSIGaugeRenderer::kMaxVertSpeed = 4000.0;
 
-double const GaugeRenderer::kMaxVSpeedDegrees = 150.0;
-float const GaugeRenderer::kGlAngleOffset_ = 90.0f;
+double const VSIGaugeRenderer::kMaxVSpeedDegrees = 150.0;
+float const VSIGaugeRenderer::kGlAngleOffset_ = 90.0f;
 
-float const GaugeRenderer::kNeedleTranslationX_ = kNeedlePosLeft_ + ((kNeedlePosRight_ - kNeedlePosLeft_) / 2.0f);
-float const GaugeRenderer::kNeedleTranslationY_ = kNeedlePosBot_ + 5.0f;
+float const VSIGaugeRenderer::kNeedleTranslationX_ = kNeedlePosLeft_ + ((kNeedlePosRight_ - kNeedlePosLeft_) / 2.0f);
+float const VSIGaugeRenderer::kNeedleTranslationY_ = kNeedlePosBot_ + 5.0f;
 
-double const GaugeRenderer::kDiskInnerRadius_ = 75.0;
-double const GaugeRenderer::kDiskOuterRadius_ = 105.0;
-int const GaugeRenderer::kDiskSlices_ = 32;
-int const GaugeRenderer::kDiskLoops_ = 2;
+double const VSIGaugeRenderer::kDiskInnerRadius_ = 75.0;
+double const VSIGaugeRenderer::kDiskOuterRadius_ = 105.0;
+int const VSIGaugeRenderer::kDiskSlices_ = 32;
+int const VSIGaugeRenderer::kDiskLoops_ = 2;
 
 
-GaugeRenderer::GaugeRenderer(char const * const appPath, Decider * const decider, Aircraft * const userAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intrudingAircraft) : 
+VSIGaugeRenderer::VSIGaugeRenderer(char const * const appPath, Decider * const decider, Aircraft * const userAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * const intrudingAircraft) :
 	appPath_(appPath), decider_(decider), userAircraft_(userAircraft), intruders_(intrudingAircraft) {
 	quadric_ = gluNewQuadric();
 
@@ -44,27 +44,27 @@ GaugeRenderer::GaugeRenderer(char const * const appPath, Decider * const decider
 	gluQuadricOrientation(quadric_, GLU_INSIDE);
 }
 
-GaugeRenderer::~GaugeRenderer() {
+VSIGaugeRenderer::~VSIGaugeRenderer() {
 	gluDeleteQuadric(quadric_);
 }
 
-void GaugeRenderer::loadTextures()
+void VSIGaugeRenderer::loadTextures()
 {
 	char fNameBuf[256];
 
-	for (int texId = textureconstants::GAUGE_ID; texId < textureconstants::K_NUM_TEXTURES; texId++) {
-		strutil::buildFilePath(fNameBuf, textureconstants::K_GAUGE_FILENAMES[texId], appPath_);
+	for (int texId = vsitextureconstants::GAUGE_ID; texId < vsitextureconstants::K_NUM_TEXTURES; texId++) {
+		strutil::buildFilePath(fNameBuf, vsitextureconstants::K_GAUGE_FILENAMES[texId], appPath_);
 		
 		if (strlen(fNameBuf) > 0 && !loadTexture(fNameBuf, texId)) {
 			char debugBuf[256];
-			snprintf(fNameBuf, 256, "GaugeRenderer::LoadTextures - failed to load texture at: %s\n", fNameBuf);
+			snprintf(fNameBuf, 256, "VSIGaugeRenderer::LoadTextures - failed to load texture at: %s\n", fNameBuf);
 			XPLMDebugString(debugBuf);
 		}
 	}
 }
 
 
-bool GaugeRenderer::loadTexture(char* texPath, int texId) const {
+bool VSIGaugeRenderer::loadTexture(char* texPath, int texId) const {
 	bool loadedSuccessfully = false;
 
 	BmpLoader::ImageData sImageData;
@@ -93,7 +93,7 @@ bool GaugeRenderer::loadTexture(char* texPath, int texId) const {
 	return loadedSuccessfully;
 }
 
-void GaugeRenderer::render(textureconstants::GlRgb8Color cockpitLighting) {
+void VSIGaugeRenderer::render(vsitextureconstants::GlRgb8Color cockpitLighting) {
 	userAircraft_->lock.lock();
 
 	LLA const userPos = userAircraft_->positionCurrent;
@@ -112,7 +112,7 @@ void GaugeRenderer::render(textureconstants::GlRgb8Color cockpitLighting) {
 	glPushMatrix();
 
 	// Draw the gauge
-	XPLMBindTexture2d(glTextures_[textureconstants::GAUGE_ID], 0);
+	XPLMBindTexture2d(glTextures_[vsitextureconstants::GAUGE_ID], 0);
 	drawOuterGauge();
 
 	decider_->recommendationRangeLock.lock();
@@ -172,7 +172,7 @@ void GaugeRenderer::render(textureconstants::GlRgb8Color cockpitLighting) {
 	glFlush();
 }
 
-void GaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velocity const * const intruderVvel, Angle const * const userHeading, LLA const * const gaugeCenterPos, Distance const * const range, Aircraft::ThreatClassification threatClass) const {
+void VSIGaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velocity const * const intruderVvel, Angle const * const userHeading, LLA const * const gaugeCenterPos, Distance const * const range, Aircraft::ThreatClassification threatClass) const {
 	Angle bearing = gaugeCenterPos->bearing(intruderPos);
 	// These two calls line makes the gauge display intruders relative to the user's heading
 	bearing = bearing - *userHeading;
@@ -195,13 +195,13 @@ void GaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velocit
 	double symbolBot = symbolCenterY - 8.0;
 	double symbolTop = symbolCenterY + 8.0;
 
-	textureconstants::TexCoords const * symbolCoords = aircraftSymbolFromThreatClassification(threatClass);
+	vsitextureconstants::TexCoords const * symbolCoords = aircraftSymbolFromThreatClassification(threatClass);
 	drawTextureRegion(symbolCoords, symbolLeft, symbolRight, symbolTop, symbolBot);
 
 	Distance altitudeDifference = intruderPos->altitude - gaugeCenterPos->altitude;
 	int altDiffHundredsFtPerMin = (int) std::round(altitudeDifference.toFeet() / 100.0);
 
-	textureconstants::TexCoords const * signChar = altDiffHundredsFtPerMin < 0.0 ? &textureconstants::K_CHAR_MINUS_SIGN : &textureconstants::K_CHAR_PLUS_SIGN;
+	vsitextureconstants::TexCoords const * signChar = altDiffHundredsFtPerMin < 0.0 ? &vsitextureconstants::K_CHAR_MINUS_SIGN : &vsitextureconstants::K_CHAR_PLUS_SIGN;
 	altDiffHundredsFtPerMin = abs(altDiffHundredsFtPerMin);
 	std::string altString = std::to_string(altDiffHundredsFtPerMin);
 
@@ -211,7 +211,7 @@ void GaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velocit
 	double altStringLeft = symbolLeft;
 	double altStringRight = altStringLeft + 6.0;
 
-	textureconstants::GlRgb8Color const * symbolColor = symbolColorFromThreatClassification(threatClass);
+	vsitextureconstants::GlRgb8Color const * symbolColor = symbolColorFromThreatClassification(threatClass);
 	glColor3f(symbolColor->red, symbolColor->green, symbolColor->blue);
 
 	drawTextureRegion(signChar, altStringLeft, altStringRight, altStringTop, altStringBot);
@@ -219,50 +219,50 @@ void GaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velocit
 	altStringRight += 6.0;
 
 	for (char c : altString) {
-		textureconstants::TexCoords const * charCoords = gaugeTexCoordsFromDigitCharacter(c);
+		vsitextureconstants::TexCoords const * charCoords = gaugeTexCoordsFromDigitCharacter(c);
 		drawTextureRegion(charCoords, altStringLeft, altStringRight, altStringTop, altStringBot);
 		altStringLeft = altStringRight;
 		altStringRight += 6.0;
 	}
 
-	textureconstants::TexCoords const * vvelArrowCoords = intruderVvel->toFeetPerMin() < 0.0 ? &textureconstants::K_VERT_ARROW_DOWN : &textureconstants::K_VERT_ARROW_UP;
+	vsitextureconstants::TexCoords const * vvelArrowCoords = intruderVvel->toFeetPerMin() < 0.0 ? &vsitextureconstants::K_VERT_ARROW_DOWN : &vsitextureconstants::K_VERT_ARROW_UP;
 	// The vertical arrow is 5 px wide by 13 px tall; the arrow is usually? centered vertically wrt to the symbol so the arrow should be drawn some amount lower than the top of the symbol
 	drawTextureRegion(vvelArrowCoords, symbolRight, symbolRight + 5.0, symbolTop - 4.0, symbolTop - 17.0);
 
 	glColor3f(1.0f, 1.0f, 1.0f);
 }
 
-textureconstants::TexCoords const * GaugeRenderer::gaugeTexCoordsFromDigitCharacter(char c) const {
+vsitextureconstants::TexCoords const * VSIGaugeRenderer::gaugeTexCoordsFromDigitCharacter(char c) const {
 	switch (c) {
 	case '0':
-		return &textureconstants::K_CHAR_ZERO;
+		return &vsitextureconstants::K_CHAR_ZERO;
 	case '1':
-		return &textureconstants::K_CHAR_ONE;
+		return &vsitextureconstants::K_CHAR_ONE;
 	case '2':
-		return &textureconstants::K_CHAR_TWO;
+		return &vsitextureconstants::K_CHAR_TWO;
 	case '3':
-		return &textureconstants::K_CHAR_THREE;
+		return &vsitextureconstants::K_CHAR_THREE;
 	case '4':
-		return &textureconstants::K_CHAR_FOUR;
+		return &vsitextureconstants::K_CHAR_FOUR;
 	case '5':
-		return &textureconstants::K_CHAR_FIVE;
+		return &vsitextureconstants::K_CHAR_FIVE;
 	case '6':
-		return &textureconstants::K_CHAR_SIX;
+		return &vsitextureconstants::K_CHAR_SIX;
 	case '7':
-		return &textureconstants::K_CHAR_SEVEN;
+		return &vsitextureconstants::K_CHAR_SEVEN;
 	case '8':
-		return &textureconstants::K_CHAR_EIGHT;
+		return &vsitextureconstants::K_CHAR_EIGHT;
 	case '9':
-		return &textureconstants::K_CHAR_NINE;
+		return &vsitextureconstants::K_CHAR_NINE;
 	default:
 		char debugBuf[128];
-		snprintf(debugBuf, 128, "GaugeRenderer::GaugeTexCoordsFromDigitCharacter - unhandled character %c supplied\n", c);
+		snprintf(debugBuf, 128, "VSIGaugeRenderer::GaugeTexCoordsFromDigitCharacter - unhandled character %c supplied\n", c);
 
-		return &textureconstants::K_DEBUG_SYMBOL;
+		return &vsitextureconstants::K_DEBUG_SYMBOL;
 	}
 }
 
-void GaugeRenderer::drawTextureRegion(textureconstants::TexCoords const * texCoords, 
+void VSIGaugeRenderer::drawTextureRegion(vsitextureconstants::TexCoords const * texCoords,
 	double vertLeft, double vertRight, double vertTop, double vertBot) const {
 	glBegin(GL_QUADS);
 	glTexCoord2d(texCoords->right, texCoords->bottom); glVertex2d(vertRight, vertBot);
@@ -272,46 +272,46 @@ void GaugeRenderer::drawTextureRegion(textureconstants::TexCoords const * texCoo
 	glEnd();
 }
 
-textureconstants::TexCoords const * GaugeRenderer::aircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threatClass) {
+vsitextureconstants::TexCoords const * VSIGaugeRenderer::aircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threatClass) {
 	switch (threatClass) {
 	case Aircraft::ThreatClassification::NON_THREAT_TRAFFIC:
-		return &textureconstants::K_SYMBOL_BLUE_DIAMOND_CUTOUT;
+		return &vsitextureconstants::K_SYMBOL_BLUE_DIAMOND_CUTOUT;
 	case Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC:
-		return &textureconstants::K_SYMBOL_BLUE_DIAMOND_WHOLE;
+		return &vsitextureconstants::K_SYMBOL_BLUE_DIAMOND_WHOLE;
 	case Aircraft::ThreatClassification::TRAFFIC_ADVISORY:
-		return &textureconstants::K_SYMBOL_YELLOW_CIRCLE;
+		return &vsitextureconstants::K_SYMBOL_YELLOW_CIRCLE;
 	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
-		return &textureconstants::K_SYMBOL_RED_SQUARE;
+		return &vsitextureconstants::K_SYMBOL_RED_SQUARE;
 	default:
-		XPLMDebugString("GaugeRenderer::AircraftSymbolFromThreatClassification - Unknown threat classification.\n");
-		return &textureconstants::K_DEBUG_SYMBOL;
+		XPLMDebugString("VSIGaugeRenderer::AircraftSymbolFromThreatClassification - Unknown threat classification.\n");
+		return &vsitextureconstants::K_DEBUG_SYMBOL;
 	}
 }
 
-textureconstants::GlRgb8Color const * GaugeRenderer::symbolColorFromThreatClassification(Aircraft::ThreatClassification threatClass) {
+vsitextureconstants::GlRgb8Color const * VSIGaugeRenderer::symbolColorFromThreatClassification(Aircraft::ThreatClassification threatClass) {
 	switch (threatClass) {
 	case Aircraft::ThreatClassification::NON_THREAT_TRAFFIC:
 	case Aircraft::ThreatClassification::PROXIMITY_INTRUDER_TRAFFIC:
-		return &textureconstants::K_SYMBOL_BLUE_DIAMOND_COLOR;
+		return &vsitextureconstants::K_SYMBOL_BLUE_DIAMOND_COLOR;
 	case Aircraft::ThreatClassification::TRAFFIC_ADVISORY:
-		return &textureconstants::K_SYMBOL_YELLOW_CIRCLE_COLOR;
+		return &vsitextureconstants::K_SYMBOL_YELLOW_CIRCLE_COLOR;
 	case Aircraft::ThreatClassification::RESOLUTION_ADVISORY:
-		return &textureconstants::K_SYMBOL_RED_SQUARE_COLOR;
+		return &vsitextureconstants::K_SYMBOL_RED_SQUARE_COLOR;
 	default:
-		XPLMDebugString("GaugeRenderer::SymbolColorFromThreatClassification - Unknown threat classification.\n");
-		return &textureconstants::K_RECOMMENDATION_RANGE_POSITIVE;
+		XPLMDebugString("VSIGaugeRenderer::SymbolColorFromThreatClassification - Unknown threat classification.\n");
+		return &vsitextureconstants::K_RECOMMENDATION_RANGE_POSITIVE;
 	}
 }
 
-void GaugeRenderer::drawOuterGauge() const {
-	drawTextureRegion(&textureconstants::K_OUTER_GAUGE, kGaugePosLeft_, kGaugePosRight_, kGaugePosTop_, kGaugePosBot_);
+void VSIGaugeRenderer::drawOuterGauge() const {
+	drawTextureRegion(&vsitextureconstants::K_OUTER_GAUGE, kGaugePosLeft_, kGaugePosRight_, kGaugePosTop_, kGaugePosBot_);
 }
 
-void GaugeRenderer::drawInnerGaugeVelocityRing() const {
-	drawTextureRegion(&textureconstants::K_INNER_GAUGE, kGaugePosLeft_, kGaugePosRight_, kGaugePosTop_, kGaugePosBot_);
+void VSIGaugeRenderer::drawInnerGaugeVelocityRing() const {
+	drawTextureRegion(&vsitextureconstants::K_INNER_GAUGE, kGaugePosLeft_, kGaugePosRight_, kGaugePosTop_, kGaugePosBot_);
 }
 
-void GaugeRenderer::drawVerticalVelocityNeedle(Velocity const userAircraftVertVel) const {
+void VSIGaugeRenderer::drawVerticalVelocityNeedle(Velocity const userAircraftVertVel) const {
 	// Translate the needle so it's properly rotated in place about the gauge center
 	glTranslatef(kNeedleTranslationX_, kNeedleTranslationY_, 0.0f);
 
@@ -326,21 +326,21 @@ void GaugeRenderer::drawVerticalVelocityNeedle(Velocity const userAircraftVertVe
 	glBlendFunc(GL_DST_COLOR, GL_ZERO);
 
 	// Draw Needle Mask
-	XPLMBindTexture2d(glTextures_[textureconstants::NEEDLE_MASK_ID], 0);
-	drawTextureRegion(&textureconstants::K_NEEDLE_MASK, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
+	XPLMBindTexture2d(glTextures_[vsitextureconstants::NEEDLE_MASK_ID], 0);
+	drawTextureRegion(&vsitextureconstants::K_NEEDLE_MASK, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
 
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	// Draw Needle
-	XPLMBindTexture2d(glTextures_[textureconstants::NEEDLE_ID], 0);
-	drawTextureRegion(&textureconstants::K_NEEDLE, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
+	XPLMBindTexture2d(glTextures_[vsitextureconstants::NEEDLE_ID], 0);
+	drawTextureRegion(&vsitextureconstants::K_NEEDLE, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
 }
 
-void GaugeRenderer::drawRecommendationRange(RecommendationRange* recRange, bool recommended) const {
+void VSIGaugeRenderer::drawRecommendationRange(RecommendationRange* recRange, bool recommended) const {
 	drawRecommendedVerticalSpeedRange(recRange->minVerticalSpeed, recRange->maxVerticalSpeed, recommended);
 }
 
-void GaugeRenderer::drawRecommendedVerticalSpeedRange(Velocity minVertical, Velocity maxVertical, bool recommended) const {
+void VSIGaugeRenderer::drawRecommendedVerticalSpeedRange(Velocity minVertical, Velocity maxVertical, bool recommended) const {
 	double minVert = mathutil::clampd(minVertical.toFeetPerMin(), kMinVertSpeed, kMaxVertSpeed);
 	double maxVert = mathutil::clampd(maxVertical.toFeetPerMin(), kMinVertSpeed, kMaxVertSpeed);
 
@@ -350,7 +350,7 @@ void GaugeRenderer::drawRecommendedVerticalSpeedRange(Velocity minVertical, Velo
 	drawRecommendationRangeStartStop(Angle(startAngle, Angle::AngleUnits::DEGREES), Angle(stopAngle, Angle::AngleUnits::DEGREES), recommended);
 }
 
-void GaugeRenderer::drawRecommendationRangeStartStop(Angle start, Angle stop, bool recommended) const {
+void VSIGaugeRenderer::drawRecommendationRangeStartStop(Angle start, Angle stop, bool recommended) const {
 	start.normalize();
 	stop.normalize();
 
@@ -368,7 +368,7 @@ void GaugeRenderer::drawRecommendationRangeStartStop(Angle start, Angle stop, bo
 	drawRecommendationRangeStartSweep(start, sweepSize, recommended);
 }
 
-void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const { //Recommended appears to be true for pull up, false for go down
+void VSIGaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const { //Recommended appears to be true for pull up, false for go down
 	start.normalize();
 	sweep.normalize();
 	
@@ -377,13 +377,13 @@ void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, 
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
 
-	textureconstants::GlRgb8Color const * recRangeColor;
+	vsitextureconstants::GlRgb8Color const * recRangeColor;
 	if (!hostile) {
 		 recRangeColor= recommended ?
-			&textureconstants::K_RECOMMENDATION_RANGE_POSITIVE : &textureconstants::K_RECOMMENDATION_RANGE_NEGATIVE;  
+			&vsitextureconstants::K_RECOMMENDATION_RANGE_POSITIVE : &vsitextureconstants::K_RECOMMENDATION_RANGE_NEGATIVE;
 	} if (hostile) {
 		recRangeColor = recommended ?
-			&textureconstants::K_RECOMMENDATION_RANGE_POSITIVE_INVERTED : &textureconstants::K_RECOMMENDATION_RANGE_NEGATIVE_INVERTED; 
+			&vsitextureconstants::K_RECOMMENDATION_RANGE_POSITIVE_INVERTED : &vsitextureconstants::K_RECOMMENDATION_RANGE_NEGATIVE_INVERTED;
 	}
 
 	glColor4f(recRangeColor->red, recRangeColor->green, recRangeColor->blue, 1.0f);
@@ -398,10 +398,10 @@ void GaugeRenderer::drawRecommendationRangeStartSweep(Angle start, Angle sweep, 
 	glPopMatrix();
 }
 
-void GaugeRenderer::markHostile() {
+void VSIGaugeRenderer::markHostile() {
 	hostile = !hostile;
 }
 
-bool GaugeRenderer::returnHostileValue() {
+bool VSIGaugeRenderer::returnHostileValue() {
 	return hostile;
 }

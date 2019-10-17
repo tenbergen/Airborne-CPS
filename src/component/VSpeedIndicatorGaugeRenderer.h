@@ -4,21 +4,21 @@
 
 #include "component/Decider.h"
 #include "rendering/Renderer.inc"
-#include "rendering/TextureConstants.hpp"
+#include "rendering/VSpeedIndicatorTextureConstants.hpp"
 #include "util/BMPLoader.h"
 #include "util/MathUtil.h"
 #include "util/StringUtil.h"
 
 // @author nstemmle
 
-class GaugeRenderer
+class VSIGaugeRenderer
 {
 public:
-	GaugeRenderer(char const * const appPath, Decider * const decider, Aircraft * const userAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * intrudingAircraft);
-	~GaugeRenderer();
+	VSIGaugeRenderer(char const * const appPath, Decider * const decider, Aircraft * const userAircraft, concurrency::concurrent_unordered_map<std::string, Aircraft*> * intrudingAircraft);
+	~VSIGaugeRenderer();
 
 	void loadTextures();
-	void render(textureconstants::GlRgb8Color cockpitLighting);
+	void render(vsitextureconstants::GlRgb8Color cockpitLighting);
 	void markHostile();
 	bool returnHostileValue();
 
@@ -77,10 +77,10 @@ private:
 	// An OpenGL quadric (quadratic) object required for use with the GLUT library's partial disk function.
 	GLUquadricObj* quadric_;
 
-	XPLMTextureID glTextures_[textureconstants::K_NUM_TEXTURES];
+	XPLMTextureID glTextures_[vsitextureconstants::K_NUM_TEXTURES];
 
-	static textureconstants::TexCoords const * aircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threatClass);
-	static textureconstants::GlRgb8Color const * GaugeRenderer::symbolColorFromThreatClassification(Aircraft::ThreatClassification threatClass);
+	static vsitextureconstants::TexCoords const * aircraftSymbolFromThreatClassification(Aircraft::ThreatClassification threatClass);
+	static vsitextureconstants::GlRgb8Color const * VSIGaugeRenderer::symbolColorFromThreatClassification(Aircraft::ThreatClassification threatClass);
 
 	bool loadTexture(char * texPath, int texId) const;
 
@@ -102,12 +102,12 @@ private:
 	/* Draws a recommendation range starting at the supplied start angle in a sweep_angle degrees arc.*/
 	void drawRecommendationRangeStartSweep(Angle start, Angle sweep, bool recommended) const;
 
-	void drawTextureRegion(textureconstants::TexCoords const * texCoords, double vertLeft, double vertRight, double vertTop, double vertBot) const;
+	void drawTextureRegion(vsitextureconstants::TexCoords const * texCoords, double vertLeft, double vertRight, double vertTop, double vertBot) const;
 
 
-	textureconstants::TexCoords const * GaugeRenderer::gaugeTexCoordsFromDigitCharacter(char) const;
+	vsitextureconstants::TexCoords const * VSIGaugeRenderer::gaugeTexCoordsFromDigitCharacter(char) const;
 
 	// No copy constructor or copy-assignment 
-	GaugeRenderer (const GaugeRenderer& that) = delete;
-	GaugeRenderer& operator=(const GaugeRenderer& that) = delete;
+	VSIGaugeRenderer (const VSIGaugeRenderer& that) = delete;
+	VSIGaugeRenderer& operator=(const VSIGaugeRenderer& that) = delete;
 };

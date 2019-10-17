@@ -15,7 +15,7 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "component/GaugeRenderer.h"
+#include "component/VSpeedIndicatorGaugeRenderer.h"
 #include "data/location.pb.h"
 #include "data/Aircraft.h"
 

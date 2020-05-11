@@ -9,20 +9,20 @@
 #pragma comment(lib, "IPHLPAPI.lib")
 #include <iphlpapi.h>
 
+
 #include <vector>
 #include <sys/types.h>
 #include <stdio.h>
 #include <sstream>
 #include <unordered_map>
+#include "data\Location.h"
 
 #include "component/VSpeedIndicatorGaugeRenderer.h"
-#include "data/location.pb.h"
 #include "data/Aircraft.h"
 
 #define BROADCAST_PORT 21221
 #define MAC_LENGTH 18
 #define PORT_LENGTH 6
-
 class Transponder
 {
 public:

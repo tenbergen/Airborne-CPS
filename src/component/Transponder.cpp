@@ -73,8 +73,11 @@ DWORD Transponder::receiveLocation()
 	while (communication)
 	{
 		XPLMDebugString("Pre receive");
+<<<<<<< HEAD
 		//temp = myLocation;
 		//temp.BuildPlane();
+=======
+>>>>>>> 934d9e673c4b28f30c9f6029b944dea13a5b9185
 		int size = myLocation.getSize();
 		char* buffer = (char*)malloc(size);
 		myID = myLocation.getID().c_str();

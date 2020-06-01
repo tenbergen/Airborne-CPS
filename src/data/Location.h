@@ -46,10 +46,7 @@ namespace xplane{
 		}
 
 		int getSize() {
-<<<<<<< HEAD
-			BuildPlane();
-=======
->>>>>>> 934d9e673c4b28f30c9f6029b944dea13a5b9185
+
 			char const *c = plane.c_str();
 			size_t length = strlen(c);
 			return length;

@@ -6,7 +6,11 @@
 std::string Transponder::macAddress_ = "";
 std::atomic<bool> Transponder::initialized_ = false;
 
-Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruders, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* connections, Decider* decider)
+Transponder::Transponder(Aircraft* ac, 
+						concurrency::concurrent_unordered_map<std::string, 
+						Aircraft*>* intruders, 
+						concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> *connections, 
+						Decider* decider)
 {
 	decider_ = decider;
 	aircraft_ = ac;
@@ -73,11 +77,7 @@ DWORD Transponder::receiveLocation()
 	while (communication)
 	{
 		XPLMDebugString("Pre receive");
-<<<<<<< HEAD
-		//temp = myLocation;
-		//temp.BuildPlane();
-=======
->>>>>>> 934d9e673c4b28f30c9f6029b944dea13a5b9185
+
 		int size = myLocation.getSize();
 		char* buffer = (char*)malloc(size);
 		myID = myLocation.getID().c_str();
@@ -171,7 +171,18 @@ DWORD Transponder::sendLocation()
 		char * buffer = new char[myLocation.getPLANE().length() + 1];
 		std::strcpy(buffer, myLocation.getPLANE().c_str());
 
+
+// basic idea of how to maybe serialize our data as binary data instead of ascii/unicode characters
+		//char outputbuffer[40];
+		//outputbuffer[3] = myLocation.setLAT & 0xFF;
+		//outputbuffer[2] = (myLocation.setLAT >> 8 ) & 0xFF;
+		//outputbuffer[1] = (myLocation.setLAT >> 16) & 0xFF;
+		//outputbuffer[0] = (myLocation.setLAT >> 24) & 0xFF;
+
+		//outputbuffer[4] = myLocation.setLON & 0xFF;
+
 		
+
 		//changes here
 		//void* buffer = (char*)malloc(size);
 		//buffer = (void *) myLocation.getPLANE().c_str();

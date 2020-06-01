@@ -199,7 +199,7 @@ void VSIGaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Velo
 	drawTextureRegion(symbolCoords, symbolLeft, symbolRight, symbolTop, symbolBot);
 
 	Distance altitudeDifference = intruderPos->altitude - gaugeCenterPos->altitude;
-	int altDiffHundredsFtPerMin = (int) std::round(altitudeDifference.toFeet() / 100.0);
+	int altDiffHundredsFtPerMin = (int) round(altitudeDifference.toFeet() / 100.0);
 
 	vsitextureconstants::TexCoords const * signChar = altDiffHundredsFtPerMin < 0.0 ? &vsitextureconstants::K_CHAR_MINUS_SIGN : &vsitextureconstants::K_CHAR_PLUS_SIGN;
 	altDiffHundredsFtPerMin = abs(altDiffHundredsFtPerMin);

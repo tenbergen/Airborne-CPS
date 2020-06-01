@@ -938,7 +938,7 @@ void AHGaugeRenderer::drawAltitudeIndicator(float currentAltitude) const {
 }
 
 void AHGaugeRenderer::writeAltitude(float currentAltitude) const {
-	writeNumber((int)std::round(currentAltitude), altimeterDisplayLeft,
+	writeNumber((int)round(currentAltitude), altimeterDisplayLeft,
 		((altimeterDisplayTopLow - altimeterDisplayBottomHigh) / 2.0 + altimeterDisplayBottomHigh), true);
 }
 
@@ -1084,7 +1084,7 @@ void AHGaugeRenderer::drawAirspeedGaugeIndicator(float currentAirspeed) const {
 }
 
 void AHGaugeRenderer::writeAirspeed(float currentAirspeed) const {
-	writeNumber((int)std::roundf(currentAirspeed), airspeedGaugeDisplayRight,
+	writeNumber((int)roundf(currentAirspeed), airspeedGaugeDisplayRight,
 		((airspeedGaugeDisplayTopLow - airspeedGaugeDisplayBottomHigh) / 2.0 + airspeedGaugeDisplayBottomHigh), false);
 }
 
@@ -1209,7 +1209,7 @@ void AHGaugeRenderer::drawIntrudingAircraft(LLA const * const intruderPos, Veloc
 		glVertex2d(symbolLeft, symbolBottom);
 
 		Distance altitudeDifference = intruderPos->altitude - gaugeCenterPos->altitude;
-		int altDiffHundredsFtPerMin = (int)std::round(altitudeDifference.toFeet() / 100.0);
+		int altDiffHundredsFtPerMin = (int)round(altitudeDifference.toFeet() / 100.0);
 
 		ahtextureconstants::TexCoords const * signChar = altDiffHundredsFtPerMin < 0.0 ? &ahtextureconstants::K_CHAR_MINUS_SIGN : &ahtextureconstants::K_CHAR_PLUS_SIGN;
 		altDiffHundredsFtPerMin = abs(altDiffHundredsFtPerMin);

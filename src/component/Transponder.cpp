@@ -1,20 +1,25 @@
 #include "Transponder.h"
 
+
 #pragma comment(lib,"WS2_32")
 
 std::string Transponder::macAddress_ = "";
 std::atomic<bool> Transponder::initialized_ = false;
 
-Transponder::Transponder(Aircraft* ac, concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruders, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* connections, Decider* decider)
+Transponder::Transponder(Aircraft* ac, 
+						concurrency::concurrent_unordered_map<std::string, 
+						Aircraft*>* intruders, 
+						concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> *connections, 
+						Decider* decider)
 {
 	decider_ = decider;
 	aircraft_ = ac;
 	intrudersMap = intruders;
 	openConnections = connections;
 
-	myLocation.set_id(macAddress_);
+	myLocation.setID(macAddress_);
 	ip = getIpAddr();
-	myLocation.set_ip(ip);
+	myLocation.setIP(ip);
 
 	sinlen = sizeof(struct sockaddr_in);
 	inSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -68,34 +73,44 @@ DWORD Transponder::receiveLocation()
 {
 	char const * intruderID;
 	char const * myID;
-
+	xplane::Location temp;
 	while (communication)
 	{
-		int size = myLocation.ByteSize();
+		XPLMDebugString("Pre receive");
+
+		int size = myLocation.getSize();
 		char* buffer = (char*)malloc(size);
-		myID = myLocation.id().c_str();
+		myID = myLocation.getID().c_str();
+
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
 
 		std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-
-		intruderLocation.ParseFromArray(buffer, size);
-		intruderID = intruderLocation.id().c_str();
+		XPLMDebugString("Pre Deserializing");
+		try {
+			intruderLocation.deserialize(buffer, size);
+		}
+		catch (...) {
+			XPLMDebugString("Deserialize is not working");
+		}
+		
+		intruderID = intruderLocation.getID().c_str();
 
 		if (strcmp(myID, intruderID) != 0) {
-			Angle latitude = { intruderLocation.lat(), Angle::AngleUnits::DEGREES };
-			Angle longitude = { intruderLocation.lon(), Angle::AngleUnits::DEGREES };
-			Distance altitude = { intruderLocation.alt(), Distance::DistanceUnits::METERS };
+			Angle latitude = { intruderLocation.getLAT(), Angle::AngleUnits::DEGREES };
+			Angle longitude = { intruderLocation.getLON(), Angle::AngleUnits::DEGREES };
+			Distance altitude = { intruderLocation.getALT(), Distance::DistanceUnits::METERS };
 			printf("Transponder::recieveLocation - altitude = %f\n", altitude.toMeters());
-			LLA updatedPosition = { intruderLocation.lat(), intruderLocation.lon(), intruderLocation.alt(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
+			LLA updatedPosition = { intruderLocation.getLAT(), intruderLocation.getLON(), intruderLocation.getALT(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
-			Aircraft* intruder = (*intrudersMap)[intruderLocation.id()];
+			Aircraft* intruder = (*intrudersMap)[intruderLocation.getID()];
 			if (!intruder) {
 
 				// Debug Statement to output Intruder MAC and IP addresses to Log
-				std::string debugString = "Intruder MAC : " + intruderLocation.id() + "\nIntruder IP : " + intruderLocation.ip() + "\n";
+				std::string debugString = "Intruder MAC : " + intruderLocation.getID() + "\nIntruder IP : " + intruderLocation.getIP() + "\n";
+
 				XPLMDebugString(debugString.c_str());
 
-				intruder = new Aircraft(intruderLocation.id(), intruderLocation.ip());
+				intruder = new Aircraft(intruderLocation.getID(), intruderLocation.getIP());
 				allocatedAircraft_.push_back(intruder);
 
 				// Fill in the current values so that the aircraft will not have two wildly different position values
@@ -132,6 +147,7 @@ DWORD Transponder::receiveLocation()
 
 			decider_->analyze(intruder);
 		}
+		XPLMDebugString("receiveLocation pre buffer free");
 		free(buffer);
 	}
 	return 0;
@@ -145,19 +161,45 @@ DWORD Transponder::sendLocation()
 		LLA position = aircraft_->positionCurrent;
 		aircraft_->lock.unlock();
 
-		myLocation.set_lat(position.latitude.toDegrees());
-		myLocation.set_lon(position.longitude.toDegrees());
-		myLocation.set_alt(position.altitude.toMeters());
+		myLocation.setLAT(position.latitude.toDegrees());
+		myLocation.setLON(position.longitude.toDegrees());
+		myLocation.setALT(position.altitude.toMeters());
 
-		int size = myLocation.ByteSize();
-		void * buffer = malloc(size);
+		myLocation.BuildPlane();
 
-		myLocation.SerializeToArray(buffer, size);
+		int size = myLocation.getSize();
+		char * buffer = new char[myLocation.getPLANE().length() + 1];
+		std::strcpy(buffer, myLocation.getPLANE().c_str());
+
+
+// basic idea of how to maybe serialize our data as binary data instead of ascii/unicode characters
+		//char outputbuffer[40];
+		//outputbuffer[3] = myLocation.setLAT & 0xFF;
+		//outputbuffer[2] = (myLocation.setLAT >> 8 ) & 0xFF;
+		//outputbuffer[1] = (myLocation.setLAT >> 16) & 0xFF;
+		//outputbuffer[0] = (myLocation.setLAT >> 24) & 0xFF;
+
+		//outputbuffer[4] = myLocation.setLON & 0xFF;
+
+		
+
+		//changes here
+		//void* buffer = (char*)malloc(size);
+		//buffer = (void *) myLocation.getPLANE().c_str();
+
+		// Original Code
+		//int size = myLocation.ByteSize();
+		//void * buffer = malloc(size);
+
+		//myLocation.SerializeToArray(buffer, size);
 
 		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
 
-		free(buffer);
+		//Free doesn't work with a buffer of const char *
+		XPLMDebugString("sendLocation pre buffer free");
+		//free(buffer)
 		Sleep(1000);
+		XPLMDebugString("sendLocation post buffer free");
 	}
 	return 0;
 }

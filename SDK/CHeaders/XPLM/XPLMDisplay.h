@@ -519,7 +519,8 @@ XPLM_API void                 XPLMGetMouseLocation(
  * which make this easy.                                                       
  *
  */
-XPLM_API XPLMWindowID         XPLMCreateWindow(
+XPLM_API XPLMWindowID         
+XPLMCreateWindow(
                                    int                  inLeft,    
                                    int                  inTop,    
                                    int                  inRight,    

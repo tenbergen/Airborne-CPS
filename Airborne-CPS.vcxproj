@@ -118,7 +118,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\X-Plane 10\Resources\plugins\</OutDir>
+    <OutDir>.\out\x86\</OutDir>
     <IntDir>.\Release\32\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -126,7 +126,7 @@
     <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>.\Test64bitOutput\</OutDir>
+    <OutDir>.\out\x64\</OutDir>
     <IntDir>.\Release\64\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>

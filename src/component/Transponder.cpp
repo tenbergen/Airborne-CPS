@@ -76,7 +76,7 @@ DWORD Transponder::receiveLocation()
 	xplane::Location temp;
 	while (communication)
 	{
-		XPLMDebugString("Pre receive");
+		XPLMDebugString("Pre receive\n");
 
 		int size = myLocation.getSize();
 		char* buffer = (char*)malloc(size);
@@ -85,12 +85,17 @@ DWORD Transponder::receiveLocation()
 		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
 
 		std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-		XPLMDebugString("Pre Deserializing");
+		XPLMDebugString("Pre Deserializing\n");
 		try {
+
+			XPLMDebugString("receiveLocaction buffer: ");
+			XPLMDebugString(buffer);
+			XPLMDebugString("\n");
+
 			intruderLocation.deserialize(buffer, size);
 		}
 		catch (...) {
-			XPLMDebugString("Deserialize is not working");
+			XPLMDebugString("Deserialize is not working\n");
 		}
 		
 		intruderID = intruderLocation.getID().c_str();
@@ -147,7 +152,7 @@ DWORD Transponder::receiveLocation()
 
 			decider_->analyze(intruder);
 		}
-		XPLMDebugString("receiveLocation pre buffer free");
+		XPLMDebugString("receiveLocation pre buffer free\n");
 		free(buffer);
 	}
 	return 0;
@@ -170,7 +175,9 @@ DWORD Transponder::sendLocation()
 		int size = myLocation.getSize();
 		char * buffer = new char[myLocation.getPLANE().length() + 1];
 		std::strcpy(buffer, myLocation.getPLANE().c_str());
-
+		XPLMDebugString("sendLocation buffer: ");
+		XPLMDebugString(buffer);
+		XPLMDebugString("\n");
 
 // basic idea of how to maybe serialize our data as binary data instead of ascii/unicode characters
 		//char outputbuffer[40];
@@ -196,10 +203,10 @@ DWORD Transponder::sendLocation()
 		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
 
 		//Free doesn't work with a buffer of const char *
-		XPLMDebugString("sendLocation pre buffer free");
+		XPLMDebugString("sendLocation pre buffer free\n");
 		//free(buffer)
 		Sleep(1000);
-		XPLMDebugString("sendLocation post buffer free");
+		XPLMDebugString("sendLocation post buffer free\n");
 	}
 	return 0;
 }

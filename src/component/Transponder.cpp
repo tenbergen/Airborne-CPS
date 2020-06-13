@@ -7,8 +7,7 @@ std::string Transponder::macAddress_ = "";
 std::atomic<bool> Transponder::initialized_ = false;
 
 Transponder::Transponder(Aircraft* ac, 
-						concurrency::concurrent_unordered_map<std::string, 
-						Aircraft*>* intruders, 
+						concurrency::concurrent_unordered_map<std::string, Aircraft*> *intruders, 
 						concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> *connections, 
 						Decider* decider)
 {
@@ -50,7 +49,7 @@ void Transponder::createSocket(SOCKET* s, struct sockaddr_in* socketAddr, int ad
 	int bindSuccess = bind(*s, (struct sockaddr *)socketAddr, sinlen);
 	if (bindSuccess < 0) {
 		char theError[32];
-		sprintf(theError, "Transponder::Failed to bind: %d\n", GetLastError());
+		sprintf(theError, "Transponder::createSocket() -> Failed to bind: %d\n", GetLastError());
 		XPLMDebugString(theError);
 	}
 }
@@ -77,30 +76,62 @@ DWORD Transponder::receiveLocation()
 	while (communication)
 	{
 		XPLMDebugString("Pre receive\n");
+									
+		char* buffer = (char*)malloc(MAX_RECEIVE_BUFFER_SIZE);		// allocate a buffer big enough to hold that max possible size
+		memset(buffer, '\0', MAX_RECEIVE_BUFFER_SIZE);				 // fill it with null terminators
 
-		int size = myLocation.getSize();
-		char* buffer = (char*)malloc(size);
-		myID = myLocation.getID().c_str();
+		myID = myLocation.getID().c_str();							// set myID  to be the MAC Address of the reciever
 
-		recvfrom(inSocket, buffer, size, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+		XPLMDebugString("Transponder.cpp::myID before recvfrom = ");
+		XPLMDebugString(myID);
+		XPLMDebugString("\n");
+
+		recvfrom(inSocket, buffer, MAX_RECEIVE_BUFFER_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+
+
+		int size = std::strlen(buffer);  // set size the actual number of characters that we received
+										// even if we don't get the null sent to us, our buffer should be null filled anyways
+										// which will mean its effectively null terminated as long as we receive less than MAX_RECEIVE_BUFFER_SIZE characters
 
 		std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 		XPLMDebugString("Pre Deserializing\n");
 		try {
-
-			XPLMDebugString("receiveLocaction buffer: ");
+			// ******** debugging
+			XPLMDebugString("receiveLocation buffer: ");
 			XPLMDebugString(buffer);
 			XPLMDebugString("\n");
-
-			intruderLocation.deserialize(buffer, size);
+			// ****************
+			intruderLocation.deserialize(buffer, size);  // deserialize the nu
 		}
 		catch (...) {
 			XPLMDebugString("Deserialize is not working\n");
 		}
 		
+		// we are done with buffer at this point. let's clean up memory and pointer
+
+		XPLMDebugString("receiveLocation pre buffer free\n");
+		free(buffer);   // free memory on the heap
+		buffer = NULL;  // clear dangling pointer
+
 		intruderID = intruderLocation.getID().c_str();
+		XPLMDebugString("Transponder.cpp::intruderID = ");
+		XPLMDebugString(intruderID);
+		XPLMDebugString("\n");
+		XPLMDebugString("Transponder.cpp::myID = ");
+		XPLMDebugString(myID);
+		XPLMDebugString("\n");
 
 		if (strcmp(myID, intruderID) != 0) {
+			// ************************ debugging
+			XPLMDebugString("Transponder.cpp::strcmp(myID, IntruderID...= ");
+			int comp = strcmp(myID, intruderID);
+			char buf[10];
+			std::string compstring = itoa(comp, buf, 10);
+			XPLMDebugString(compstring.c_str());
+			XPLMDebugString("\n");
+
+			//************************
+
 			Angle latitude = { intruderLocation.getLAT(), Angle::AngleUnits::DEGREES };
 			Angle longitude = { intruderLocation.getLON(), Angle::AngleUnits::DEGREES };
 			Distance altitude = { intruderLocation.getALT(), Distance::DistanceUnits::METERS };
@@ -152,8 +183,7 @@ DWORD Transponder::receiveLocation()
 
 			decider_->analyze(intruder);
 		}
-		XPLMDebugString("receiveLocation pre buffer free\n");
-		free(buffer);
+
 	}
 	return 0;
 }

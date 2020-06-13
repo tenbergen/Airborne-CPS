@@ -23,6 +23,8 @@
 #define BROADCAST_PORT 21221
 #define MAC_LENGTH 18
 #define PORT_LENGTH 6
+#define MAX_RECEIVE_BUFFER_SIZE 4096
+
 class Transponder
 {
 public:

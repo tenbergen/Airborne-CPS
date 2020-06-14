@@ -24,6 +24,7 @@
 #define MAC_LENGTH 18
 #define PORT_LENGTH 6
 #define MAX_RECEIVE_BUFFER_SIZE 4096
+#define MAC_ADDRESS_STRING_LENGTH 17
 
 class Transponder
 {

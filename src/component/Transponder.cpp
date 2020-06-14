@@ -70,8 +70,9 @@ Transponder::~Transponder()
 
 DWORD Transponder::receiveLocation()
 {
-	char const * intruderID;
-	char const * myID;
+	std::string intruderID;     
+	std::string myID; 
+
 	xplane::Location temp;
 	while (communication)
 	{
@@ -80,10 +81,12 @@ DWORD Transponder::receiveLocation()
 		char* buffer = (char*)malloc(MAX_RECEIVE_BUFFER_SIZE);		// allocate a buffer big enough to hold that max possible size
 		memset(buffer, '\0', MAX_RECEIVE_BUFFER_SIZE);				 // fill it with null terminators
 
-		myID = myLocation.getID().c_str();							// set myID  to be the MAC Address of the reciever
+		myID = myLocation.getID();	// store myID as a C++ string
+
+
 
 		XPLMDebugString("Transponder.cpp::myID before recvfrom = ");
-		XPLMDebugString(myID);
+		XPLMDebugString(myID.c_str());
 		XPLMDebugString("\n");
 
 		recvfrom(inSocket, buffer, MAX_RECEIVE_BUFFER_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
@@ -115,16 +118,16 @@ DWORD Transponder::receiveLocation()
 
 		intruderID = intruderLocation.getID().c_str();
 		XPLMDebugString("Transponder.cpp::intruderID = ");
-		XPLMDebugString(intruderID);
+		XPLMDebugString(intruderID.c_str());
 		XPLMDebugString("\n");
 		XPLMDebugString("Transponder.cpp::myID = ");
-		XPLMDebugString(myID);
+		XPLMDebugString(myID.c_str());
 		XPLMDebugString("\n");
 
-		if (strcmp(myID, intruderID) != 0) {
+		if (strcmp(myID.c_str(), intruderID.c_str()) != 0) {
 			// ************************ debugging
 			XPLMDebugString("Transponder.cpp::strcmp(myID, IntruderID...= ");
-			int comp = strcmp(myID, intruderID);
+			int comp = strcmp(myID.c_str(), intruderID.c_str());
 			char buf[10];
 			std::string compstring = itoa(comp, buf, 10);
 			XPLMDebugString(compstring.c_str());

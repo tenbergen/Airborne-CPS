@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <sstream>
 #include <unordered_map>
+#include <ctime>
 #include "data\Location.h"
 
 #include "component/VSpeedIndicatorGaugeRenderer.h"

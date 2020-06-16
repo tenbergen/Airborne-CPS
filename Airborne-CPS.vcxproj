@@ -192,6 +192,9 @@
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)\SDK\CHeaders\google\protobuf;$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(SolutionDir)out\x86" "E:\X-Plane 10\Resources\plugins\"  /Y </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>

@@ -274,3 +274,4 @@ __pycache__/
 
 ### VisualStudio Patch ###
 build/
+Airborne-CPS.vcxproj

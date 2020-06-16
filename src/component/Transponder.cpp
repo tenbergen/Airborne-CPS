@@ -70,24 +70,19 @@ Transponder::~Transponder()
 
 DWORD Transponder::receiveLocation()
 {
+	
 	std::string intruderID;     
 	std::string myID; 
 
 	xplane::Location temp;
 	while (communication)
 	{
-		XPLMDebugString("Pre receive\n");
-									
+								
 		char* buffer = (char*)malloc(MAX_RECEIVE_BUFFER_SIZE);		// allocate a buffer big enough to hold that max possible size
 		memset(buffer, '\0', MAX_RECEIVE_BUFFER_SIZE);				 // fill it with null terminators
 
 		myID = myLocation.getID();	// store myID as a C++ string
 
-
-
-		XPLMDebugString("Transponder.cpp::myID before recvfrom = ");
-		XPLMDebugString(myID.c_str());
-		XPLMDebugString("\n");
 
 		recvfrom(inSocket, buffer, MAX_RECEIVE_BUFFER_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
 
@@ -97,13 +92,13 @@ DWORD Transponder::receiveLocation()
 										// which will mean its effectively null terminated as long as we receive less than MAX_RECEIVE_BUFFER_SIZE characters
 
 		std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-		XPLMDebugString("Pre Deserializing\n");
+
 		try {
-			// ******** debugging
-			XPLMDebugString("receiveLocation buffer: ");
-			XPLMDebugString(buffer);
-			XPLMDebugString("\n");
-			// ****************
+			//// ******** debugging
+			//XPLMDebugString("receiveLocation buffer: ");
+			//XPLMDebugString(buffer);
+			//XPLMDebugString("\n");
+			//// ****************
 			intruderLocation.deserialize(buffer, size);  // deserialize the nu
 		}
 		catch (...) {
@@ -117,23 +112,23 @@ DWORD Transponder::receiveLocation()
 		buffer = NULL;  // clear dangling pointer
 
 		intruderID = intruderLocation.getID().c_str();
-		XPLMDebugString("Transponder.cpp::intruderID = ");
-		XPLMDebugString(intruderID.c_str());
-		XPLMDebugString("\n");
-		XPLMDebugString("Transponder.cpp::myID = ");
-		XPLMDebugString(myID.c_str());
-		XPLMDebugString("\n");
+		//XPLMDebugString("Transponder.cpp::intruderID = ");
+		//XPLMDebugString(intruderID.c_str());
+		//XPLMDebugString("\n");
+		//XPLMDebugString("Transponder.cpp::myID = ");
+		//XPLMDebugString(myID.c_str());
+		//XPLMDebugString("\n");
 
 		if (strcmp(myID.c_str(), intruderID.c_str()) != 0) {
-			// ************************ debugging
-			XPLMDebugString("Transponder.cpp::strcmp(myID, IntruderID...= ");
-			int comp = strcmp(myID.c_str(), intruderID.c_str());
-			char buf[10];
-			std::string compstring = itoa(comp, buf, 10);
-			XPLMDebugString(compstring.c_str());
-			XPLMDebugString("\n");
+			//// ************************ debugging
+			//XPLMDebugString("Transponder.cpp::strcmp(myID, IntruderID...= ");
+			//int comp = strcmp(myID.c_str(), intruderID.c_str());
+			//char buf[10];
+			//std::string compstring = itoa(comp, buf, 10);
+			//XPLMDebugString(compstring.c_str());
+			//XPLMDebugString("\n");
 
-			//************************
+			////************************
 
 			Angle latitude = { intruderLocation.getLAT(), Angle::AngleUnits::DEGREES };
 			Angle longitude = { intruderLocation.getLON(), Angle::AngleUnits::DEGREES };
@@ -211,27 +206,6 @@ DWORD Transponder::sendLocation()
 		XPLMDebugString("sendLocation buffer: ");
 		XPLMDebugString(buffer);
 		XPLMDebugString("\n");
-
-// basic idea of how to maybe serialize our data as binary data instead of ascii/unicode characters
-		//char outputbuffer[40];
-		//outputbuffer[3] = myLocation.setLAT & 0xFF;
-		//outputbuffer[2] = (myLocation.setLAT >> 8 ) & 0xFF;
-		//outputbuffer[1] = (myLocation.setLAT >> 16) & 0xFF;
-		//outputbuffer[0] = (myLocation.setLAT >> 24) & 0xFF;
-
-		//outputbuffer[4] = myLocation.setLON & 0xFF;
-
-		
-
-		//changes here
-		//void* buffer = (char*)malloc(size);
-		//buffer = (void *) myLocation.getPLANE().c_str();
-
-		// Original Code
-		//int size = myLocation.ByteSize();
-		//void * buffer = malloc(size);
-
-		//myLocation.SerializeToArray(buffer, size);
 
 		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
 

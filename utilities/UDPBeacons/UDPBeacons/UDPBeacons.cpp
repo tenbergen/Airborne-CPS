@@ -24,14 +24,42 @@
 int __cdecl main(int argc, char* argv[])
 {
     std::string fileName;
+    int innerDelay = 10;
+    int outerDelay = 1000;
+    std::string secondArg;
+    std::string thirdArg;
+
     if (argc < 2) {
         std::cout << "Enter the path/filename to the beacon file:" << std::endl;
         std::cin >> fileName;
         std::cout << "Parsing File: " + fileName << std::endl;
     }
-    else {
+    else if (argc == 2 || argc == 3 || argc == 4) {
         fileName = argv[1];
         std::cout << "Parsing File: " + fileName << std::endl;
+        if (argc == 3 || argc == 4) {
+            secondArg = argv[2];
+            if (secondArg == "slow") {
+                innerDelay = 100;
+                outerDelay = 10;
+            }
+            else {
+                std::cout << "Unknown argument. Please use the syntax:\nUDPBeacons.exe <filename> slow\n if you wish to invoke slow mode" << std::endl;
+                return 0;
+            }
+            if (argc == 4) {
+                thirdArg = argv[3];
+                if (thirdArg == "slow") {
+                    innerDelay = 500;
+                    outerDelay = 10;
+                }
+                else {
+                    std::cout << "Unknown argument. Please use the syntax:\nUDPBeacons.exe <filename> slow slow\n if you wish to invoke slow slow mode" << std::endl;
+                    return 0;
+                }
+            }
+
+        } 
     }
 
     std::ifstream infile(fileName);
@@ -72,12 +100,14 @@ int __cdecl main(int argc, char* argv[])
         for (int i = 0; i < beacons.size(); i++) {
             sendto(outSocket, (const char*)beacons[i].c_str(), beacons[i].length() + 1, 0, (struct sockaddr*) & outgoing, sizeof(struct sockaddr_in));
             std::cout << beacons[i] << std::endl;
-            Sleep(10);
+            if (GetAsyncKeyState(VK_ESCAPE)) {
+                exit = true;
+                break;
+            }
+            Sleep(innerDelay);
         }
-        if (GetAsyncKeyState(VK_ESCAPE)) {
-            exit = true;
-        }
-        Sleep(1000);
+
+        Sleep(outerDelay);
     }
     std::cout << "Stopped UDP Broadcaset." << std::endl;
     closesocket(outSocket);

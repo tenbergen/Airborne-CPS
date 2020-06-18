@@ -164,6 +164,9 @@ void ResolutionConnection::resolveSense()
 					lock.unlock();
 
 					char debugBuf[256];
+					char debuggingsense[512];
+					snprintf(debuggingsense, 512, "ResolutionConnection::resolveSense Compare \nmyMac: %s\ninteruderMac: %s\n", myMac.c_str(), intruderMac.c_str());
+					XPLMDebugString(debuggingsense);
 					if (strcmp(myMac.c_str(), intruderMac.c_str()) > 0) {
 						snprintf(debugBuf, 256, "ResolutionConnection::resolveSense - edge case with my mac > intr_mac; sending sense: %s\n", senseToString(senseCurrent));
 						XPLMDebugString(debugBuf);

@@ -60,6 +60,7 @@ namespace xplane{
 		}
 
 		void deserialize(char const *c, int size) {
+			if (c[0] == '\0') { return; }  // gracefully return if passed an empty string
 			std::vector<int> array;
 			std::string s(c, size);
 			for (int i = 0; i < s.size(); i++) {

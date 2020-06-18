@@ -102,14 +102,14 @@ DWORD Transponder::receiveLocation()
 			intruderLocation.deserialize(buffer, size);  // deserialize the nu
 		}
 		catch (...) {
-			XPLMDebugString("Deserialize is not working\n");
+			XPLMDebugString("Deserialize is not working: ");
 		}
 		
 		// we are done with buffer at this point. let's clean up memory and pointer
 
-		XPLMDebugString("receiveLocation pre buffer free\n");
+		//XPLMDebugString("receiveLocation pre buffer free\n");
 		free(buffer);   // free memory on the heap
-		buffer = NULL;  // clear dangling pointer
+		buffer = nullptr;  // clear dangling pointer
 
 		intruderID = intruderLocation.getID().c_str();
 		//XPLMDebugString("Transponder.cpp::intruderID = ");
@@ -139,6 +139,8 @@ DWORD Transponder::receiveLocation()
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.getID()];
 			if (!intruder) {
 
+				// if we don't have this intruder already, create it
+
 				// Debug Statement to output Intruder MAC and IP addresses to Log
 				std::string debugString = "Intruder MAC : " + intruderLocation.getID() + "\nIntruder IP : " + intruderLocation.getIP() + "\n";
 
@@ -159,7 +161,7 @@ DWORD Transponder::receiveLocation()
 				(*openConnections)[intruder->id] = connection;
 			}
 
-			keepAliveMap_[intruder->id] = 10;
+			keepAliveMap_[intruder->id] = 10;  // what does 10 mean here? Why 10? 10 what? Why not 9 or 11000000? Magic number alert!
 
 			ResolutionConnection* conn = (*openConnections)[intruder->id];
 
@@ -200,8 +202,10 @@ DWORD Transponder::sendLocation()
 
 		myLocation.BuildPlane();
 
-		int size = myLocation.getSize();
-		char * buffer = new char[myLocation.getPLANE().length() + 1];
+		int size = myLocation.getPLANE().length() + 1;  // length of the C++ string, plus 1 for the null terminator
+		//char * buffer = new char[myLocation.getPLANE().length() + 1];
+		char* buffer = (char*)malloc(size);  // to be consistent with how its done in receiveLocation()
+		memset(buffer, '\0', size);
 		std::strcpy(buffer, myLocation.getPLANE().c_str());
 		XPLMDebugString("sendLocation buffer: ");
 		XPLMDebugString(buffer);
@@ -209,11 +213,12 @@ DWORD Transponder::sendLocation()
 
 		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
 
-		//Free doesn't work with a buffer of const char *
-		XPLMDebugString("sendLocation pre buffer free\n");
-		//free(buffer)
+		
+		//XPLMDebugString("sendLocation pre buffer free\n");
+		free(buffer);       // free memory on the heap
+		buffer = nullptr;   // clear dangling pointer
 		Sleep(1000);
-		XPLMDebugString("sendLocation post buffer free\n");
+		//XPLMDebugString("sendLocation post buffer free\n");
 	}
 	return 0;
 }

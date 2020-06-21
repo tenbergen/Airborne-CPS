@@ -95,11 +95,11 @@ DWORD Transponder::receiveLocation()
 
 		try {
 			//// ******** debugging
-			//XPLMDebugString("receiveLocation buffer: ");
-			//XPLMDebugString(buffer);
-			//XPLMDebugString("\n");
+			std::string debugString = "receiveLocation buffer: " + std::string(buffer) + "\n";
+
+			XPLMDebugString(debugString.c_str());
 			//// ****************
-			intruderLocation.deserialize(buffer, size);  // deserialize the nu
+			intruderLocation.deserialize(buffer, size);  
 		}
 		catch (...) {
 			XPLMDebugString("Deserialize is not working: ");
@@ -112,28 +112,17 @@ DWORD Transponder::receiveLocation()
 		buffer = nullptr;  // clear dangling pointer
 
 		intruderID = intruderLocation.getID().c_str();
-		//XPLMDebugString("Transponder.cpp::intruderID = ");
-		//XPLMDebugString(intruderID.c_str());
-		//XPLMDebugString("\n");
-		//XPLMDebugString("Transponder.cpp::myID = ");
-		//XPLMDebugString(myID.c_str());
-		//XPLMDebugString("\n");
+
 
 		if (strcmp(myID.c_str(), intruderID.c_str()) != 0) {
-			//// ************************ debugging
-			//XPLMDebugString("Transponder.cpp::strcmp(myID, IntruderID...= ");
-			//int comp = strcmp(myID.c_str(), intruderID.c_str());
-			//char buf[10];
-			//std::string compstring = itoa(comp, buf, 10);
-			//XPLMDebugString(compstring.c_str());
-			//XPLMDebugString("\n");
 
-			////************************
+			// commenting the following lines out as a test. They don't seem to be referenced ever so no point in having them.
+			//Angle latitude = { intruderLocation.getLAT(), Angle::AngleUnits::DEGREES };    // why does this exist? Doesn't seem to be referenced ever
+			//Angle longitude = { intruderLocation.getLON(), Angle::AngleUnits::DEGREES };   // why does this exist? Doesn't seem to be referenced ever
+			//Distance altitude = { intruderLocation.getALT(), Distance::DistanceUnits::METERS };  // why does this exist? Doesn't seem to be referenced ever
+			//printf("Transponder::recieveLocation - altitude = %f\n", altitude.toMeters());
 
-			Angle latitude = { intruderLocation.getLAT(), Angle::AngleUnits::DEGREES };
-			Angle longitude = { intruderLocation.getLON(), Angle::AngleUnits::DEGREES };
-			Distance altitude = { intruderLocation.getALT(), Distance::DistanceUnits::METERS };
-			printf("Transponder::recieveLocation - altitude = %f\n", altitude.toMeters());
+
 			LLA updatedPosition = { intruderLocation.getLAT(), intruderLocation.getLON(), intruderLocation.getALT(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
 			Aircraft* intruder = (*intrudersMap)[intruderLocation.getID()];
@@ -141,10 +130,10 @@ DWORD Transponder::receiveLocation()
 
 				// if we don't have this intruder already, create it
 
-				// Debug Statement to output Intruder MAC and IP addresses to Log
+				// Debug Statements to output Intruder MAC and IP addresses to Log
 				std::string debugString = "Intruder MAC : " + intruderLocation.getID() + "\nIntruder IP : " + intruderLocation.getIP() + "\n";
-
 				XPLMDebugString(debugString.c_str());
+
 
 				intruder = new Aircraft(intruderLocation.getID(), intruderLocation.getIP());
 				allocatedAircraft_.push_back(intruder);

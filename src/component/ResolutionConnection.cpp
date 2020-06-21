@@ -120,7 +120,8 @@ int ResolutionConnection::connectToIntruder(std::string ip, int port)
 DWORD ResolutionConnection::senseSender()
 {
 	if (connectToIntruder(ip, port) < 0) {
-		XPLMDebugString("ResolutionConnection::senseSender - failed to establish connection\n");
+		std::string dbgstring = "ResolutionConnection::senseSender - failed to establish connection to " + ip + "\n";
+		XPLMDebugString(dbgstring.c_str());
 	} else {
 		connected_ = true;
 		openSocket_ = sock_;

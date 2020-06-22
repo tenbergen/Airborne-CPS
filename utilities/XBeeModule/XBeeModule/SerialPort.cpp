@@ -76,6 +76,9 @@
 #define REST_OF_TX_FRAME			18
 #define REST_OF_RX_FRAME			22
 
+// how many bytes are excluded from the Frame's Length field value
+#define BYTES_EXCLUDED_FROM_COUNT	4
+
 // Array offsets for Received XBee API Frame (type 0x91)
 #define XBEE_RX_LENGTH_HI_BYTE		1
 #define XBEE_RX_LENGTH_LO_BYTE		2
@@ -88,7 +91,7 @@
 // Function Prototypes
 // ************************
 BOOL TransmitFrame(char* lpBuf, DWORD dwToWrite, HANDLE hComm);
-DWORD XBeeTXThread(void);
+DWORD XBeeTXThread(HANDLE hComm);
 
 
 // ************************
@@ -202,8 +205,12 @@ int main(int argc, char* argv[])
 
 
 				std::cout << "Sending testHelloFrame" << std::endl;
-				BOOL success = TransmitFrame(testHelloFrame, sizeof(testHelloFrame), hComm);
-				std::cout << "Packet Status = " + success << std::endl;
+
+				XBeeTXThread(hComm);
+
+
+				//BOOL success = TransmitFrame(testHelloFrame, sizeof(testHelloFrame), hComm);
+				//std::cout << "Packet Status = " + success << std::endl;
 			}
 		}
 	}
@@ -257,11 +264,15 @@ DWORD XBeeTXThread(HANDLE hComm) {
 	// build the TX Frame
 
 	// simulating what we will get from Location::getPLANE()
+	// this data shoul yeild a API Frame that is 80 bytes long, and has a legth field of 0x004C (decimal 76)
+
 	std::string myLocationGetPlane = "n4C:ED:FB:59:53:00n192.168.0.3n47.519961n10.698863n3050.078383";
+	//std::string myLocationGetPlane = "";
 
 	// Determine frame size and allocate memory on the heap for it
-	uint32_t PayloadSize = strlen(myLocationGetPlane.c_str());
+	uint32_t PayloadSize = myLocationGetPlane.length();
 	uint32_t XBeeTxFrameSize = PayloadSize + REST_OF_TX_FRAME;
+	uint32_t ChecksumOffset = XBeeTxFrameSize - 1; // the last position of the array is the checksum offset. 
 	char* XBeeTXFrame = (char*)malloc(XBeeTxFrameSize);   // put our working frames on the heap
 
 	if (XBeeTXFrame != NULL)
@@ -270,8 +281,8 @@ DWORD XBeeTXThread(HANDLE hComm) {
 		// [ Field (number of bytes in field) | Next field (num bytes) | etc...]
 		// [ Start Delim (1) | Length (2) | Frame Type (1) | Frame ID (1) | 64bit Dst Addr (8) | 16bit Dst Addr (2) | Radius (1) | Options (1) | Payload (PayloadSize) | Checksum (1) ]
 		XBeeTXFrame[XBEE_TXOFFSET_START_DELIM] =	XBEE_FRAME_START_DELIMITER;
-		XBeeTXFrame[XBEE_TXOFFSET_LENGTH_HIBYTE] =	(char)(XBeeTxFrameSize >> 8);
-		XBeeTXFrame[XBEE_TXOFFSET_LENGTH_LOBYTE] =	(char)(XBeeTxFrameSize & 0xff);
+		XBeeTXFrame[XBEE_TXOFFSET_LENGTH_HIBYTE] =	(char)(XBeeTxFrameSize - BYTES_EXCLUDED_FROM_COUNT >> 8);  // Length field does not count Delim, Length, or Checksum
+		XBeeTXFrame[XBEE_TXOFFSET_LENGTH_LOBYTE] =	(char)(XBeeTxFrameSize - BYTES_EXCLUDED_FROM_COUNT & 0xff);
 		XBeeTXFrame[XBEE_TXOFFSET_FRAME_TYPE] =		XBEE_TX_REQUEST_FRAME;
 		XBeeTXFrame[XBEE_TXOFFSET_FRAME_ID] =		XBEE_FRAME_ID;
 		
@@ -296,13 +307,13 @@ DWORD XBeeTXThread(HANDLE hComm) {
 		uint32_t sum = 0;
 		
 		// change this to use XBeeTxFrameSize
-		for (uint32_t i = XBEE_TXOFFSET_FRAME_TYPE; i <= (XBEE_TXOFFSET_PAYLOAD_START + PayloadSize); i++) {
+		for (uint32_t i = XBEE_TXOFFSET_FRAME_TYPE; i < XBeeTxFrameSize - 1; i++) { 
 			sum += XBeeTXFrame[i];
 		}
 		char checksum = (char)(0xFF - (sum & 0xff));
 
 		// place the checksum at the end of the array, after the payload. 
-		XBeeTXFrame[XBEE_TXOFFSET_PAYLOAD_START + PayloadSize + 1] = checksum;  // change this to utilize XBeeTxFrameSize
+		XBeeTXFrame[ChecksumOffset] = checksum;
 		
 
 		// Send the frame

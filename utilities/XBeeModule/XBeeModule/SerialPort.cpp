@@ -186,7 +186,7 @@ DWORD XBeeTXThread(HANDLE hComm) {
 			uint32_t sum = 0;
 
 			// change this to use XBeeTxFrameSize
-			for (uint32_t i = XBEE_TXOFFSET_FRAME_TYPE; i < XBeeTxFrameSize - 1; i++) {
+			for (uint32_t i = XBEE_TXOFFSET_FRAME_TYPE; i < ChecksumOffset; i++) {
 				sum += XBeeTXFrame[i];
 			}
 			char checksum = (char)(0xFF - (sum & 0xff));
@@ -211,6 +211,7 @@ DWORD XBeeTXThread(HANDLE hComm) {
 
 		}
 	}
+	std::cout << "TX Thread Exiting" << std::endl;
 	return 0;
 }
 
@@ -219,7 +220,6 @@ int ReadSerial(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm) {
 	bool fWaitingOnRead = FALSE;
 
 	int retVal = ReadFile(hComm, lpBuf, XBEE_MAX_API_FRAME_SIZE, &dwRead, NULL);
-	//std::cout << GetLastError() << std::endl;
 	return dwRead;
 }
 
@@ -263,23 +263,22 @@ DWORD XBeeRXThread(HANDLE hComm) {
 				}
 				char checksum = (char)(0xFF - (sum & 0xff));
 				printf("Received Checksum: %x\nCalculated Checksum: %x\n", checksum, XBeeRXFrame[checksumOffset]);
-				if (checksum != XBeeRXFrame[checksumOffset]) {
-					break; // checksums don't match, must be corruption/incomplete. ignore this frame
+				if (checksum == XBeeRXFrame[checksumOffset]) {
+					// now that we have that, we can calculate the payload length
+					uint16_t payloadLength = checksumOffset - XBEE_RXOFFSET_PAYLOAD_START;
+
+
+					fwrite(XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, sizeof(unsigned char), payloadLength, pPayloadFile);
+					fwrite("\n", 1, 1, pPayloadFile);
 				}
 
-				// now that we have that, we can calculate the payload length
-				uint16_t payloadLength = checksumOffset - XBEE_RXOFFSET_PAYLOAD_START;
 
-				//std::string RXPayload(XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START], XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START + payloadLength]);
-				//std::cout << "Received Frame: " + RXPayload << std::endl;
-
-				fwrite(XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, sizeof(unsigned char), payloadLength, pPayloadFile);
-				fwrite("\n", 1, 1, pPayloadFile);
 			}
 
 
 		}
 
+		
 		// free up memory and null the pointer
 		free(XBeeRXFrame);
 		XBeeRXFrame = nullptr;
@@ -289,6 +288,7 @@ DWORD XBeeRXThread(HANDLE hComm) {
 		}
 
 	}
+	std::cout << "RX Thread Exiting" << std::endl;
 	return 0;
 }
 
@@ -436,7 +436,7 @@ int main(int argc, char* argv[])
 				else {
 
 
-					std::cout << "Starting TX Thread on COM Port " + TXcomPortNum << std::endl;
+					std::cout << "Starting TX Thread on COM Port " << TXcomPortNum << std::endl;
 					DWORD TXThreadID;
 					hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hTXComm, 0, &TXThreadID);
 
@@ -509,7 +509,7 @@ int main(int argc, char* argv[])
 					if (!SetCommTimeouts(hRXComm, &timeouts))
 						std::cout << "Error setting port time-outs." << std::endl;
 
-					std::cout << "Starting RX Thread on COM Port " + RXcomPortNum << std::endl;
+					std::cout << "Starting RX Thread on COM Port " << RXcomPortNum << std::endl;
 					DWORD RXThreadID;
 					hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hRXComm, 0, &RXThreadID);
 

@@ -227,9 +227,13 @@ int ReadSerial(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm) {
 DWORD XBeeRXThread(HANDLE hComm) {
 
 	bool exit = false;
-	FILE* pFile;
-	pFile = fopen("file.binary", "wb");
+	FILE* pPayloadFile;
+	pPayloadFile = fopen("payload.txt", "wb");
 
+	FILE* pRawDataFile;
+	pRawDataFile = fopen("rawdata.hex", "wb");
+
+	unsigned char fileDelimiter[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
 
 	while (exit == false) {
 
@@ -240,7 +244,8 @@ DWORD XBeeRXThread(HANDLE hComm) {
 		int charsRead = ReadSerial(XBeeRXFrame, XBEE_MAX_API_FRAME_SIZE, hComm);
 		if (charsRead) {
 			
-			fwrite(XBeeRXFrame, 1, charsRead, pFile);
+			fwrite(XBeeRXFrame, sizeof(unsigned char), charsRead, pRawDataFile);
+			fwrite(fileDelimiter, sizeof(unsigned char), sizeof(fileDelimiter), pRawDataFile);
 
 			// Check for the start delimiter and that frame type is 0x91
 			if ((XBeeRXFrame[XBEE_RXOFFSET_START_DELIM] == XBEE_FRAME_START_DELIMITER) &&
@@ -249,12 +254,27 @@ DWORD XBeeRXThread(HANDLE hComm) {
 				// Read in the length from the Frame (offsets 1 and 2, big-endian)
 				uint16_t length = (XBeeRXFrame[XBEE_RXOFFSET_LENGTH_HIBYTE] << 8) | XBeeRXFrame[XBEE_RXOFFSET_LENGTH_LOBYTE];
 
+				
+				uint32_t checksumOffset = length + XBEE_RXOFFSET_FRAME_TYPE;
+				uint32_t sum = 0;
+				// check the checksum value to make sure the API Frame is complete/well formed
+				for (unsigned int i = XBEE_RXOFFSET_FRAME_TYPE; i < checksumOffset; i++) {
+					sum += XBeeRXFrame[i];
+				}
+				char checksum = (char)(0xFF - (sum & 0xff));
+				printf("Received Checksum: %x\nCalculated Checksum: %x\n", checksum, XBeeRXFrame[checksumOffset]);
+				if (checksum != XBeeRXFrame[checksumOffset]) {
+					break; // checksums don't match, must be corruption/incomplete. ignore this frame
+				}
 
 				// now that we have that, we can calculate the payload length
-				uint16_t payloadLength = length - 18;
+				uint16_t payloadLength = checksumOffset - XBEE_RXOFFSET_PAYLOAD_START;
 
-				std::string RXPayload(XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START], XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START + payloadLength]);
-				std::cout << "Received Frame: " + RXPayload << std::endl;
+				//std::string RXPayload(XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START], XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START + payloadLength]);
+				//std::cout << "Received Frame: " + RXPayload << std::endl;
+
+				fwrite(XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, sizeof(unsigned char), payloadLength, pPayloadFile);
+				fwrite("\n", 1, 1, pPayloadFile);
 			}
 
 

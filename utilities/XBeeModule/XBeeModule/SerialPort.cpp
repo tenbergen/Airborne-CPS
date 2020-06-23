@@ -38,20 +38,23 @@
 #include <iostream>
 
 
+
+#pragma comment(lib,"WS2_32")
+
  // ************************
  // Macros
  // ************************
 
 #define MAX_COMPORT 4096  // highest possible com port number for Windows
+#define READ_TIMEOUT      500      // milliseconds timeout for Reading COM Port
 
- // can't actually do it this way. 
- // keeping these defines for now, but will probably be
- // removing all the multibyte ones
+// Defined XBee Field Values
 #define XBEE_FRAME_START_DELIMITER	0x7E
-#define XBEE_TX_REQUEST_FRAME		0x10
+#define XBEE_TX_REQUEST_FRAME_TYPE	0x10
+#define XBEE_RECIEVE_FRAME_TYPE		0x91
 #define XBEE_FRAME_ID				0x00
 #define XBEE_16BIT_DEST_HIBYTE		0xFF
-#define XBEE_16BIT_DEST_LOWBYTE		0xFE;
+#define XBEE_16BIT_DEST_LOWBYTE		0xFE
 #define XBEE_BROADCAST_RADIUS		0x00
 #define XBEE_TX_OPTIONS				0x00
 
@@ -70,6 +73,16 @@
 #define XBEE_TXOFFSET_PAYLOAD_START			17
 // the checksum is the last byte, its offset is determined at runtime
 
+//Maximum size that an API Frame could possibly be
+#define XBEE_MAX_API_FRAME_SIZE		256
+
+// Array offsets for XBee Trasmit Request API  Frame (Frame type 0x10)
+#define XBEE_RXOFFSET_START_DELIM			0
+#define XBEE_RXOFFSET_LENGTH_HIBYTE			1
+#define XBEE_RXOFFSET_LENGTH_LOBYTE			2
+#define XBEE_RXOFFSET_FRAME_TYPE			3
+#define XBEE_RXOFFSET_PAYLOAD_START			21
+// the checksum is the last byte, its offset is determined at runtime
 
 
 // how many bytes an API Frame has in addition to its payload
@@ -87,39 +100,197 @@
 #define XBEE_RX_PAYLOAD_START		21
 
 
-// ************************
-// Function Prototypes
-// ************************
-BOOL TransmitFrame(char* lpBuf, DWORD dwToWrite, HANDLE hComm);
-DWORD XBeeTXThread(HANDLE hComm);
 
 
-// ************************
-// Global Data
-// ************************
-uint32_t XBeeNP = 49;			// XBee Maximum Packet Payload Bytes
-								// ultimately we should query the XBEE for it
-								// Shouldn't be a "global" either, but for now lets just put it here
+bool TransmitFrame(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm)
+{
+	OVERLAPPED osWrite = { 0 };
+	DWORD dwWritten;
+	bool fRes;
+
+	// Create this writes OVERLAPPED structure hEvent.
+	osWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	if (osWrite.hEvent == NULL)
+		// Error creating overlapped event handle.
+		return false;
+
+	// Issue write.
+	if (!WriteFile(hComm, lpBuf, dwToWrite, &dwWritten, &osWrite)) {
+		if (GetLastError() != ERROR_IO_PENDING) {
+			// WriteFile failed, but it isn't delayed. Report error and abort.
+			fRes = false;
+		}
+		else {
+			// Write is pending.
+			if (!GetOverlappedResult(hComm, &osWrite, &dwWritten, TRUE))
+				fRes = false;
+			else
+				// Write operation completed successfully.
+				fRes = true;
+		}
+	}
+	else
+		// WriteFile completed immediately.
+		fRes = false;
+
+	CloseHandle(osWrite.hEvent);
+	return fRes;
+}
 
 
-// transmit request (0x10), to broadcast address, frame ID 0(no ack response requested) payload 'Hello' 
-char testHelloFrame[23] = { 0x7E, 0x00, 0x13, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, \
-							0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x00, 0x48, \
-							0x65, 0x6C, 0x6C, 0x6F, 0x00 };
+
+DWORD XBeeTXThread(HANDLE hComm) {
+
+	bool exit = false;
+	while (exit == false) {
+
+		// simulating what we will get from Location::getPLANE()
+		std::string myLocationGetPlane = "n4C:ED:FB:59:53:00n192.168.0.3n47.519961n10.698863n3050.078383";
+
+
+		// Determine frame size and allocate memory on the heap for it
+		uint32_t PayloadSize = myLocationGetPlane.length();
+		uint32_t XBeeTxFrameSize = PayloadSize + REST_OF_TX_FRAME;
+		uint32_t ChecksumOffset = XBeeTxFrameSize - 1; // the last position of the array is the checksum offset. 
+		unsigned char* XBeeTXFrame = (unsigned char*)malloc(XBeeTxFrameSize);   // put our working frames on the heap
+
+		if (XBeeTXFrame != NULL)
+		{
+			// Fill the frame with the data 
+			// [ Field (number of bytes in field) | Next field (num bytes) | etc...]
+			// [ Start Delim (1) | Length (2) | Frame Type (1) | Frame ID (1) | 64bit Dst Addr (8) | 16bit Dst Addr (2) | Radius (1) | Options (1) | Payload (PayloadSize) | Checksum (1) ]
+			XBeeTXFrame[XBEE_TXOFFSET_START_DELIM] = XBEE_FRAME_START_DELIMITER;
+			XBeeTXFrame[XBEE_TXOFFSET_LENGTH_HIBYTE] = (char)((XBeeTxFrameSize - BYTES_EXCLUDED_FROM_COUNT) >> 8);  // Length field does not count Delim, Length, or Checksum
+			XBeeTXFrame[XBEE_TXOFFSET_LENGTH_LOBYTE] = (char)((XBeeTxFrameSize - BYTES_EXCLUDED_FROM_COUNT) & 0xff);
+			XBeeTXFrame[XBEE_TXOFFSET_FRAME_TYPE] = XBEE_TX_REQUEST_FRAME_TYPE;
+			XBeeTXFrame[XBEE_TXOFFSET_FRAME_ID] = XBEE_FRAME_ID;
+
+			// iterate through the 8 byte destination address backwards to store as big-endian in the API Frame
+			uint64_t broadcastAddress = 0x000000000000FFFF;
+			for (uint32_t i = XBEE_TXOFFSET_64BIT_DST_ADDR_END; i >= XBEE_TXOFFSET_64BIT_DST_ADDR_START; i--) {
+				XBeeTXFrame[i] = (char)(broadcastAddress & 0xff);	// write the LSB to the array position
+				broadcastAddress = broadcastAddress >> 8;			// shift the address one byte right
+			}
+
+			XBeeTXFrame[XBEE_TXOFFSET_16BIT_DST_ADDR_HIBYTE] = XBEE_16BIT_DEST_HIBYTE;
+			XBeeTXFrame[XBEE_TXOFFSET_16BIT_DST_ADDR_LOBYTE] = XBEE_16BIT_DEST_LOWBYTE;
+			XBeeTXFrame[XBEE_TXOFFSET_BROADCAST_RAD] = XBEE_BROADCAST_RADIUS;
+			XBeeTXFrame[XBEE_TXOFFSET_TX_OPTIONS] = XBEE_TX_OPTIONS;
+
+
+			// fill in the payload.  myLocationGetPlane is the payload
+			memcpy(XBeeTXFrame + XBEE_TXOFFSET_PAYLOAD_START, myLocationGetPlane.c_str(), PayloadSize);
+
+
+			//Calculate checksum  checksum = add bytes from frame type to payload, only keep LSB, subtract that from 0xFF.
+			uint32_t sum = 0;
+
+			// change this to use XBeeTxFrameSize
+			for (uint32_t i = XBEE_TXOFFSET_FRAME_TYPE; i < XBeeTxFrameSize - 1; i++) {
+				sum += XBeeTXFrame[i];
+			}
+			char checksum = (char)(0xFF - (sum & 0xff));
+
+			// place the checksum at the end of the array, after the payload. 
+			XBeeTXFrame[ChecksumOffset] = checksum;
+
+
+			// Send the frame
+			if (TransmitFrame(XBeeTXFrame, XBeeTxFrameSize, hComm)) {
+				std::cout << "TransmitFrame: Success" << std::endl;
+			}
+
+			// free up memory and null the pointer
+			free(XBeeTXFrame);
+			XBeeTXFrame = nullptr;
+			if (GetAsyncKeyState(VK_ESCAPE)) {
+				exit = true;
+			}
+
+			Sleep(1000);
+
+		}
+	}
+	return 0;
+}
+
+int ReadSerial(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm) {
+	DWORD dwRead;
+	bool fWaitingOnRead = FALSE;
+
+	int retVal = ReadFile(hComm, lpBuf, XBEE_MAX_API_FRAME_SIZE, &dwRead, NULL);
+	//std::cout << GetLastError() << std::endl;
+	return dwRead;
+}
+
+
+DWORD XBeeRXThread(HANDLE hComm) {
+
+	bool exit = false;
+	FILE* pFile;
+	pFile = fopen("file.binary", "wb");
+
+
+	while (exit == false) {
+
+		// allocate memory on the heap to hold the received API Frame
+		unsigned char* XBeeRXFrame = (unsigned char*)malloc(XBEE_MAX_API_FRAME_SIZE);
+
+		// Blocking Wait for XBee data to be received and placed into XBeeRXFrame
+		int charsRead = ReadSerial(XBeeRXFrame, XBEE_MAX_API_FRAME_SIZE, hComm);
+		if (charsRead) {
+			
+			fwrite(XBeeRXFrame, 1, charsRead, pFile);
+
+			// Check for the start delimiter and that frame type is 0x91
+			if ((XBeeRXFrame[XBEE_RXOFFSET_START_DELIM] == XBEE_FRAME_START_DELIMITER) &&
+				(XBeeRXFrame[XBEE_RXOFFSET_FRAME_TYPE] == XBEE_RECIEVE_FRAME_TYPE)) {
+
+				// Read in the length from the Frame (offsets 1 and 2, big-endian)
+				uint16_t length = (XBeeRXFrame[XBEE_RXOFFSET_LENGTH_HIBYTE] << 8) | XBeeRXFrame[XBEE_RXOFFSET_LENGTH_LOBYTE];
+
+
+				// now that we have that, we can calculate the payload length
+				uint16_t payloadLength = length - 18;
+
+				std::string RXPayload(XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START], XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START + payloadLength]);
+				std::cout << "Received Frame: " + RXPayload << std::endl;
+			}
+
+
+		}
+
+		// free up memory and null the pointer
+		free(XBeeRXFrame);
+		XBeeRXFrame = nullptr;
+
+		if (GetAsyncKeyState(VK_ESCAPE)) {
+			exit = true;
+		}
+
+	}
+	return 0;
+}
+
+static DWORD WINAPI startXBeeBroadcasting(void* param) {
+	HANDLE hComm = (HANDLE)param;
+	return XBeeTXThread(hComm);
+}
+
+static DWORD WINAPI startXBeeListening(void* param) {
+	HANDLE hComm = (HANDLE)param;
+	return XBeeRXThread(hComm);
+}
 
 
 int main(int argc, char* argv[])
 {
 
+	bool isRXenabled = false;
+	bool isTXenabled = false;
 
-
-
-	uint32_t XBeeRxFrameMaxSize = XBeeNP + REST_OF_RX_FRAME;   // maximum possible size for XBee API Frame Type 0x91
-
-
-	char* XBEEReceiveFrame = (char*)malloc(XBeeRxFrameMaxSize);
-
-
+	HANDLE hRXThread = 0;
+	HANDLE hTXThread = 0;
 
 	// a lot of the serial port code comes from the following MS Code examples
 	// https://docs.microsoft.com/en-us/previous-versions/ff802693(v=msdn.10)
@@ -128,6 +299,12 @@ int main(int argc, char* argv[])
 	// This part should fill in menu options for picking com port(advanced)
 	// or ommitted if we just want the user to enter in a text field.
 	// XBee/Serial Port Initialization - Probably will go in Airborne-CPS.cpp::XPluginStart(), XPluginEnable() or menu handlers
+
+
+	// *********************************************************************
+	//  End User Input Section
+	// *********************************************************************
+
 	TCHAR path[10000];
 
 	printf("Checking COM1 through COM%d:\n", MAX_COMPORT);
@@ -151,207 +328,191 @@ int main(int argc, char* argv[])
 	}
 
 	// comPortNum should get filled by menu item 
-	unsigned int comPortNum = 3;
-	std::cout << "Enter COM Port Number(enter 0 to abort): ";
-	std::cin >> comPortNum;
+	unsigned int TXcomPortNum = 0;
+	std::cout << "Enter COM Port Number for TX(enter 0 for no TX): ";
+	std::cin >> TXcomPortNum;
 	std::cout << std::endl;
 
-	if (comPortNum == 0) {
-		exit(0);  // get out of here, heap be damned. this should not stay in production code
-	}
-
-	TCHAR gszPort[10];
-	_stprintf(gszPort, L"COM%u", comPortNum);
-
-
-	HANDLE hComm;
-	hComm = CreateFile(gszPort,
-		GENERIC_READ | GENERIC_WRITE,
-		0,   // must be 0 for serial ports
-		0,
-		OPEN_EXISTING,    // must be OPEN_EXISTING for serial ports
-		FILE_FLAG_OVERLAPPED,
-		0);  // must be 0 for serial ports
-	if (hComm == INVALID_HANDLE_VALUE) {
-		std::cout << "Invalid Handle Value. Cannot Open port" << std::endl;// error opening port; abort
+	if (TXcomPortNum == 0) {
+		std::cout << "No TX Port Selected" << std::endl;  // get out of here, heap be damned. this should not stay in production code
 	}
 	else {
+		isTXenabled = true;
+	}
 
-		// get current com port settings
-		DCB dcb = { 0 };
-		FillMemory(&dcb, sizeof(dcb), 0);
-		if (!GetCommState(hComm, &dcb))
-		{       // Error getting current DCB settings
-			std::cout << "Unable to get com port settings" << std::endl;
+	unsigned int RXcomPortNum = 0;
+	std::cout << "Enter COM Port Number for RX(enter 0 for no RX): ";
+	std::cin >> RXcomPortNum;
+	std::cout << std::endl;
 
+	if (RXcomPortNum == 0) {
+		std::cout << "No RX Port Selected" << std::endl;
+		if (!isTXenabled) {
+			std::cout << "No COM Ports Selected. Nothing to do but exit." << std::endl;
+			exit(0);
+		}
+	}
+	else {
+		if (RXcomPortNum == TXcomPortNum) {
+			std::cout << "RX and TX Com Ports cannot be the same. Exiting." << std::endl;
+			exit(0);
+		}
+		else {
+			isRXenabled = true;
+		}
+
+	}
+
+	// *********************************************************************
+	//  End User Input Section
+	// *********************************************************************
+
+
+	//
+	//	TX Com Port Configuration
+	//
+	if (isTXenabled) {
+		TCHAR gszPort[10];
+		_stprintf(gszPort, L"COM%u", TXcomPortNum);
+
+
+		HANDLE hTXComm;
+		hTXComm = CreateFile(gszPort,
+			GENERIC_READ | GENERIC_WRITE,
+			0,   // must be 0 for serial ports
+			0,
+			OPEN_EXISTING,    // must be OPEN_EXISTING for serial ports
+			FILE_FLAG_OVERLAPPED,
+			0);  // must be 0 for serial ports
+		if (hTXComm == INVALID_HANDLE_VALUE) {
+			std::cout << "Invalid Handle Value. Cannot Open port" << std::endl;// error opening port; abort
 		}
 		else {
 
-			// Modify DCB 
-			dcb.BaudRate = CBR_115200;
-			dcb.ByteSize = 8;
-			dcb.Parity = NOPARITY;
-			dcb.StopBits = ONESTOPBIT;
-
-			// Set new state.
-			if (!SetCommState(hComm, &dcb))
-			{
-				// Error in SetCommState. Possibly a problem with the communications 
-				// port handle or a problem with the DCB structure itself.
-				std::cout << "Unable to set com port settings" << std::endl;
+			// get current com port settings
+			DCB TXdcb = { 0 };
+			FillMemory(&TXdcb, sizeof(TXdcb), 0);
+			if (!GetCommState(hTXComm, &TXdcb))
+			{       // Error getting current DCB settings
+				std::cout << "Unable to get com port settings" << std::endl;
 
 			}
 			else {
 
+				// Modify DCB 
+				TXdcb.BaudRate = CBR_115200;
+				TXdcb.ByteSize = 8;
+				TXdcb.Parity = NOPARITY;
+				TXdcb.StopBits = ONESTOPBIT;
 
-				std::cout << "Sending testHelloFrame" << std::endl;
+				// Set new state.
+				if (!SetCommState(hTXComm, &TXdcb))
+				{
+					// Error in SetCommState. Possibly a problem with the communications 
+					// port handle or a problem with the DCB structure itself.
+					std::cout << "Unable to set com port settings" << std::endl;
 
-				XBeeTXThread(hComm);
+				}
+				else {
 
 
-				//BOOL success = TransmitFrame(testHelloFrame, sizeof(testHelloFrame), hComm);
-				//std::cout << "Packet Status = " + success << std::endl;
+					std::cout << "Starting TX Thread on COM Port " + TXcomPortNum << std::endl;
+					DWORD TXThreadID;
+					hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hTXComm, 0, &TXThreadID);
+
+					//XBeeTXThread(hComm);
+
+
+					//BOOL success = TransmitFrame(testHelloFrame, sizeof(testHelloFrame), hComm);
+					//std::cout << "Packet Status = " + success << std::endl;
+				}
 			}
 		}
 	}
 
-	// Free heap and null the pointers
 
-	free(XBEEReceiveFrame);
-	XBEEReceiveFrame = nullptr;
+	//
+	//	RX Com Port Configuration
+	//
+	if (isRXenabled) {
+		TCHAR gszPort[10];
+		_stprintf(gszPort, L"COM%u", RXcomPortNum);
 
-	return 0;
-}
 
-
-
-BOOL TransmitFrame(char* lpBuf, DWORD dwToWrite, HANDLE hComm)
-{
-	OVERLAPPED osWrite = { 0 };
-	DWORD dwWritten;
-	BOOL fRes;
-
-	// Create this writes OVERLAPPED structure hEvent.
-	osWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	if (osWrite.hEvent == NULL)
-		// Error creating overlapped event handle.
-		return FALSE;
-
-	// Issue write.
-	if (!WriteFile(hComm, lpBuf, dwToWrite, &dwWritten, &osWrite)) {
-		if (GetLastError() != ERROR_IO_PENDING) {
-			// WriteFile failed, but it isn't delayed. Report error and abort.
-			fRes = FALSE;
+		HANDLE hRXComm;
+		hRXComm = CreateFile(gszPort,
+			GENERIC_READ | GENERIC_WRITE,
+			0,   // must be 0 for serial ports
+			NULL,
+			OPEN_EXISTING,    // must be OPEN_EXISTING for serial ports
+			0,
+			NULL);  // must be 0 for serial ports
+		if (hRXComm == INVALID_HANDLE_VALUE) {
+			std::cout << "Invalid Handle Value. Cannot Open port" << std::endl;// error opening port; abort
 		}
 		else {
-			// Write is pending.
-			if (!GetOverlappedResult(hComm, &osWrite, &dwWritten, TRUE))
-				fRes = FALSE;
-			else
-				// Write operation completed successfully.
-				fRes = TRUE;
+
+			// get current com port settings
+			DCB RXdcb = { 0 };
+			FillMemory(&RXdcb, sizeof(RXdcb), 0);
+			if (!GetCommState(hRXComm, &RXdcb))
+			{       // Error getting current DCB settings
+				std::cout << "Unable to get com port settings" << std::endl;
+
+			}
+			else {
+
+				// Modify DCB 
+				RXdcb.BaudRate = CBR_115200;
+				RXdcb.ByteSize = 8;
+				RXdcb.Parity = NOPARITY;
+				RXdcb.StopBits = ONESTOPBIT;
+				RXdcb.fOutxCtsFlow = 1;
+				RXdcb.fRtsControl = 2;
+
+				// Set new state.
+				if (!SetCommState(hRXComm, &RXdcb))
+				{
+					// Error in SetCommState. Possibly a problem with the communications 
+					// port handle or a problem with the DCB structure itself.
+					std::cout << "Unable to set RX com port settings" << std::endl;
+
+				}
+				else {
+					COMMTIMEOUTS timeouts;
+					// set short timeouts on the comm port.
+					timeouts.ReadIntervalTimeout = 1;
+					timeouts.ReadTotalTimeoutMultiplier = 1;
+					timeouts.ReadTotalTimeoutConstant = 1;
+					timeouts.WriteTotalTimeoutMultiplier = 1;
+					timeouts.WriteTotalTimeoutConstant = 1;
+					if (!SetCommTimeouts(hRXComm, &timeouts))
+						std::cout << "Error setting port time-outs." << std::endl;
+
+					std::cout << "Starting RX Thread on COM Port " + RXcomPortNum << std::endl;
+					DWORD RXThreadID;
+					hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hRXComm, 0, &RXThreadID);
+
+				}
+			}
 		}
 	}
-	else
-		// WriteFile completed immediately.
-		fRes = TRUE;
 
-	CloseHandle(osWrite.hEvent);
-	return fRes;
-}
+	std::cout << "Hit Esc a few times to exit." << std::endl;
 
-DWORD XBeeTXThread(HANDLE hComm) {
-	// build the TX Frame
-
-	// simulating what we will get from Location::getPLANE()
-	// this data shoul yeild a API Frame that is 80 bytes long, and has a legth field of 0x004C (decimal 76)
-
-	std::string myLocationGetPlane = "n4C:ED:FB:59:53:00n192.168.0.3n47.519961n10.698863n3050.078383";
-	//std::string myLocationGetPlane = "";
-
-	// Determine frame size and allocate memory on the heap for it
-	uint32_t PayloadSize = myLocationGetPlane.length();
-	uint32_t XBeeTxFrameSize = PayloadSize + REST_OF_TX_FRAME;
-	uint32_t ChecksumOffset = XBeeTxFrameSize - 1; // the last position of the array is the checksum offset. 
-	char* XBeeTXFrame = (char*)malloc(XBeeTxFrameSize);   // put our working frames on the heap
-
-	if (XBeeTXFrame != NULL)
-	{
-		// Fill the frame with the data 
-		// [ Field (number of bytes in field) | Next field (num bytes) | etc...]
-		// [ Start Delim (1) | Length (2) | Frame Type (1) | Frame ID (1) | 64bit Dst Addr (8) | 16bit Dst Addr (2) | Radius (1) | Options (1) | Payload (PayloadSize) | Checksum (1) ]
-		XBeeTXFrame[XBEE_TXOFFSET_START_DELIM] =	XBEE_FRAME_START_DELIMITER;
-		XBeeTXFrame[XBEE_TXOFFSET_LENGTH_HIBYTE] =	(char)(XBeeTxFrameSize - BYTES_EXCLUDED_FROM_COUNT >> 8);  // Length field does not count Delim, Length, or Checksum
-		XBeeTXFrame[XBEE_TXOFFSET_LENGTH_LOBYTE] =	(char)(XBeeTxFrameSize - BYTES_EXCLUDED_FROM_COUNT & 0xff);
-		XBeeTXFrame[XBEE_TXOFFSET_FRAME_TYPE] =		XBEE_TX_REQUEST_FRAME;
-		XBeeTXFrame[XBEE_TXOFFSET_FRAME_ID] =		XBEE_FRAME_ID;
-		
-		// iterate through the 8 byte destination address backwards to store as big-endian in the API Frame
-		uint64_t broadcastAddress = 0x000000000000FFFF;
-		for (uint32_t i = XBEE_TXOFFSET_64BIT_DST_ADDR_END; i >= XBEE_TXOFFSET_64BIT_DST_ADDR_START; i--) {
-			XBeeTXFrame[i] = (char)(broadcastAddress & 0xff);	// write the LSB to the array position
-			broadcastAddress = broadcastAddress >> 8;			// shift the address one byte right
-		}
-		
-		XBeeTXFrame[XBEE_TXOFFSET_16BIT_DST_ADDR_HIBYTE] =	XBEE_16BIT_DEST_HIBYTE;
-		XBeeTXFrame[XBEE_TXOFFSET_16BIT_DST_ADDR_LOBYTE] =	XBEE_16BIT_DEST_LOWBYTE;
-		XBeeTXFrame[XBEE_TXOFFSET_BROADCAST_RAD] =			XBEE_BROADCAST_RADIUS;
-		XBeeTXFrame[XBEE_TXOFFSET_TX_OPTIONS] = XBEE_TX_OPTIONS;
-
-
-		// fill in the payload.  myLocationGetPlane is the payload
-		memcpy(XBeeTXFrame + XBEE_TXOFFSET_PAYLOAD_START, myLocationGetPlane.c_str(), PayloadSize);
-
-
-		//Calculate checksum  checksum = add bytes from frame type to payload, only keep LSB, subtract that from 0xFF.
-		uint32_t sum = 0;
-		
-		// change this to use XBeeTxFrameSize
-		for (uint32_t i = XBEE_TXOFFSET_FRAME_TYPE; i < XBeeTxFrameSize - 1; i++) { 
-			sum += XBeeTXFrame[i];
-		}
-		char checksum = (char)(0xFF - (sum & 0xff));
-
-		// place the checksum at the end of the array, after the payload. 
-		XBeeTXFrame[ChecksumOffset] = checksum;
-		
-
-		// Send the frame
-		TransmitFrame(XBeeTXFrame, XBeeTxFrameSize, hComm);
-
-		// free up memory and null the pointer
-		free(XBeeTXFrame);
-		XBeeTXFrame = nullptr;
-
-		Sleep(1000);
-		
+	if (hTXThread) {
+		WaitForSingleObject(hTXThread, INFINITE);
+		CloseHandle(hTXThread);
+		//CloseHandle(hTXComm);
 	}
+	if (hRXThread) {
+		WaitForSingleObject(hRXThread, INFINITE);
+		CloseHandle(hRXThread);
+		//CloseHandle(hRXComm);
+	}
+
+
 	return 0;
 }
 
-//BOOL ReadSerial(char* lpBuf, DWORD dwToWrite, HANDLE hComm) {
-//	DWORD dwRead;
-//	BOOL fWaitingOnRead = FALSE;
-//	OVERLAPPED osReader = { 0 };
-//
-//	// Create the overlapped event. Must be closed before exiting
-//	// to avoid a handle leak.
-//	osReader.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-//
-//	if (osReader.hEvent == NULL)
-//		// Error creating overlapped event; abort.
-//
-//		if (!fWaitingOnRead) {
-//			// Issue read operation.
-//			if (!ReadFile(hComm, lpBuf, READ_BUF_SIZE, &dwRead, &osReader)) {
-//				if (GetLastError() != ERROR_IO_PENDING)     // read not delayed?
-//				   // Error in communications; report it.
-//				else
-//					fWaitingOnRead = TRUE;
-//			}
-//			else {
-//				// read completed immediately
-//				HandleASuccessfulRead(lpBuf, dwRead);
-//			}
-//		}
-//}
+

@@ -30,12 +30,21 @@
 
  */
 
+ // use debug versions of malloc and free
+#define _CRTDBG_MAP_ALLOC
+#define _CRT_SECURE_NO_WARNINGS
+
+
 #include <stdio.h>
 #include <windows.h>
 #include <winbase.h>
 #include <string>
 #include <tchar.h>
 #include <iostream>
+
+// included for memory leak checking
+#include <stdlib.h>
+#include <crtdbg.h>
 
 
 
@@ -220,7 +229,8 @@ int ReadSerial(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm) {
 	bool fWaitingOnRead = FALSE;
 
 	int retVal = ReadFile(hComm, lpBuf, XBEE_MAX_API_FRAME_SIZE, &dwRead, NULL);
-	return dwRead;
+	if (retVal) { return dwRead; }
+	else { return 0; }
 }
 
 
@@ -232,6 +242,8 @@ DWORD XBeeRXThread(HANDLE hComm) {
 
 	FILE* pRawDataFile;
 	pRawDataFile = fopen("rawdata.hex", "wb");
+
+
 
 	unsigned char fileDelimiter[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
 
@@ -288,6 +300,9 @@ DWORD XBeeRXThread(HANDLE hComm) {
 		}
 
 	}
+
+	fclose(pPayloadFile);
+	fclose(pRawDataFile);
 	std::cout << "RX Thread Exiting" << std::endl;
 	return 0;
 }
@@ -387,7 +402,7 @@ int main(int argc, char* argv[])
 	//  End User Input Section
 	// *********************************************************************
 
-	TCHAR path[10000];
+	TCHAR path[5000];
 
 	printf("Checking COM1 through COM%d:\n", MAX_COMPORT);
 	for (unsigned i = 1; i <= MAX_COMPORT; ++i) {
@@ -519,7 +534,7 @@ int main(int argc, char* argv[])
 		//CloseHandle(hRXComm);
 	}
 
-
+	_CrtDumpMemoryLeaks();
 	return 0;
 }
 

@@ -243,7 +243,7 @@ DWORD XBeeRXThread(HANDLE hComm) {
 		// Blocking Wait for XBee data to be received and placed into XBeeRXFrame
 		int charsRead = ReadSerial(XBeeRXFrame, XBEE_MAX_API_FRAME_SIZE, hComm);
 		if (charsRead) {
-			
+
 			fwrite(XBeeRXFrame, sizeof(unsigned char), charsRead, pRawDataFile);
 			fwrite(fileDelimiter, sizeof(unsigned char), sizeof(fileDelimiter), pRawDataFile);
 
@@ -254,7 +254,7 @@ DWORD XBeeRXThread(HANDLE hComm) {
 				// Read in the length from the Frame (offsets 1 and 2, big-endian)
 				uint16_t length = (XBeeRXFrame[XBEE_RXOFFSET_LENGTH_HIBYTE] << 8) | XBeeRXFrame[XBEE_RXOFFSET_LENGTH_LOBYTE];
 
-				
+
 				uint32_t checksumOffset = length + XBEE_RXOFFSET_FRAME_TYPE;
 				uint32_t sum = 0;
 				// check the checksum value to make sure the API Frame is complete/well formed
@@ -278,7 +278,7 @@ DWORD XBeeRXThread(HANDLE hComm) {
 
 		}
 
-		
+
 		// free up memory and null the pointer
 		free(XBeeRXFrame);
 		XBeeRXFrame = nullptr;
@@ -302,12 +302,74 @@ static DWORD WINAPI startXBeeListening(void* param) {
 	return XBeeRXThread(hComm);
 }
 
+HANDLE InitializeComPort(unsigned int portnum) {
+	TCHAR gszPort[10];
+	_stprintf(gszPort, L"COM%u", portnum);
+
+
+	HANDLE hComm;
+	hComm = CreateFile(gszPort,
+		GENERIC_READ | GENERIC_WRITE,
+		0,   // must be 0 for serial ports
+		NULL,
+		OPEN_EXISTING,    // must be OPEN_EXISTING for serial ports
+		0,
+		NULL);  // must be 0 for serial ports
+	if (hComm == INVALID_HANDLE_VALUE) {
+		std::cout << "Invalid Handle Value. Cannot Open port" << std::endl;// error opening port; abort
+	}
+	else {
+
+		// get current com port settings
+		DCB dcb = { 0 };
+		FillMemory(&dcb, sizeof(dcb), 0);
+		if (!GetCommState(hComm, &dcb))
+		{       // Error getting current DCB settings
+			std::cout << "Unable to get com port settings" << std::endl;
+
+		}
+		else {
+
+			// Modify DCB 
+			dcb.BaudRate = CBR_115200;
+			dcb.ByteSize = 8;
+			dcb.Parity = NOPARITY;
+			dcb.StopBits = ONESTOPBIT;
+			dcb.fOutxCtsFlow = 1;
+			dcb.fRtsControl = 2;
+
+			// Set new state.
+			if (!SetCommState(hComm, &dcb))
+			{
+				// Error in SetCommState. Possibly a problem with the communications 
+				// port handle or a problem with the DCB structure itself.
+				std::cout << "Unable to set RX com port settings" << std::endl;
+
+			}
+			else {
+				COMMTIMEOUTS timeouts;
+				// set short timeouts on the comm port.
+				timeouts.ReadIntervalTimeout = 1;
+				timeouts.ReadTotalTimeoutMultiplier = 1;
+				timeouts.ReadTotalTimeoutConstant = 1;
+				timeouts.WriteTotalTimeoutMultiplier = 1;
+				timeouts.WriteTotalTimeoutConstant = 1;
+				if (!SetCommTimeouts(hComm, &timeouts)) {
+					std::cout << "Error setting port time-outs." << std::endl;
+				}
+			}
+		}
+	}
+	return hComm;
+}
+
 
 int main(int argc, char* argv[])
 {
 
 	bool isRXenabled = false;
 	bool isTXenabled = false;
+	bool isSingleXBDuplex = false;
 
 	HANDLE hRXThread = 0;
 	HANDLE hTXThread = 0;
@@ -374,8 +436,11 @@ int main(int argc, char* argv[])
 	}
 	else {
 		if (RXcomPortNum == TXcomPortNum) {
-			std::cout << "RX and TX Com Ports cannot be the same. Exiting." << std::endl;
-			exit(0);
+			std::cout << "COM " << RXcomPortNum << " selected for both TX and RX. Entering Single XBee Duplex Mode." << std::endl;
+			isSingleXBDuplex = true;
+			isTXenabled = false;
+			isRXenabled = false;
+
 		}
 		else {
 			isRXenabled = true;
@@ -387,136 +452,59 @@ int main(int argc, char* argv[])
 	//  End User Input Section
 	// *********************************************************************
 
+	//
+	// Single XBee Duplex Mode Configuration
+	//
+	unsigned int comPortNum = TXcomPortNum;
+	HANDLE hComm = InitializeComPort(comPortNum);
+	if (hComm == INVALID_HANDLE_VALUE) {
+		std::cout << "Invalid COM Port Number. COM: " << comPortNum << " Cannot Continue." << std::endl;
+	}
+	else {
+		std::cout << "Starting TX Thread on COM Port " << comPortNum << std::endl;
+		DWORD TXThreadID;
+		hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hComm, 0, &TXThreadID);
+
+		std::cout << "Starting RX Thread on COM Port " << comPortNum << std::endl;
+		DWORD RXThreadID;
+		hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hComm, 0, &RXThreadID);
+	}
+
 
 	//
 	//	TX Com Port Configuration
 	//
 	if (isTXenabled) {
-		TCHAR gszPort[10];
-		_stprintf(gszPort, L"COM%u", TXcomPortNum);
 
-
-		HANDLE hTXComm;
-		hTXComm = CreateFile(gszPort,
-			GENERIC_READ | GENERIC_WRITE,
-			0,   // must be 0 for serial ports
-			0,
-			OPEN_EXISTING,    // must be OPEN_EXISTING for serial ports
-			FILE_FLAG_OVERLAPPED,
-			0);  // must be 0 for serial ports
+		HANDLE hTXComm = InitializeComPort(TXcomPortNum);
 		if (hTXComm == INVALID_HANDLE_VALUE) {
-			std::cout << "Invalid Handle Value. Cannot Open port" << std::endl;// error opening port; abort
+			std::cout << "Invalid TX COM Port Number. COM: " << TXcomPortNum << " Cannot Continue." << std::endl;
 		}
 		else {
 
-			// get current com port settings
-			DCB TXdcb = { 0 };
-			FillMemory(&TXdcb, sizeof(TXdcb), 0);
-			if (!GetCommState(hTXComm, &TXdcb))
-			{       // Error getting current DCB settings
-				std::cout << "Unable to get com port settings" << std::endl;
-
-			}
-			else {
-
-				// Modify DCB 
-				TXdcb.BaudRate = CBR_115200;
-				TXdcb.ByteSize = 8;
-				TXdcb.Parity = NOPARITY;
-				TXdcb.StopBits = ONESTOPBIT;
-
-				// Set new state.
-				if (!SetCommState(hTXComm, &TXdcb))
-				{
-					// Error in SetCommState. Possibly a problem with the communications 
-					// port handle or a problem with the DCB structure itself.
-					std::cout << "Unable to set com port settings" << std::endl;
-
-				}
-				else {
-
-
-					std::cout << "Starting TX Thread on COM Port " << TXcomPortNum << std::endl;
-					DWORD TXThreadID;
-					hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hTXComm, 0, &TXThreadID);
-
-					//XBeeTXThread(hComm);
-
-
-					//BOOL success = TransmitFrame(testHelloFrame, sizeof(testHelloFrame), hComm);
-					//std::cout << "Packet Status = " + success << std::endl;
-				}
-			}
+			std::cout << "Starting TX Thread on COM Port " << TXcomPortNum << std::endl;
+			DWORD TXThreadID;
+			hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hTXComm, 0, &TXThreadID);
 		}
 	}
+
 
 
 	//
 	//	RX Com Port Configuration
 	//
 	if (isRXenabled) {
-		TCHAR gszPort[10];
-		_stprintf(gszPort, L"COM%u", RXcomPortNum);
 
-
-		HANDLE hRXComm;
-		hRXComm = CreateFile(gszPort,
-			GENERIC_READ | GENERIC_WRITE,
-			0,   // must be 0 for serial ports
-			NULL,
-			OPEN_EXISTING,    // must be OPEN_EXISTING for serial ports
-			0,
-			NULL);  // must be 0 for serial ports
+		HANDLE hRXComm = InitializeComPort(RXcomPortNum);
 		if (hRXComm == INVALID_HANDLE_VALUE) {
-			std::cout << "Invalid Handle Value. Cannot Open port" << std::endl;// error opening port; abort
+			std::cout << "Invalid RX COM Port Number. COM: " << RXcomPortNum << " Cannot Continue." << std::endl;
 		}
 		else {
-
-			// get current com port settings
-			DCB RXdcb = { 0 };
-			FillMemory(&RXdcb, sizeof(RXdcb), 0);
-			if (!GetCommState(hRXComm, &RXdcb))
-			{       // Error getting current DCB settings
-				std::cout << "Unable to get com port settings" << std::endl;
-
-			}
-			else {
-
-				// Modify DCB 
-				RXdcb.BaudRate = CBR_115200;
-				RXdcb.ByteSize = 8;
-				RXdcb.Parity = NOPARITY;
-				RXdcb.StopBits = ONESTOPBIT;
-				RXdcb.fOutxCtsFlow = 1;
-				RXdcb.fRtsControl = 2;
-
-				// Set new state.
-				if (!SetCommState(hRXComm, &RXdcb))
-				{
-					// Error in SetCommState. Possibly a problem with the communications 
-					// port handle or a problem with the DCB structure itself.
-					std::cout << "Unable to set RX com port settings" << std::endl;
-
-				}
-				else {
-					COMMTIMEOUTS timeouts;
-					// set short timeouts on the comm port.
-					timeouts.ReadIntervalTimeout = 1;
-					timeouts.ReadTotalTimeoutMultiplier = 1;
-					timeouts.ReadTotalTimeoutConstant = 1;
-					timeouts.WriteTotalTimeoutMultiplier = 1;
-					timeouts.WriteTotalTimeoutConstant = 1;
-					if (!SetCommTimeouts(hRXComm, &timeouts))
-						std::cout << "Error setting port time-outs." << std::endl;
-
-					std::cout << "Starting RX Thread on COM Port " << RXcomPortNum << std::endl;
-					DWORD RXThreadID;
-					hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hRXComm, 0, &RXThreadID);
-
-				}
-			}
+			std::cout << "Starting RX Thread on COM Port " << RXcomPortNum << std::endl;
+			DWORD RXThreadID;
+			hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hRXComm, 0, &RXThreadID);
 		}
-	}
+	} 
 
 	std::cout << "Hit Esc a few times to exit." << std::endl;
 

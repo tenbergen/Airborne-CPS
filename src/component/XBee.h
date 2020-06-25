@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <stdio.h>
 #include <windows.h>
 #include <winbase.h>
@@ -72,17 +74,23 @@
 
 
 
-#pragma once
+
 class XBee
 {
 public:
-    DWORD XBeeRXThread(), XBeeTXThread();
+    //static DWORD WINAPI startXBeeBroadcasting();  //
+    //static DWORD WINAPI startXBeeListening();    //
+    std::string XBeeReceive(HANDLE hComm);
+    DWORD XBeeBroadcast(std::string payload, HANDLE hComm);    // //
+    XBee(); //
+    ~XBee(); //
+    HANDLE InitializeComPort(unsigned int portnum);  //
 
 private:
 	bool isXBeeEnabled;
-    int ReadSerial();
-    bool TransmitFrame();
-    HANDLE InitializeComPort();
+    int ReadSerial(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm);  //
+    bool TransmitFrame(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm);   // 
+    
 
 };
 

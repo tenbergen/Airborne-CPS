@@ -444,6 +444,7 @@ int main(int argc, char* argv[])
 
 	if (RXcomPortNum == 0) {
 		std::cout << "No RX Port Selected" << std::endl;
+		isRXenabled = false;
 		if (!isTXenabled) {
 			std::cout << "No COM Ports Selected. Nothing to do but exit." << std::endl;
 			exit(0);
@@ -470,45 +471,37 @@ int main(int argc, char* argv[])
 	//
 	// Single XBee Duplex Mode Configuration
 	//
-	unsigned int comPortNum = TXcomPortNum;
-	HANDLE hComm = InitializeComPort(comPortNum);
-	if (hComm == INVALID_HANDLE_VALUE) {
-		std::cout << "Invalid COM Port Number. COM: " << comPortNum << " Cannot Continue." << std::endl;
+
+	if (isSingleXBDuplex) {
+		unsigned int comPortNum = TXcomPortNum;
+		HANDLE hComm = InitializeComPort(comPortNum);
+		if (hComm == INVALID_HANDLE_VALUE) {
+			std::cout << "Invalid COM Port Number. COM: " << comPortNum << " Cannot Continue." << std::endl;
+		}
+		else {
+			std::cout << "Starting TX Thread on COM Port " << comPortNum << std::endl;
+			DWORD TXThreadID;
+			hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hComm, 0, &TXThreadID);
+
+			std::cout << "Starting RX Thread on COM Port " << comPortNum << std::endl;
+			DWORD RXThreadID;
+			hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hComm, 0, &RXThreadID);
+		}
 	}
-	else {
-		std::cout << "Starting TX Thread on COM Port " << comPortNum << std::endl;
-		DWORD TXThreadID;
-		hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hComm, 0, &TXThreadID);
-
-		std::cout << "Starting RX Thread on COM Port " << comPortNum << std::endl;
-		DWORD RXThreadID;
-		hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hComm, 0, &RXThreadID);
-	}
-
-
-	//
-	//	TX Com Port Configuration
-	//
-	if (isTXenabled) {
+	else if (isTXenabled) {
 
 		HANDLE hTXComm = InitializeComPort(TXcomPortNum);
 		if (hTXComm == INVALID_HANDLE_VALUE) {
 			std::cout << "Invalid TX COM Port Number. COM: " << TXcomPortNum << " Cannot Continue." << std::endl;
+
 		}
 		else {
-
 			std::cout << "Starting TX Thread on COM Port " << TXcomPortNum << std::endl;
 			DWORD TXThreadID;
 			hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hTXComm, 0, &TXThreadID);
 		}
 	}
-
-
-
-	//
-	//	RX Com Port Configuration
-	//
-	if (isRXenabled) {
+	else if (isRXenabled) {
 
 		HANDLE hRXComm = InitializeComPort(RXcomPortNum);
 		if (hRXComm == INVALID_HANDLE_VALUE) {
@@ -519,7 +512,7 @@ int main(int argc, char* argv[])
 			DWORD RXThreadID;
 			hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hRXComm, 0, &RXThreadID);
 		}
-	} 
+	}
 
 	std::cout << "Hit Esc a few times to exit." << std::endl;
 

@@ -225,6 +225,8 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	Transponder::initNetworking();
 	std::string myMac = Transponder::getHardwareAddress();
 
+	
+
 	LLA currentPos = LLA::ZERO;
 	userAircraft = new Aircraft(myMac, "127.0.0.1", currentPos, Angle::ZERO, Velocity::ZERO, Angle::ZERO, Angle::ZERO);
 	std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -241,6 +243,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 
 	// start broadcasting location, and listening for aircraft
 	transponder = new Transponder(userAircraft, &intrudingAircraft, &openConnections, decider);
+	transponder->initXBee(3);  // ******* get this value from the Menu ************
 	transponder->start();
 
 	return 1;

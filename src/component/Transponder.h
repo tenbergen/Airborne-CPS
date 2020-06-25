@@ -5,6 +5,7 @@
 
 // This include statement must be before IPHLpapi include
 #include "component/Decider.h"
+#include "component/XBee.h"
 
 #pragma comment(lib, "IPHLPAPI.lib")
 #include <iphlpapi.h>
@@ -39,6 +40,9 @@ public:
 	DWORD receiveLocation(), sendLocation(), keepalive();
 	void start();
 
+	/*Calls XBee::InitializeComPort which must be called before using the COM Port*/
+	void initXBee(unsigned int portnum);
+
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* openConnections;
 protected:
 	std::string ip;
@@ -60,6 +64,10 @@ private:
 
 	Decider * decider_;
 	Aircraft* aircraft_;
+
+	// added for XBee support
+	XBee* xb;
+	HANDLE xbComm;
 
 	std::vector<Aircraft*> allocatedAircraft_;
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap_;

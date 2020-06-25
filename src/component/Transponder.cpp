@@ -1,6 +1,7 @@
 #include "Transponder.h"
 
 
+
 #pragma comment(lib,"WS2_32")
 
 std::string Transponder::macAddress_ = "";
@@ -15,6 +16,8 @@ Transponder::Transponder(Aircraft* ac,
 	aircraft_ = ac;
 	intrudersMap = intruders;
 	openConnections = connections;
+
+	xb = new XBee();
 
 	myLocation.setID(macAddress_);
 	ip = getIpAddr();
@@ -112,16 +115,11 @@ DWORD Transponder::receiveLocation()
 		buffer = nullptr;  // clear dangling pointer
 
 		intruderID = intruderLocation.getID().c_str();
-
+		std::string xbPayload = xb->XBeeReceive(xbComm);
+		std::string debugstring = "XB Payload: " + xbPayload + "\n";
+		XPLMDebugString(debugstring.c_str());
 
 		if (strcmp(myID.c_str(), intruderID.c_str()) != 0) {
-
-			// commenting the following lines out as a test. They don't seem to be referenced ever so no point in having them.
-			//Angle latitude = { intruderLocation.getLAT(), Angle::AngleUnits::DEGREES };    // why does this exist? Doesn't seem to be referenced ever
-			//Angle longitude = { intruderLocation.getLON(), Angle::AngleUnits::DEGREES };   // why does this exist? Doesn't seem to be referenced ever
-			//Distance altitude = { intruderLocation.getALT(), Distance::DistanceUnits::METERS };  // why does this exist? Doesn't seem to be referenced ever
-			//printf("Transponder::recieveLocation - altitude = %f\n", altitude.toMeters());
-
 
 			LLA updatedPosition = { intruderLocation.getLAT(), intruderLocation.getLON(), intruderLocation.getALT(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
@@ -200,7 +198,11 @@ DWORD Transponder::sendLocation()
 		XPLMDebugString(buffer);
 		XPLMDebugString("\n");
 
+		// UDP Broadcast
 		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
+
+		// XBee Broadcast
+		xb->XBeeBroadcast(myLocation.getPLANE(), xbComm);
 
 		
 		//XPLMDebugString("sendLocation pre buffer free\n");
@@ -337,5 +339,9 @@ void Transponder::initNetworking()
 			exit(0);
 		}
 	}
+}
+
+void Transponder::initXBee(unsigned int portnum) {
+	xbComm = xb->InitializeComPort(portnum);	
 }
 

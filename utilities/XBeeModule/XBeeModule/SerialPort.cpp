@@ -273,8 +273,8 @@ DWORD XBeeRXThread(HANDLE hComm) {
 				for (unsigned int i = XBEE_RXOFFSET_FRAME_TYPE; i < checksumOffset; i++) {
 					sum += XBeeRXFrame[i];
 				}
-				char checksum = (char)(0xFF - (sum & 0xff));
-				printf("Received Checksum: %x\nCalculated Checksum: %x\n", checksum, XBeeRXFrame[checksumOffset]);
+				unsigned char checksum = (unsigned char)(0xFF - (sum & 0xff));
+				printf("Received Checksum: %x\nCalculated Checksum: %x\n", XBeeRXFrame[checksumOffset], checksum);
 				if (checksum == XBeeRXFrame[checksumOffset]) {
 					// now that we have that, we can calculate the payload length
 					uint16_t payloadLength = checksumOffset - XBEE_RXOFFSET_PAYLOAD_START;

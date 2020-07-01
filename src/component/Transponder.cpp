@@ -73,6 +73,11 @@ Transponder::~Transponder()
 
 DWORD Transponder::receiveLocation()
 {
+	//FILE* pPayloadFile;
+	//pPayloadFile = fopen("payload.txt", "wb");
+
+	//FILE* pRawDataFile;
+	//pRawDataFile = fopen("rawdata.hex", "wb");
 	
 	std::string intruderID;     
 	std::string myID; 
@@ -80,7 +85,23 @@ DWORD Transponder::receiveLocation()
 	xplane::Location temp;
 	while (communication)
 	{
-								
+		char* XBbuffer = (char*)malloc(MAX_RECEIVE_BUFFER_SIZE);
+		memset(XBbuffer, '\0', MAX_RECEIVE_BUFFER_SIZE);
+		xb->XBeeReceive(xbComm, XBbuffer, MAX_RECEIVE_BUFFER_SIZE);
+		XPLMDebugString("XB Payload: ");
+		XPLMDebugString(XBbuffer);
+		XPLMDebugString("\n");
+
+		free(XBbuffer);
+		XBbuffer = nullptr;
+
+		//std::string xbPayload = xb->XBeeReceive(xbComm);
+		//std::string debugstring = "XB Payload: ";
+		//XPLMDebugString(debugstring.c_str());
+		//XPLMDebugString(xbPayload.c_str());
+		//XPLMDebugString("\n");
+
+
 		char* buffer = (char*)malloc(MAX_RECEIVE_BUFFER_SIZE);		// allocate a buffer big enough to hold that max possible size
 		memset(buffer, '\0', MAX_RECEIVE_BUFFER_SIZE);				 // fill it with null terminators
 
@@ -98,9 +119,9 @@ DWORD Transponder::receiveLocation()
 
 		try {
 			//// ******** debugging
-			std::string debugString = "receiveLocation buffer: " + std::string(buffer) + "\n";
+			//std::string debugString = "receiveLocation buffer: " + std::string(buffer) + "\n";
 
-			XPLMDebugString(debugString.c_str());
+			//XPLMDebugString(debugString.c_str());
 			//// ****************
 			intruderLocation.deserialize(buffer, size);  
 		}
@@ -115,9 +136,7 @@ DWORD Transponder::receiveLocation()
 		buffer = nullptr;  // clear dangling pointer
 
 		intruderID = intruderLocation.getID().c_str();
-		std::string xbPayload = xb->XBeeReceive(xbComm);
-		std::string debugstring = "XB Payload: " + xbPayload + "\n";
-		XPLMDebugString(debugstring.c_str());
+
 
 		if (strcmp(myID.c_str(), intruderID.c_str()) != 0) {
 
@@ -194,9 +213,9 @@ DWORD Transponder::sendLocation()
 		char* buffer = (char*)malloc(size);  // to be consistent with how its done in receiveLocation()
 		memset(buffer, '\0', size);
 		std::strcpy(buffer, myLocation.getPLANE().c_str());
-		XPLMDebugString("sendLocation buffer: ");
-		XPLMDebugString(buffer);
-		XPLMDebugString("\n");
+		//XPLMDebugString("sendLocation buffer: ");
+		//XPLMDebugString(buffer);
+		//XPLMDebugString("\n");
 
 		// UDP Broadcast
 		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);

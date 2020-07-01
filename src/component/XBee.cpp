@@ -77,17 +77,16 @@ HANDLE XBee::InitializeComPort(unsigned int portnum) {
 	return hComm;
 }
 
-std::string XBee::XBeeReceive(HANDLE hComm) {
+bool XBee::XBeeReceive(HANDLE hComm, char* buf, int len) {
 
-	std::string returnPayload;
+	bool retVal = false;
 
 	FILE* pPayloadFile;
-	pPayloadFile = fopen("payload.txt", "wb");
+	pPayloadFile = fopen("payload.txt", "a+b");
 
 	FILE* pRawDataFile;
-	pRawDataFile = fopen("rawdata.hex", "wb");
+	pRawDataFile = fopen("rawdata.hex", "a+b");
 
-	
 	unsigned char fileDelimiter[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
 
 	//while (exit == false) {
@@ -106,6 +105,8 @@ std::string XBee::XBeeReceive(HANDLE hComm) {
 			if ((XBeeRXFrame[XBEE_RXOFFSET_START_DELIM] == XBEE_FRAME_START_DELIMITER) &&
 				(XBeeRXFrame[XBEE_RXOFFSET_FRAME_TYPE] == XBEE_RECIEVE_FRAME_TYPE)) {
 
+
+
 				// Read in the length from the Frame (offsets 1 and 2, big-endian)
 				uint16_t length = (XBeeRXFrame[XBEE_RXOFFSET_LENGTH_HIBYTE] << 8) | XBeeRXFrame[XBEE_RXOFFSET_LENGTH_LOBYTE];
 
@@ -116,21 +117,29 @@ std::string XBee::XBeeReceive(HANDLE hComm) {
 				for (unsigned int i = XBEE_RXOFFSET_FRAME_TYPE; i < checksumOffset; i++) {
 					sum += XBeeRXFrame[i];
 				}
-				char checksum = (char)(0xFF - (sum & 0xff));
-				printf("Received Checksum: %x\nCalculated Checksum: %x\n", checksum, XBeeRXFrame[checksumOffset]);
+				unsigned char checksum = (unsigned char)(0xFF - (sum & 0xff));
+
+
 				if (checksum == XBeeRXFrame[checksumOffset]) {
 					// now that we have that, we can calculate the payload length
 					uint16_t payloadLength = checksumOffset - XBEE_RXOFFSET_PAYLOAD_START;
 
-					std::string returnPayload = std::string(XBeeRXFrame[XBEE_RXOFFSET_PAYLOAD_START], (size_t)payloadLength);
-					
+					if (payloadLength < len) { 
+						retVal = true;
+						memcpy(buf, XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, payloadLength);
+					}
 
+					//fwrite(XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, sizeof(unsigned char), payloadLength, pPayloadFile);
+					fwrite(buf, sizeof(unsigned char), payloadLength, pPayloadFile);
 
-					fwrite(XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, sizeof(unsigned char), payloadLength, pPayloadFile);
 					fwrite("\n", 1, 1, pPayloadFile);
+					fflush(pPayloadFile);
+					fflush(pRawDataFile);
 				}
 			}
 		}
+
+		// this whole plan is the problem. I'm returning
 
 		// free up memory and null the pointer
 		free(XBeeRXFrame);
@@ -138,7 +147,7 @@ std::string XBee::XBeeReceive(HANDLE hComm) {
 
 	fclose(pPayloadFile);
 	fclose(pRawDataFile);
-	return returnPayload;
+	return retVal;
 }
 
 int XBee::ReadSerial(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm) {

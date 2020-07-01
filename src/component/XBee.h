@@ -1,4 +1,19 @@
 
+
+/*
+
+XBee configuration:
+
+All XBee's set to the same baud rate. I used 115200 BD = 115200 [7]
+AP = 1    API Mode Without Escapes
+AO = 1    API Explicit RX Indicator 0x91
+D6 = 1    RTS Flow Control
+D7 = 1    CTS Flow Control
+
+
+*/
+
+
 #pragma once
 
 #include <stdio.h>
@@ -11,6 +26,10 @@
 // included for memory leak checking
 #include <stdlib.h>
 #include <crtdbg.h>
+
+// throwing the kitchen sink at this to get XPLMDebugString to work
+#include "util/StringUtil.h"
+#include "component/VSpeedIndicatorGaugeRenderer.h"
 
 
 
@@ -80,7 +99,7 @@ class XBee
 public:
     //static DWORD WINAPI startXBeeBroadcasting();  //
     //static DWORD WINAPI startXBeeListening();    //
-    std::string XBeeReceive(HANDLE hComm);
+    bool XBeeReceive(HANDLE hComm, char* buf, int len);
     DWORD XBeeBroadcast(std::string payload, HANDLE hComm);    // //
     XBee(); //
     ~XBee(); //

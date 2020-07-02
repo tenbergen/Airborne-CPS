@@ -74,4 +74,6 @@ private:
 
 	std::string getIpAddr();
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);
+
+	DWORD Transponder::processIntruder(std::string intruderID);
 };

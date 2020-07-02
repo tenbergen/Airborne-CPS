@@ -73,39 +73,18 @@ Transponder::~Transponder()
 
 DWORD Transponder::receiveLocation()
 {
-	//FILE* pPayloadFile;
-	//pPayloadFile = fopen("payload.txt", "wb");
 
-	//FILE* pRawDataFile;
-	//pRawDataFile = fopen("rawdata.hex", "wb");
-	
-	std::string intruderID;     
-	std::string myID; 
+	std::string intruderID; 
+	//std::string intruderID_XBee;
 
-	xplane::Location temp;
 	while (communication)
 	{
-		char* XBbuffer = (char*)malloc(MAX_RECEIVE_BUFFER_SIZE);
-		memset(XBbuffer, '\0', MAX_RECEIVE_BUFFER_SIZE);
-		xb->XBeeReceive(xbComm, XBbuffer, MAX_RECEIVE_BUFFER_SIZE);
-		XPLMDebugString("XB Payload: ");
-		XPLMDebugString(XBbuffer);
-		XPLMDebugString("\n");
-
-		free(XBbuffer);
-		XBbuffer = nullptr;
-
-		//std::string xbPayload = xb->XBeeReceive(xbComm);
-		//std::string debugstring = "XB Payload: ";
-		//XPLMDebugString(debugstring.c_str());
-		//XPLMDebugString(xbPayload.c_str());
-		//XPLMDebugString("\n");
 
 
 		char* buffer = (char*)malloc(MAX_RECEIVE_BUFFER_SIZE);		// allocate a buffer big enough to hold that max possible size
 		memset(buffer, '\0', MAX_RECEIVE_BUFFER_SIZE);				 // fill it with null terminators
 
-		myID = myLocation.getID();	// store myID as a C++ string
+
 
 
 		recvfrom(inSocket, buffer, MAX_RECEIVE_BUFFER_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
@@ -115,7 +94,7 @@ DWORD Transponder::receiveLocation()
 										// even if we don't get the null sent to us, our buffer should be null filled anyways
 										// which will mean its effectively null terminated as long as we receive less than MAX_RECEIVE_BUFFER_SIZE characters
 
-		std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+		
 
 		try {
 			//// ******** debugging
@@ -129,69 +108,98 @@ DWORD Transponder::receiveLocation()
 			XPLMDebugString("Deserialize is not working: ");
 		}
 		
-		// we are done with buffer at this point. let's clean up memory and pointer
 
-		//XPLMDebugString("receiveLocation pre buffer free\n");
-		free(buffer);   // free memory on the heap
-		buffer = nullptr;  // clear dangling pointer
 
 		intruderID = intruderLocation.getID().c_str();
 
+		processIntruder(intruderID);
 
-		if (strcmp(myID.c_str(), intruderID.c_str()) != 0) {
-
-			LLA updatedPosition = { intruderLocation.getLAT(), intruderLocation.getLON(), intruderLocation.getALT(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
-
-			Aircraft* intruder = (*intrudersMap)[intruderLocation.getID()];
-			if (!intruder) {
-
-				// if we don't have this intruder already, create it
-
-				// Debug Statements to output Intruder MAC and IP addresses to Log
-				std::string debugString = "Intruder MAC : " + intruderLocation.getID() + "\nIntruder IP : " + intruderLocation.getIP() + "\n";
-				XPLMDebugString(debugString.c_str());
+		// repeat the same steps, but for any pending XBee data 
+		memset(buffer, '\0', MAX_RECEIVE_BUFFER_SIZE);		// clean out the buffer to reuse it for xbee data
 
 
-				intruder = new Aircraft(intruderLocation.getID(), intruderLocation.getIP());
-				allocatedAircraft_.push_back(intruder);
+		if (xb->XBeeReceive(xbComm, buffer, MAX_RECEIVE_BUFFER_SIZE)) {
+			// Debugging
+			XPLMDebugString("XB Payload: ");
+			XPLMDebugString(buffer);
+			XPLMDebugString("\n");
+			//
 
-				// Fill in the current values so that the aircraft will not have two wildly different position values
-				// If the position current is not set, position old will get set to LLA::ZERO while position current will
-				// be some real value, so setting the position current here prevents the LLAs from being radically different
-				intruder->positionCurrent = updatedPosition;
-				intruder->positionCurrentTime = msSinceEpoch;
+			
+			int size = std::strlen(buffer);
+			intruderLocation.deserialize(buffer, size);
+			intruderID = intruderLocation.getID().c_str();
+			processIntruder(intruderID);
 
-				(*intrudersMap)[intruder->id] = intruder;
-				aircraft_->lock.lock();
-				ResolutionConnection* connection = new ResolutionConnection(macAddress_, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft_);
-				(*openConnections)[intruder->id] = connection;
-			}
-
-			keepAliveMap_[intruder->id] = 10;  // what does 10 mean here? Why 10? 10 what? Why not 9 or 11000000? Magic number alert!
-
-			ResolutionConnection* conn = (*openConnections)[intruder->id];
-
-			intruder->lock.lock();
-			aircraft_->lock.lock();
-			conn->lock.lock();
-			intruder->positionOld = intruder->positionCurrent;
-			conn->userPositionOld = conn->userPosition;
-			intruder->positionOldTime = intruder->positionCurrentTime;
-			conn->userPositionOldTime = conn->userPositionTime;
-
-			intruder->positionCurrent = updatedPosition;
-			conn->userPosition = aircraft_->positionCurrent;
-			intruder->positionCurrentTime = msSinceEpoch;
-			conn->userPositionTime = msSinceEpoch;
-			intruder->lock.unlock();
-			aircraft_->lock.unlock();
-			conn->lock.unlock();
-
-			decider_->analyze(intruder);
 		}
+
+
+		free(buffer);   // free memory on the heap
+		buffer = nullptr;  // clear dangling pointer
 
 	}
 	return 0;
+}
+
+DWORD Transponder::processIntruder(std::string intruderID)
+{
+
+	std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+
+	std::string myID;
+	myID = myLocation.getID();	// store myID as a C++ string
+
+	if (strcmp(myID.c_str(), intruderID.c_str()) != 0) {
+
+		LLA updatedPosition = { intruderLocation.getLAT(), intruderLocation.getLON(), intruderLocation.getALT(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
+
+		Aircraft* intruder = (*intrudersMap)[intruderLocation.getID()];
+		if (!intruder) {
+
+			// if we don't have this intruder already, create it
+
+			// Debug Statements to output Intruder MAC and IP addresses to Log
+			std::string debugString = "Intruder MAC : " + intruderLocation.getID() + "\nIntruder IP : " + intruderLocation.getIP() + "\n";
+			XPLMDebugString(debugString.c_str());
+
+
+			intruder = new Aircraft(intruderLocation.getID(), intruderLocation.getIP());
+			allocatedAircraft_.push_back(intruder);
+
+			// Fill in the current values so that the aircraft will not have two wildly different position values
+			// If the position current is not set, position old will get set to LLA::ZERO while position current will
+			// be some real value, so setting the position current here prevents the LLAs from being radically different
+			intruder->positionCurrent = updatedPosition;
+			intruder->positionCurrentTime = msSinceEpoch;
+
+			(*intrudersMap)[intruder->id] = intruder;
+			aircraft_->lock.lock();
+			ResolutionConnection* connection = new ResolutionConnection(macAddress_, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft_);
+			(*openConnections)[intruder->id] = connection;
+		}
+
+		keepAliveMap_[intruder->id] = 10;  // what does 10 mean here? Why 10? 10 what? Why not 9 or 11000000? Magic number alert!
+
+		ResolutionConnection* conn = (*openConnections)[intruder->id];
+
+		intruder->lock.lock();
+		aircraft_->lock.lock();
+		conn->lock.lock();
+		intruder->positionOld = intruder->positionCurrent;
+		conn->userPositionOld = conn->userPosition;
+		intruder->positionOldTime = intruder->positionCurrentTime;
+		conn->userPositionOldTime = conn->userPositionTime;
+
+		intruder->positionCurrent = updatedPosition;
+		conn->userPosition = aircraft_->positionCurrent;
+		intruder->positionCurrentTime = msSinceEpoch;
+		conn->userPositionTime = msSinceEpoch;
+		intruder->lock.unlock();
+		aircraft_->lock.unlock();
+		conn->lock.unlock();
+
+		decider_->analyze(intruder);
+	}
 }
 
 DWORD Transponder::sendLocation()
@@ -209,13 +217,11 @@ DWORD Transponder::sendLocation()
 		myLocation.BuildPlane();
 
 		int size = myLocation.getPLANE().length() + 1;  // length of the C++ string, plus 1 for the null terminator
-		//char * buffer = new char[myLocation.getPLANE().length() + 1];
+
 		char* buffer = (char*)malloc(size);  // to be consistent with how its done in receiveLocation()
 		memset(buffer, '\0', size);
 		std::strcpy(buffer, myLocation.getPLANE().c_str());
-		//XPLMDebugString("sendLocation buffer: ");
-		//XPLMDebugString(buffer);
-		//XPLMDebugString("\n");
+
 
 		// UDP Broadcast
 		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
@@ -223,12 +229,11 @@ DWORD Transponder::sendLocation()
 		// XBee Broadcast
 		xb->XBeeBroadcast(myLocation.getPLANE(), xbComm);
 
-		
-		//XPLMDebugString("sendLocation pre buffer free\n");
-		free(buffer);       // free memory on the heap
-		buffer = nullptr;   // clear dangling pointer
+
+		free(buffer);       
+		buffer = nullptr;   
 		Sleep(1000);
-		//XPLMDebugString("sendLocation post buffer free\n");
+
 	}
 	return 0;
 }

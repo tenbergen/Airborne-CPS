@@ -154,7 +154,7 @@ DWORD XBeeTXThread(HANDLE hComm) {
 	while (exit == false) {
 
 		// simulating what we will get from Location::getPLANE()
-		std::string myLocationGetPlane = "n4C:ED:FB:59:53:00n192.168.0.3n47.519961n10.698863n3050.078383";
+		std::string myLocationGetPlane = "nFF:00:00:60:53:2En192.168.0.1n47.581802n10.665801n3047.689339";
 
 
 		// Determine frame size and allocate memory on the heap for it

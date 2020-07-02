@@ -1,5 +1,5 @@
 # Airborne-CPS
-Building a Software Simulator for Airborne Cyber Physical Systems using X-Plane
+A Traffic Collusion Avoidance System Mark II (TCAS-II) implementation for Laminar Research X-Plane
 
 ### Current Functionality
 
@@ -13,9 +13,9 @@ Building a Software Simulator for Airborne Cyber Physical Systems using X-Plane
 - Strength-Based RA Selection Algorithm for 3+ aircraft RA scenarios.
 
 ### Description / Setup
-This project is a plugin for the Microsoft X-Plane flight simulator, and is an implementation of a [Traffic Collision Avoidance System](https://www.faa.gov/documentLibrary/media/Advisory_Circular/TCAS%20II%20V7.1%20Intro%20booklet.pdf).
+This project is a plugin for the Laminar Research X-Plane flight simulator, and is an implementation of a [Traffic Collision Avoidance System](https://www.faa.gov/documentLibrary/media/Advisory_Circular/TCAS%20II%20V7.1%20Intro%20booklet.pdf), mark II. It is used in Cyber Physical Systems research at the State University of New York at Oswego; please see "Literature" for examples and related work.
 
-- The plugin was written in C++ in Microsoft Visual Studio 15 Community.
+- The plugin was written in C++ in Microsoft Visual Studio Community 2019.
 
 - The SDK for the plugin is included in the codebase, and can also be found [here](http://www.xsquawkbox.net/xpsdk/mediawiki/Main_Page).
 
@@ -24,9 +24,7 @@ This project is a plugin for the Microsoft X-Plane flight simulator, and is an i
   * glaux.lib
   They should already be included.
 
-- You need Google's serialization protocol buffers from [here](https://github.com/google/protobuf/releases/tag/v3.0.0).
-  * These are included in the codebase.
-  
+
 - Open the Visual Studio project ExampleGauge, and change the project's C++ Linker folder locations, Dependency folder locations, and build   path to reflect your project's path structure. Browse to where respository is located and add the following to the project settings.
 
   * General -> Output Directory

@@ -97,15 +97,17 @@ D7 = 1    CTS Flow Control
 class XBee
 {
 public:
-    //static DWORD WINAPI startXBeeBroadcasting();  //
-    //static DWORD WINAPI startXBeeListening();    //
+
     bool XBeeReceive(HANDLE hComm, char* buf, int len);
     DWORD XBeeBroadcast(std::string payload, HANDLE hComm);    // //
     XBee(); //
     ~XBee(); //
     HANDLE InitializeComPort(unsigned int portnum);  //
+    void XBee::SetPortnum(unsigned int pnum);
+    unsigned int XBee::GetPortNum();
 
 private:
+    unsigned int portnum;
 	bool isXBeeEnabled;
     int ReadSerial(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm);  //
     bool TransmitFrame(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm);   // 

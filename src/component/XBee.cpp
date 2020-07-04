@@ -6,12 +6,22 @@
 XBee::XBee()
 {
 	bool isXBeeEnabled = false;
+	this->SetPortnum(3);
 
 }
 
 XBee::~XBee()
 {
 	// Do something useful
+}
+
+void XBee::SetPortnum(unsigned int pnum)
+{
+	portnum = pnum;
+}
+
+unsigned int XBee::GetPortNum() {
+	return portnum;
 }
 
 

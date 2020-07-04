@@ -18,6 +18,9 @@
 #include <unordered_map>
 #include <ctime>
 #include "data\Location.h"
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 
 #include "component/VSpeedIndicatorGaugeRenderer.h"
 #include "data/Aircraft.h"
@@ -26,6 +29,7 @@
 #define MAC_LENGTH 18
 #define PORT_LENGTH 6
 #define MAX_RECEIVE_BUFFER_SIZE 4096
+#define MAX_BRIDGE_QUEUE_SIZE  1024
 
 
 class Transponder
@@ -62,7 +66,7 @@ private:
 	static std::atomic<bool> initialized_;
 	static std::string macAddress_;
 
-	Decider * decider_;
+	Decider* decider_;
 	Aircraft* aircraft_;
 
 	// added for XBee support
@@ -76,4 +80,16 @@ private:
 	void createSocket(SOCKET*, struct sockaddr_in*, int, int);
 
 	DWORD Transponder::processIntruder(std::string intruderID);
+
+	std::mutex mQueueXB;
+	std::condition_variable condXB;
+	std::queue<std::string> queueXB;
+
+	std::mutex mQueueUDP;
+	std::condition_variable condUDP;
+	std::queue<std::string> queueUDP;
+
+	std::string qPayload;
+
+	struct sockaddr_in self_sockaddr;
 };

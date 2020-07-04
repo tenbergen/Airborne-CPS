@@ -7,10 +7,10 @@
 std::string Transponder::macAddress_ = "";
 std::atomic<bool> Transponder::initialized_ = false;
 
-Transponder::Transponder(Aircraft* ac, 
-						concurrency::concurrent_unordered_map<std::string, Aircraft*> *intruders, 
-						concurrency::concurrent_unordered_map<std::string, ResolutionConnection*> *connections, 
-						Decider* decider)
+Transponder::Transponder(Aircraft* ac,
+	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intruders,
+	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* connections,
+	Decider* decider)
 {
 	decider_ = decider;
 	aircraft_ = ac;
@@ -27,20 +27,21 @@ Transponder::Transponder(Aircraft* ac,
 	inSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (inSocket < 0) {
 		XPLMDebugString("failed to open socket to listen for locations\n");
-	} else {
+	}
+	else {
 		createSocket(&inSocket, &incoming, INADDR_ANY, BROADCAST_PORT);
 	}
 	outSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (outSocket < 0) {
 		XPLMDebugString("failed to open socket to broadcast location\n");
-	} else {
+	}
+	else {
 		BOOL bOptVal = TRUE;
-		setsockopt(outSocket, SOL_SOCKET, SO_BROADCAST, (char *)&bOptVal, sizeof(int));
-		//createSocket(&outSocket, &outgoing, -1, BROADCAST_PORT);
+		setsockopt(outSocket, SOL_SOCKET, SO_BROADCAST, (char*)&bOptVal, sizeof(int));
 		outgoing.sin_addr.s_addr = htonl(-1);
 		outgoing.sin_port = htons(BROADCAST_PORT);
 		outgoing.sin_family = PF_INET;
-		bind(outSocket, (struct sockaddr*)&outgoing, sinlen);
+		bind(outSocket, (struct sockaddr*) & outgoing, sinlen);
 	}
 }
 
@@ -49,7 +50,7 @@ void Transponder::createSocket(SOCKET* s, struct sockaddr_in* socketAddr, int ad
 	socketAddr->sin_addr.s_addr = htonl(addr);
 	socketAddr->sin_port = htons(port);
 	socketAddr->sin_family = AF_INET;
-	int bindSuccess = bind(*s, (struct sockaddr *)socketAddr, sinlen);
+	int bindSuccess = bind(*s, (struct sockaddr*)socketAddr, sinlen);
 	if (bindSuccess < 0) {
 		char theError[32];
 		sprintf(theError, "Transponder::createSocket() -> Failed to bind: %d\n", GetLastError());
@@ -66,7 +67,7 @@ Transponder::~Transponder()
 
 	// Delete all of the aircraft that the transponder created
 	for (std::vector<Aircraft*>::iterator iter = allocatedAircraft_.begin(); iter != allocatedAircraft_.end(); ) {
-		delete *iter;
+		delete* iter;
 		iter = allocatedAircraft_.erase(iter);
 	}
 }
@@ -74,8 +75,11 @@ Transponder::~Transponder()
 DWORD Transponder::receiveLocation()
 {
 
-	std::string intruderID; 
-	//std::string intruderID_XBee;
+	std::string myID;
+	myID = myLocation.getID();	// store myID as a C++ string
+
+	std::string intruderID;
+
 
 	while (communication)
 	{
@@ -87,56 +91,84 @@ DWORD Transponder::receiveLocation()
 
 
 
-		recvfrom(inSocket, buffer, MAX_RECEIVE_BUFFER_SIZE, 0, (struct sockaddr *)&incoming, (int *)&sinlen);
+		recvfrom(inSocket, buffer, MAX_RECEIVE_BUFFER_SIZE, 0, (struct sockaddr*) & incoming, (int*)&sinlen);
 
 
-		int size = std::strlen(buffer);  // set size the actual number of characters that we received
-										// even if we don't get the null sent to us, our buffer should be null filled anyways
-										// which will mean its effectively null terminated as long as we receive less than MAX_RECEIVE_BUFFER_SIZE characters
-
-		
-
-		try {
-			//// ******** debugging
-			//std::string debugString = "receiveLocation buffer: " + std::string(buffer) + "\n";
-
-			//XPLMDebugString(debugString.c_str());
-			//// ****************
-			intruderLocation.deserialize(buffer, size);  
-		}
-		catch (...) {
-			XPLMDebugString("Deserialize is not working: ");
-		}
-		
+		char receivedIP[INET_ADDRSTRLEN];
+		struct sockaddr_in* pincoming = &incoming;
+		inet_ntop(AF_INET, &(pincoming->sin_addr), receivedIP, INET_ADDRSTRLEN);
 
 
-		intruderID = intruderLocation.getID().c_str();
+		// filter out any packets that were broadcasted from self
+		if (strncmp(receivedIP, myID.c_str(), INET_ADDRSTRLEN) != 0) {
 
-		processIntruder(intruderID);
+			int size = std::strlen(buffer);  // set size the actual number of characters that we received
+											// even if we don't get the null sent to us, our buffer should be null filled anyways
+											// which will mean its effectively null terminated as long as we receive less than MAX_RECEIVE_BUFFER_SIZE characters
 
-		// repeat the same steps, but for any pending XBee data 
-		memset(buffer, '\0', MAX_RECEIVE_BUFFER_SIZE);		// clean out the buffer to reuse it for xbee data
 
 
-		if (xb->XBeeReceive(xbComm, buffer, MAX_RECEIVE_BUFFER_SIZE)) {
-			// Debugging
-			XPLMDebugString("XB Payload: ");
-			XPLMDebugString(buffer);
-			XPLMDebugString("\n");
-			//
+			try {
+				//// ******** debugging
+				//std::string debugString = "receiveLocation buffer: " + std::string(buffer) + "\n";
 
-			
-			int size = std::strlen(buffer);
-			intruderLocation.deserialize(buffer, size);
+				//XPLMDebugString(debugString.c_str());
+				//// ****************
+				intruderLocation.deserialize(buffer, size);
+			}
+			catch (...) {
+				XPLMDebugString("Deserialize is not working: ");
+			}
+
 			intruderID = intruderLocation.getID().c_str();
-			processIntruder(intruderID);
 
+			// process any possible intruder we received via UDP
+			if (strcmp(myID.c_str(), intruderID.c_str()) != 0)  // redundant but fine to keep for now
+			{
+				processIntruder(intruderID);
+				// do something here to inform the send thread to send this data out XBee
+				std::unique_lock<std::mutex> lockXB(mQueueXB);
+				condXB.wait(lockXB, [this]() { return queueXB.size() < MAX_BRIDGE_QUEUE_SIZE; });
+				qPayload.assign(buffer);
+				queueXB.push(qPayload);
+				XPLMDebugString("pushed onto XBee queue\n");
+				lockXB.unlock();
+				condXB.notify_one();
+
+			}
+
+			// repeat the same steps, but for any pending XBee data 
+			memset(buffer, '\0', MAX_RECEIVE_BUFFER_SIZE);		// clean out the buffer to reuse it for xbee data
+
+
+			if (xb->XBeeReceive(xbComm, buffer, MAX_RECEIVE_BUFFER_SIZE)) {
+				// Debugging
+				XPLMDebugString("XB Payload: ");
+				XPLMDebugString(buffer);
+				XPLMDebugString("\n");
+				//
+
+
+				int size = std::strlen(buffer);
+				intruderLocation.deserialize(buffer, size);
+				intruderID = intruderLocation.getID().c_str();
+				if (strcmp(myID.c_str(), intruderID.c_str()) != 0)
+				{
+					processIntruder(intruderID);  // process any possible intruder we received via XBee
+						// do something here to inform the send thread to send this data out UDP
+					std::unique_lock<std::mutex> lockUDP(mQueueUDP);
+					condUDP.wait(lockUDP, [this]() { return queueUDP.size() < MAX_BRIDGE_QUEUE_SIZE; });
+					qPayload.assign(buffer);
+					queueUDP.push(qPayload);
+					XPLMDebugString("pushed onto UDP queue\n");
+					lockUDP.unlock();
+					condUDP.notify_one();
+				}
+
+			}
+			free(buffer);   // free memory on the heap
+			buffer = nullptr;  // clear dangling pointer
 		}
-
-
-		free(buffer);   // free memory on the heap
-		buffer = nullptr;  // clear dangling pointer
-
 	}
 	return 0;
 }
@@ -146,60 +178,57 @@ DWORD Transponder::processIntruder(std::string intruderID)
 
 	std::chrono::milliseconds msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
-	std::string myID;
-	myID = myLocation.getID();	// store myID as a C++ string
-
-	if (strcmp(myID.c_str(), intruderID.c_str()) != 0) {
-
-		LLA updatedPosition = { intruderLocation.getLAT(), intruderLocation.getLON(), intruderLocation.getALT(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
-
-		Aircraft* intruder = (*intrudersMap)[intruderLocation.getID()];
-		if (!intruder) {
-
-			// if we don't have this intruder already, create it
-
-			// Debug Statements to output Intruder MAC and IP addresses to Log
-			std::string debugString = "Intruder MAC : " + intruderLocation.getID() + "\nIntruder IP : " + intruderLocation.getIP() + "\n";
-			XPLMDebugString(debugString.c_str());
 
 
-			intruder = new Aircraft(intruderLocation.getID(), intruderLocation.getIP());
-			allocatedAircraft_.push_back(intruder);
+	LLA updatedPosition = { intruderLocation.getLAT(), intruderLocation.getLON(), intruderLocation.getALT(), Angle::AngleUnits::DEGREES, Distance::DistanceUnits::METERS };
 
-			// Fill in the current values so that the aircraft will not have two wildly different position values
-			// If the position current is not set, position old will get set to LLA::ZERO while position current will
-			// be some real value, so setting the position current here prevents the LLAs from being radically different
-			intruder->positionCurrent = updatedPosition;
-			intruder->positionCurrentTime = msSinceEpoch;
+	Aircraft* intruder = (*intrudersMap)[intruderLocation.getID()];
+	if (!intruder) {
 
-			(*intrudersMap)[intruder->id] = intruder;
-			aircraft_->lock.lock();
-			ResolutionConnection* connection = new ResolutionConnection(macAddress_, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft_);
-			(*openConnections)[intruder->id] = connection;
-		}
+		// if we don't have this intruder already, create it
 
-		keepAliveMap_[intruder->id] = 10;  // what does 10 mean here? Why 10? 10 what? Why not 9 or 11000000? Magic number alert!
+		// Debug Statements to output Intruder MAC and IP addresses to Log
+		std::string debugString = "Intruder MAC : " + intruderLocation.getID() + "\nIntruder IP : " + intruderLocation.getIP() + "\n";
+		XPLMDebugString(debugString.c_str());
 
-		ResolutionConnection* conn = (*openConnections)[intruder->id];
 
-		intruder->lock.lock();
-		aircraft_->lock.lock();
-		conn->lock.lock();
-		intruder->positionOld = intruder->positionCurrent;
-		conn->userPositionOld = conn->userPosition;
-		intruder->positionOldTime = intruder->positionCurrentTime;
-		conn->userPositionOldTime = conn->userPositionTime;
+		intruder = new Aircraft(intruderLocation.getID(), intruderLocation.getIP());
+		allocatedAircraft_.push_back(intruder);
 
+		// Fill in the current values so that the aircraft will not have two wildly different position values
+		// If the position current is not set, position old will get set to LLA::ZERO while position current will
+		// be some real value, so setting the position current here prevents the LLAs from being radically different
 		intruder->positionCurrent = updatedPosition;
-		conn->userPosition = aircraft_->positionCurrent;
 		intruder->positionCurrentTime = msSinceEpoch;
-		conn->userPositionTime = msSinceEpoch;
-		intruder->lock.unlock();
-		aircraft_->lock.unlock();
-		conn->lock.unlock();
 
-		decider_->analyze(intruder);
+		(*intrudersMap)[intruder->id] = intruder;
+		aircraft_->lock.lock();
+		ResolutionConnection* connection = new ResolutionConnection(macAddress_, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft_);
+		(*openConnections)[intruder->id] = connection;
 	}
+
+	keepAliveMap_[intruder->id] = 10;  // what does 10 mean here? Why 10? 10 what? Why not 9 or 11000000? Magic number alert!
+
+	ResolutionConnection* conn = (*openConnections)[intruder->id];
+
+	intruder->lock.lock();
+	aircraft_->lock.lock();
+	conn->lock.lock();
+	intruder->positionOld = intruder->positionCurrent;
+	conn->userPositionOld = conn->userPosition;
+	intruder->positionOldTime = intruder->positionCurrentTime;
+	conn->userPositionOldTime = conn->userPositionTime;
+
+	intruder->positionCurrent = updatedPosition;
+	conn->userPosition = aircraft_->positionCurrent;
+	intruder->positionCurrentTime = msSinceEpoch;
+	conn->userPositionTime = msSinceEpoch;
+	intruder->lock.unlock();
+	aircraft_->lock.unlock();
+	conn->lock.unlock();
+
+	decider_->analyze(intruder);
+
 }
 
 DWORD Transponder::sendLocation()
@@ -224,14 +253,39 @@ DWORD Transponder::sendLocation()
 
 
 		// UDP Broadcast
-		sendto(outSocket, (const char *)buffer, size, 0, (struct sockaddr *) &outgoing, sinlen);
+		sendto(outSocket, (const char*)buffer, size, 0, (struct sockaddr*) & outgoing, sinlen);
 
 		// XBee Broadcast
 		xb->XBeeBroadcast(myLocation.getPLANE(), xbComm);
 
+		// process any UDP -> XBee forwarding that is queued
+		std::unique_lock<std::mutex> lockXB(mQueueXB);
+		while (!queueXB.empty()) {
+			condXB.wait(lockXB, [this]() { return !queueXB.empty(); });
+			xb->XBeeBroadcast(queueXB.front(), xbComm);
+			queueXB.pop();
+			condXB.notify_one();
+		}
+		lockXB.unlock();
+		XPLMDebugString("Emptied XBee queue\n");
 
-		free(buffer);       
-		buffer = nullptr;   
+		std::unique_lock<std::mutex> lockUDP(mQueueUDP);
+		std::string outpayload;
+		while (!queueUDP.empty()) {
+			condUDP.wait(lockUDP, [this]() { return !queueUDP.empty(); });
+			// send the udp packect
+			//outpayload = queueUDP.front();
+			int qsize = strlen(queueUDP.front().c_str());
+			sendto(outSocket, (const char*)queueUDP.front().c_str(), qsize, 0, (struct sockaddr*) & outgoing, sinlen);
+			queueUDP.pop();
+			condUDP.notify_one();
+		}
+		lockUDP.unlock();
+		XPLMDebugString("Emptied UDP Queue\n");
+
+
+		free(buffer);
+		buffer = nullptr;
 		Sleep(1000);
 
 	}
@@ -242,7 +296,7 @@ DWORD Transponder::keepalive()
 {
 	while (communication)
 	{
-		concurrency::concurrent_unordered_map<std::string, int>::iterator &iter = keepAliveMap_.begin();
+		concurrency::concurrent_unordered_map<std::string, int>::iterator& iter = keepAliveMap_.begin();
 		for (; iter != keepAliveMap_.cend(); ++iter)
 		{
 			if (--(iter->second) == 0) {
@@ -260,7 +314,7 @@ std::string Transponder::getHardwareAddress()
 {
 	if (macAddress_.empty()) {
 		std::string hardwareAddress{};
-		IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
+		IP_ADAPTER_INFO* pAdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
 		char macAddr[MAC_LENGTH];
 
 		DWORD dwRetVal;
@@ -268,7 +322,7 @@ std::string Transponder::getHardwareAddress()
 
 		if (GetAdaptersInfo(pAdapterInfo, &outBufLen) != ERROR_SUCCESS) {
 			free(pAdapterInfo);
-			pAdapterInfo = (IP_ADAPTER_INFO *)malloc(outBufLen);
+			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(outBufLen);
 		}
 
 		if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &outBufLen)) == NO_ERROR) {
@@ -282,7 +336,8 @@ std::string Transponder::getHardwareAddress()
 				hardwareAddress = macAddr;
 				pAdapter = pAdapter->Next;
 			}
-		} else {
+		}
+		else {
 			XPLMDebugString("Transponder::getHardwareAddress - Failed to retrieve network adapter information.\n");
 		}
 
@@ -349,9 +404,9 @@ void Transponder::start()
 {
 	communication = 1;
 	DWORD ThreadID;
-	CreateThread(NULL, 0, startListening, (void*) this, 0, &ThreadID);
-	CreateThread(NULL, 0, startBroadcasting, (void*) this, 0, &ThreadID);
-	CreateThread(NULL, 0, startKeepAliveTimer, (void*) this, 0, &ThreadID);
+	CreateThread(NULL, 0, startListening, (void*)this, 0, &ThreadID);
+	CreateThread(NULL, 0, startBroadcasting, (void*)this, 0, &ThreadID);
+	CreateThread(NULL, 0, startKeepAliveTimer, (void*)this, 0, &ThreadID);
 }
 
 void Transponder::initNetworking()
@@ -366,6 +421,7 @@ void Transponder::initNetworking()
 }
 
 void Transponder::initXBee(unsigned int portnum) {
-	xbComm = xb->InitializeComPort(portnum);	
+	xb->SetPortnum(portnum);
+	xbComm = xb->InitializeComPort(portnum);
 }
 

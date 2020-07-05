@@ -55,6 +55,7 @@
 #include "XPStandardWidgets.h"
 
 #define XBEE_CONFIG_MENU	1
+#define MAX_DEVICE_PATH		200
 
 /*
 * These variables are used in the toggling of gauges during the simulation.
@@ -109,18 +110,10 @@ int gXBeeMenuItem;  // flag to tell us if the xbee widget is being displayed
 void XBeeMenuHandler(void*, void*);  // XBeeMenuHandler
 void CreateXBeeWidget(int x1, int y1, int w, int h);  //CreateXBeeWidget
 int XBeeHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2);  //XBeeHandler
+void GenerateComPortList();
+ 
+char XBeeCOMPortList[MAX_COMPORT][MAX_DEVICE_PATH] = { {'\0'} };
 
-// only for getting the widget started from example. 
-char XBeeText[50][200] = {   //XBeeText[][]
-"   1. Text line one.",
-"   2. Text.",
-"   3. Text.",
-"   4. Text.",
-"   5. Text.",
-"   6. Text.",
-"end"
-
-};
 
 
 // This Global is used to activate hostile mode. This is TEMPORARY
@@ -208,11 +201,8 @@ PLUGIN_API int XPluginStart(char* outName, char* outSig, char* outDesc) {
 	strcpy(outDesc, "A plug-in for displaying several TCAS gauges.");
 
 	/*Start of Plugin Menu Creation*/
-	menuContainerID = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Airborne-CPS", 0, 0);					 // meneContainerID = PluginSubMenuItem in example
-	menuID = XPLMCreateMenu("Airborne CPS", XPLMFindPluginsMenu(), menuContainerID, MenuHandler, NULL);  // menuID = PluginMenu in example
-
-	// Lets move these declarations to a better place, but for now I want them nearby
-	// int ToggleCPSMenuIndex, ToggleHostileMenuIndex, ToggleDebugMenuIndex, EnableXBeeRoutingMenuIndex, XBeeConfigMenuIndex;
+	menuContainerID = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Airborne-CPS", 0, 0);					 
+	menuID = XPLMCreateMenu("Airborne CPS", XPLMFindPluginsMenu(), menuContainerID, MenuHandler, NULL);  
 
 	XPLMAppendMenuItem(menuID, "Toggle CPS", (void*)"exampleGaugeHotkey", 1);
 	XPLMAppendMenuItem(menuID, "Toggle Hostile", (void*)"hostileToggle", 1);
@@ -568,12 +558,13 @@ void MenuHandler(void* in_menu_ref, void* in_item_ref) {
 
 	std::string debugstring = "MenuHandler received in_item_ref: " + std::to_string((int)in_item_ref) + "\n";
 
-	XPLMDebugString(debugstring.c_str());
+	//XPLMDebugString(debugstring.c_str());
 	if ((int)in_item_ref == XBEE_CONFIG_MENU) {
-		XPLMDebugString("in_item_ref == XBeeConfigMenuIndex\n");
+		//XPLMDebugString("in_item_ref == XBeeConfigMenuIndex\n");
 		if (gXBeeMenuItem == 0)
 		{
-			CreateXBeeWidget(50, 712, 974, 662);	//left, top, right, bottom.
+			//CreateXBeeWidget(50, 712, 974, 662);	//left, top, right, bottom.
+			CreateXBeeWidget(50, 712, 500, 300);
 			gXBeeMenuItem = 1;
 		}
 		else
@@ -595,6 +586,7 @@ void CreateXBeeWidget(int x, int y, int w, int h)  // void CreateXbeeWidget
 
 	int x2 = x + w;
 	int y2 = y - h;
+	GenerateComPortList();
 
 	// Create the Main Widget window.
 	XBeeWidget = XPCreateWidget(x, y, x2, y2,
@@ -612,12 +604,12 @@ void CreateXBeeWidget(int x, int y, int w, int h)  // void CreateXbeeWidget
 	// Print each line of instructions.
 	for (Index = 0; Index < 50; Index++)
 	{
-		if (strcmp(XBeeText[Index], "end") == 0) { break; }
+		if (strcmp(XBeeCOMPortList[Index], "end") == 0) { break; }
 
 		// Create a text widget
 		XBeeTextWidget[Index] = XPCreateWidget(x + 10, y - (30 + (Index * 20)), x2 - 10, y - (42 + (Index * 20)),
 			1,	// Visible
-			XBeeText[Index],// desc
+			XBeeCOMPortList[Index],// desc
 			0,		// root
 			XBeeWidget,
 			xpWidgetClass_Caption);
@@ -641,3 +633,47 @@ int	XBeeHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1
 	return 0;
 }
 
+
+void GenerateComPortList() {
+	//char XBeeCOMPortList[MAX_COMPORT][MAX_DEVICE_PATH] = { {'\0'} };
+	TCHAR path[5000];
+	int comPortListLineNum = 0;
+
+	sprintf(XBeeCOMPortList[comPortListLineNum], "COM     Path");
+	comPortListLineNum++;
+
+	//printf("Checking COM1 through COM%d:\n", MAX_COMPORT);
+	for (unsigned i = 1; i <= MAX_COMPORT; ++i) {
+
+		// iterate through possible com ports by name
+
+		TCHAR buffer[10];
+		_stprintf(buffer, "COM%u", i);
+		DWORD result = QueryDosDevice(buffer, path, (sizeof path) / 2);
+
+
+		if (result != 0) {
+			//_tprintf("%s:\t%s\n", buffer, path);
+			sprintf(XBeeCOMPortList[comPortListLineNum], "  %u          %s", i, path);
+			XPLMDebugString(XBeeCOMPortList[comPortListLineNum]);
+			comPortListLineNum++;
+		}
+		else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+			//_tprintf("%s:\t%s\n", buffer, L"(error, path buffer too small)");
+
+		}
+		sprintf(XBeeCOMPortList[comPortListLineNum], "end");
+	}
+	//char XBeeText[50][200] = {   //XBeeText[][]
+//"   1. Text line one.",
+//"   2. Text.",
+//"   3. Text.",
+//"   4. Text.",
+//"   5. Text.",
+//"   6. Text.",
+//"end"
+//
+//};
+
+
+}

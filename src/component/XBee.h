@@ -37,7 +37,7 @@ D7 = 1    CTS Flow Control
  // Macros
  // ************************
 
-#define MAX_COMPORT     4096     // highest possible com port number for Windows
+#define MAX_COMPORT     50       // highest possible com port number that we will consider using
 #define READ_TIMEOUT    500      // milliseconds timeout for Reading COM Port
 
 // Defined XBee Field Values

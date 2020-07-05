@@ -18,6 +18,7 @@ Transponder::Transponder(Aircraft* ac,
 	openConnections = connections;
 
 	xb = new XBee();
+	enableXBeeRouting = true;
 
 	myLocation.setID(macAddress_);
 	ip = getIpAddr();
@@ -126,14 +127,17 @@ DWORD Transponder::receiveLocation()
 			if (strcmp(myID.c_str(), intruderID.c_str()) != 0)  // redundant but fine to keep for now
 			{
 				processIntruder(intruderID);
-				// do something here to inform the send thread to send this data out XBee
-				std::unique_lock<std::mutex> lockXB(mQueueXB);
-				condXB.wait(lockXB, [this]() { return queueXB.size() < MAX_BRIDGE_QUEUE_SIZE; });
-				qPayload.assign(buffer);
-				queueXB.push(qPayload);
-				XPLMDebugString("pushed onto XBee queue\n");
-				lockXB.unlock();
-				condXB.notify_one();
+
+				// XBee <-> UDP Routing
+				if (enableXBeeRouting) {
+					std::unique_lock<std::mutex> lockXB(mQueueXB);
+					condXB.wait(lockXB, [this]() { return queueXB.size() < MAX_BRIDGE_QUEUE_SIZE; });
+					qPayload.assign(buffer);
+					queueXB.push(qPayload);
+					XPLMDebugString("pushed onto XBee queue\n");
+					lockXB.unlock();
+					condXB.notify_one();
+				}
 
 			}
 
@@ -155,14 +159,17 @@ DWORD Transponder::receiveLocation()
 				if (strcmp(myID.c_str(), intruderID.c_str()) != 0)
 				{
 					processIntruder(intruderID);  // process any possible intruder we received via XBee
-						// do something here to inform the send thread to send this data out UDP
-					std::unique_lock<std::mutex> lockUDP(mQueueUDP);
-					condUDP.wait(lockUDP, [this]() { return queueUDP.size() < MAX_BRIDGE_QUEUE_SIZE; });
-					qPayload.assign(buffer);
-					queueUDP.push(qPayload);
-					XPLMDebugString("pushed onto UDP queue\n");
-					lockUDP.unlock();
-					condUDP.notify_one();
+
+					// XBee <-> UDP Routing
+					if (enableXBeeRouting) {
+						std::unique_lock<std::mutex> lockUDP(mQueueUDP);
+						condUDP.wait(lockUDP, [this]() { return queueUDP.size() < MAX_BRIDGE_QUEUE_SIZE; });
+						qPayload.assign(buffer);
+						queueUDP.push(qPayload);
+						XPLMDebugString("pushed onto UDP queue\n");
+						lockUDP.unlock();
+						condUDP.notify_one();
+					}
 				}
 
 			}
@@ -258,31 +265,34 @@ DWORD Transponder::sendLocation()
 		// XBee Broadcast
 		xb->XBeeBroadcast(myLocation.getPLANE(), xbComm);
 
-		// process any UDP -> XBee forwarding that is queued
-		std::unique_lock<std::mutex> lockXB(mQueueXB);
-		while (!queueXB.empty()) {
-			condXB.wait(lockXB, [this]() { return !queueXB.empty(); });
-			xb->XBeeBroadcast(queueXB.front(), xbComm);
-			queueXB.pop();
-			condXB.notify_one();
-		}
-		lockXB.unlock();
-		XPLMDebugString("Emptied XBee queue\n");
 
-		std::unique_lock<std::mutex> lockUDP(mQueueUDP);
-		std::string outpayload;
-		while (!queueUDP.empty()) {
-			condUDP.wait(lockUDP, [this]() { return !queueUDP.empty(); });
-			// send the udp packect
-			//outpayload = queueUDP.front();
-			int qsize = strlen(queueUDP.front().c_str());
-			sendto(outSocket, (const char*)queueUDP.front().c_str(), qsize, 0, (struct sockaddr*) & outgoing, sinlen);
-			queueUDP.pop();
-			condUDP.notify_one();
-		}
-		lockUDP.unlock();
-		XPLMDebugString("Emptied UDP Queue\n");
+		// XBee <-> UDP Routing
+		if (enableXBeeRouting) {
+			// process any UDP -> XBee forwarding that is queued
+			std::unique_lock<std::mutex> lockXB(mQueueXB);
+			while (!queueXB.empty()) {
+				condXB.wait(lockXB, [this]() { return !queueXB.empty(); });
+				xb->XBeeBroadcast(queueXB.front(), xbComm);
+				queueXB.pop();
+				condXB.notify_one();
+			}
+			lockXB.unlock();
+			XPLMDebugString("Emptied XBee queue\n");
 
+			std::unique_lock<std::mutex> lockUDP(mQueueUDP);
+			std::string outpayload;
+			while (!queueUDP.empty()) {
+				condUDP.wait(lockUDP, [this]() { return !queueUDP.empty(); });
+				// send the udp packect
+				//outpayload = queueUDP.front();
+				int qsize = strlen(queueUDP.front().c_str());
+				sendto(outSocket, (const char*)queueUDP.front().c_str(), qsize, 0, (struct sockaddr*) & outgoing, sinlen);
+				queueUDP.pop();
+				condUDP.notify_one();
+			}
+			lockUDP.unlock();
+			XPLMDebugString("Emptied UDP Queue\n");
+		}
 
 		free(buffer);
 		buffer = nullptr;
@@ -423,5 +433,17 @@ void Transponder::initNetworking()
 void Transponder::initXBee(unsigned int portnum) {
 	xb->SetPortnum(portnum);
 	xbComm = xb->InitializeComPort(portnum);
+}
+
+bool Transponder::isXBeeRoutingEnabled() {
+	return enableXBeeRouting;
+}
+
+void Transponder::disableXbeeRouting() {
+	enableXBeeRouting = false;
+}
+
+void Transponder::enableXbeeRouting() {
+	enableXBeeRouting = true;
 }
 

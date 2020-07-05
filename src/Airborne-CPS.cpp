@@ -51,6 +51,10 @@
 #include "component/Transponder.h"
 #include "component/NASADecider.h"
 
+#include "XPWidgets.h"
+#include "XPStandardWidgets.h"
+
+#define XBEE_CONFIG_MENU	1
 
 /*
 * These variables are used in the toggling of gauges during the simulation.
@@ -94,7 +98,30 @@ static XPLMHotKeyID tcasToggle = NULL;
 //Menu Declarations
 int menuContainerID;
 XPLMMenuID menuID;
-void menuHandler(void *, void *);
+void MenuHandler(void*, void*);
+
+// more Menu Declarations added for XBee
+XPWidgetID	XBeeWidget = NULL;  // XBeeWidget
+XPWidgetID	XBeeWindow = NULL;  // XBeeWindow
+XPWidgetID	XBeeTextWidget[50] = { NULL }; // XBeeTextWidget[50];
+int gXBeeMenuItem;  // flag to tell us if the xbee widget is being displayed
+
+void XBeeMenuHandler(void*, void*);  // XBeeMenuHandler
+void CreateXBeeWidget(int x1, int y1, int w, int h);  //CreateXBeeWidget
+int XBeeHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2);  //XBeeHandler
+
+// only for getting the widget started from example. 
+char XBeeText[50][200] = {   //XBeeText[][]
+"   1. Text line one.",
+"   2. Text.",
+"   3. Text.",
+"   4. Text.",
+"   5. Text.",
+"   6. Text.",
+"end"
+
+};
+
 
 // This Global is used to activate hostile mode. This is TEMPORARY
 //TODO: Turn on Hostile TA/RA without Globals.
@@ -126,13 +153,13 @@ static int	coordInRect(int x, int y, int l, int t, int r, int b) {
 static void drawGLSceneForVSI();
 static void drawGLSceneForAH();
 
-static int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon);
-static void exampleGaugeHotKey(void * refCon);
-static void debugWindow(void * refCon);
-static void hostileGauge(void * refCon);
-static void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
-static void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
-static int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
+static int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void* inRefcon);
+static void exampleGaugeHotKey(void* refCon);
+static void debugWindow(void* refCon);
+static void hostileGauge(void* refCon);
+static void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon);
+static void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon, int losingFocus);
+static int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void* inRefcon);
 
 static XPLMWindowID	gWindow = NULL;
 static int gClicked = 0;
@@ -150,23 +177,23 @@ float verticalSpeedData = 0;
 float latREF, lonREF = 0;
 float ilatREF, ilonREF = 0;
 
-static void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon);
+static void myDrawWindowCallback(XPLMWindowID inWindowID, void* inRefcon);
 
-static void myHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus);
+static void myHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon, int losingFocus);
 
-static int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon);
+static int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void* inRefcon);
 
-PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
+PLUGIN_API int XPluginStart(char* outName, char* outSig, char* outDesc) {
 	/// Handle cross platform differences
 #if IBM
-	char *pVSIFileName = "Resources\\Plugins\\AirborneCPS\\Vertical_Speed_Indicator\\";
-	char *pAHFileName = "Resources\\Plugins\\AirborneCPS\\Artificial_Horizon\\";
+	char* pVSIFileName = "Resources\\Plugins\\AirborneCPS\\Vertical_Speed_Indicator\\";
+	char* pAHFileName = "Resources\\Plugins\\AirborneCPS\\Artificial_Horizon\\";
 #elif LIN
-	char *pVSIFileName = "Resources/plugins/AirborneCPS/Vertical_Speed_Indicator/";
-	char *pAHFileName = "Resources/plugins/AirborneCPS/Artificial_Horizon/";
+	char* pVSIFileName = "Resources/plugins/AirborneCPS/Vertical_Speed_Indicator/";
+	char* pAHFileName = "Resources/plugins/AirborneCPS/Artificial_Horizon/";
 #else
-	char *pVSIFileName = "Resources:Plugins:AirborneCPS:Vertical_Speed_Indicator:";
-	char *pAHFileName = "Resources:Plugins:AirborneCPS:Artificial_Horizon:";
+	char* pVSIFileName = "Resources:Plugins:AirborneCPS:Vertical_Speed_Indicator:";
+	char* pAHFileName = "Resources:Plugins:AirborneCPS:Artificial_Horizon:";
 #endif
 	/// Setup texture file locations
 	XPLMGetSystemPath(gVSIPluginDataFile);
@@ -181,11 +208,19 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	strcpy(outDesc, "A plug-in for displaying several TCAS gauges.");
 
 	/*Start of Plugin Menu Creation*/
-	menuContainerID = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Airborne-CPS", 0, 0);
-	menuID = XPLMCreateMenu("Airborne CPS", XPLMFindPluginsMenu(), menuContainerID, menuHandler, NULL);
-	XPLMAppendMenuItem(menuID, "Toggle CPS", (void *) "exampleGaugeHotkey", 1);
-	XPLMAppendMenuItem(menuID, "Toggle Hostile", (void *) "hostileToggle", 1);
-	XPLMAppendMenuItem(menuID, "Toggle Debug", (void *) "debugToggle", 1);
+	menuContainerID = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Airborne-CPS", 0, 0);					 // meneContainerID = PluginSubMenuItem in example
+	menuID = XPLMCreateMenu("Airborne CPS", XPLMFindPluginsMenu(), menuContainerID, MenuHandler, NULL);  // menuID = PluginMenu in example
+
+	// Lets move these declarations to a better place, but for now I want them nearby
+	// int ToggleCPSMenuIndex, ToggleHostileMenuIndex, ToggleDebugMenuIndex, EnableXBeeRoutingMenuIndex, XBeeConfigMenuIndex;
+
+	XPLMAppendMenuItem(menuID, "Toggle CPS", (void*)"exampleGaugeHotkey", 1);
+	XPLMAppendMenuItem(menuID, "Toggle Hostile", (void*)"hostileToggle", 1);
+	XPLMAppendMenuItem(menuID, "Toggle Debug", (void*)"debugToggle", 1);
+	//EnableXBeeRoutingMenuIndex = XPLMAppendMenuItem(menuID, "Enable XBee Routing", (void*)"routingToggle", 1);
+	XPLMAppendMenuItem(menuID, "XBee Config", (void*)XBEE_CONFIG_MENU, 1);
+
+	gXBeeMenuItem = 0;
 
 	/*End of Plugin Menu Creation*/
 
@@ -225,7 +260,7 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 	Transponder::initNetworking();
 	std::string myMac = Transponder::getHardwareAddress();
 
-	
+
 
 	LLA currentPos = LLA::ZERO;
 	userAircraft = new Aircraft(myMac, "127.0.0.1", currentPos, Angle::ZERO, Velocity::ZERO, Angle::ZERO, Angle::ZERO);
@@ -251,6 +286,11 @@ PLUGIN_API int XPluginStart(char * outName, char *	outSig, char *	outDesc) {
 
 PLUGIN_API void	XPluginStop(void) {
 	/// Clean up
+	if (gXBeeMenuItem == 1) {
+		XPDestroyWidget(XBeeWidget, 1);
+		gXBeeMenuItem = 0;
+	}
+
 	XPLMUnregisterDrawCallback(gaugeDrawingCallback, XPLM_PHASE_GAUGES, 0, NULL);
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
@@ -267,10 +307,10 @@ PLUGIN_API void XPluginDisable(void) {}
 
 PLUGIN_API int XPluginEnable(void) { return 1; }
 
-PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void * inParam) {}
+PLUGIN_API void XPluginReceiveMessage(XPLMPluginID	inFromWho, int	inMessage, void* inParam) {}
 
 /* The callback responsible for drawing the gauge during the X-Plane gauge drawing phase. */
-int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void * inRefcon) {
+int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void* inRefcon) {
 	// Do the actual drawing, but only if the window is active
 	if (gaugeOnDisplay == NO_GAUGE) {
 		/*
@@ -342,10 +382,10 @@ void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon) {}
 /* Our key handling callback does nothing in this plugin.  This is ok;
 * we simply don't use keyboard input.*/
 void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey,
-	XPLMKeyFlags inFlags, char inVirtualKey, void * inRefcon, int losingFocus) {}
+	XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon, int losingFocus) {}
 
 /* Our mouse click callback updates the position that the windows is dragged to. */
-int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon) {
+int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void* inRefcon) {
 	int	dX = 0, dY = 0;
 	int	weight = 0, height = 0;
 	int	left, top, right, bottom;
@@ -389,15 +429,15 @@ int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, X
 /**
 * Toggle between displaying one of the N NUMBER_OF_GAUGES, or no gauge.
 * */
-void exampleGaugeHotKey(void * refCon) {
+void exampleGaugeHotKey(void* refCon) {
 	gaugeOnDisplay = ((gaugeOnDisplay + 1) % (NUMBER_OF_GAUGES + 1));
 }
 
-void debugWindow(void * refCon) {
+void debugWindow(void* refCon) {
 	debug = !debug;
 }
 
-void hostileGauge(void * refCon) {
+void hostileGauge(void* refCon) {
 	//TODO: Toggle Hostile Mode.
 	vsiGaugeRenderer->markHostile();
 	ahGaugeRenderer->markHostile();
@@ -422,7 +462,7 @@ void drawGLSceneForAH() {
 * status.  Note that we don't have to tell X-Plane to redraw us when our text
 * changes; we are redrawn by the sim continuously. */
 /// This function draws the window that is currently being used for debug text rendering
-void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
+void myDrawWindowCallback(XPLMWindowID inWindowID, void* inRefcon) {
 	int		left, top, right, bottom;
 	static float color[] = { 1.0, 1.0, 1.0 }; 	/* RGB White */
 
@@ -441,7 +481,7 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 		/* Drawing the LLA for each intruder aircraft in the intruding_aircraft set */
 		int offsetYPxls = 40;
 
-		for (auto & iter = intrudingAircraft.cbegin(); iter != intrudingAircraft.cend(); ++iter) {
+		for (auto& iter = intrudingAircraft.cbegin(); iter != intrudingAircraft.cend(); ++iter) {
 			Aircraft* intruder = iter->second;
 
 			intruder->lock.lock();
@@ -483,16 +523,16 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 		RecommendationRange neg = decider->negativeRecommendationRange;
 		decider->recommendationRangeLock.unlock();
 
-		float vMin = 1.0f*mathutil::clampd(positive.minVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
-		float vMax = 1.0f*mathutil::clampd(positive.maxVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
+		float vMin = 1.0f * mathutil::clampd(positive.minVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
+		float vMax = 1.0f * mathutil::clampd(positive.maxVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
 
 		positionBuf[0] = '\0';
 		snprintf(positionBuf, 128, "Decider (+) vMin, vMax : %.3f, %.3f", vMin, vMax);
 		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 		offsetYPxls += 20;
 
-		vMin = 1.0f*mathutil::clampd(neg.minVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
-		vMax = 1.0f*mathutil::clampd(neg.maxVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
+		vMin = 1.0f * mathutil::clampd(neg.minVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
+		vMax = 1.0f * mathutil::clampd(neg.maxVerticalSpeed.toFeetPerMin(), -4000.0, 4000.0);
 
 		positionBuf[0] = '\0';
 		snprintf(positionBuf, 128, "Decider (-) vMin, vMax : %.3f, %.3f", vMin, vMax);
@@ -503,12 +543,12 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void * inRefcon) {
 
 /* Our key handling callback does nothing in this plugin.  This is ok; we simply don't use keyboard input. */
 void myHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags,
-	char inVirtualKey, void * inRefcon, int losingFocus) {}
+	char inVirtualKey, void* inRefcon, int losingFocus) {}
 
 /*Our mouse click callback toggles the status of our mouse variable
 * as the mouse is clicked.  We then update our text on the next sim
 * cycle. */
-int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void * inRefcon) {
+int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void* inRefcon) {
 	/* If we get a down or up, toggle our status click.  We will
 	* never get a down without an up if we accept the down. */
 	if ((inMouse == XPLM_MOUSE_DOWN) || (inMouse == xplm_MouseUp))
@@ -524,9 +564,80 @@ int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseS
 	return 1;
 }
 
-void menuHandler(void * in_menu_ref, void * in_item_ref) {
-	if (!strcmp((const char*)in_item_ref, "Toggle CPS")) {
-		XPLMCommandKeyStroke(XPLM_VK_F8);
+void MenuHandler(void* in_menu_ref, void* in_item_ref) {
+
+	std::string debugstring = "MenuHandler received in_item_ref: " + std::to_string((int)in_item_ref) + "\n";
+
+	XPLMDebugString(debugstring.c_str());
+	if ((int)in_item_ref == XBEE_CONFIG_MENU) {
+		XPLMDebugString("in_item_ref == XBeeConfigMenuIndex\n");
+		if (gXBeeMenuItem == 0)
+		{
+			CreateXBeeWidget(50, 712, 974, 662);	//left, top, right, bottom.
+			gXBeeMenuItem = 1;
+		}
+		else
+		{
+			if (!XPIsWidgetVisible(XBeeWidget))
+				XPShowWidget(XBeeWidget);
+		}
 	}
+
+
+	//if (!strcmp((const char*)in_item_ref, "Toggle CPS")) {
+	//	XPLMCommandKeyStroke(XPLM_VK_F8);
+	//}
+}
+// This will create our widget dialog.
+void CreateXBeeWidget(int x, int y, int w, int h)  // void CreateXbeeWidget
+{
+	int Index;
+
+	int x2 = x + w;
+	int y2 = y - h;
+
+	// Create the Main Widget window.
+	XBeeWidget = XPCreateWidget(x, y, x2, y2,
+		1,										// Visible
+		"XBee Configuration - SUNY Oswego",	// desc
+		1,										// root
+		NULL,									// no container
+		xpWidgetClass_MainWindow);
+
+
+	// Add Close Box to the Main Widget.  Other options are available.  See the SDK Documentation.  
+	XPSetWidgetProperty(XBeeWidget, xpProperty_MainWindowHasCloseBoxes, 1);
+
+
+	// Print each line of instructions.
+	for (Index = 0; Index < 50; Index++)
+	{
+		if (strcmp(XBeeText[Index], "end") == 0) { break; }
+
+		// Create a text widget
+		XBeeTextWidget[Index] = XPCreateWidget(x + 10, y - (30 + (Index * 20)), x2 - 10, y - (42 + (Index * 20)),
+			1,	// Visible
+			XBeeText[Index],// desc
+			0,		// root
+			XBeeWidget,
+			xpWidgetClass_Caption);
+	}
+	// Register our widget handler
+	XPAddWidgetCallback(XBeeWidget, (XPWidgetFunc_t)XBeeHandler);
+}
+
+// This is our widget handler.  In this example we are only interested when the close box is pressed.
+int	XBeeHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2)
+{
+	if (inMessage == xpMessage_CloseButtonPushed)
+	{
+		if (gXBeeMenuItem == 1)
+		{
+			XPHideWidget(XBeeWidget);
+		}
+		return 1;
+	}
+
+	return 0;
 }
 

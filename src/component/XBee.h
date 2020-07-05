@@ -106,6 +106,7 @@ public:
     void XBee::SetPortnum(unsigned int pnum);
     unsigned int XBee::GetPortNum();
 
+
 private:
     unsigned int portnum;
 	bool isXBeeEnabled;

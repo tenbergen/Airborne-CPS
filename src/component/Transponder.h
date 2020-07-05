@@ -48,8 +48,11 @@ public:
 	void initXBee(unsigned int portnum);
 
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* openConnections;
+
+
 protected:
 	std::string ip;
+	
 
 	SOCKET outSocket;
 	SOCKET inSocket;
@@ -62,6 +65,12 @@ protected:
 
 
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
+
+	bool Transponder::isXBeeRoutingEnabled();
+	void Transponder::disableXbeeRouting();
+	void Transponder::enableXbeeRouting();
+
+
 private:
 	static std::atomic<bool> initialized_;
 	static std::string macAddress_;
@@ -72,6 +81,7 @@ private:
 	// added for XBee support
 	XBee* xb;
 	HANDLE xbComm;
+	bool enableXBeeRouting;
 
 	std::vector<Aircraft*> allocatedAircraft_;
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap_;
@@ -91,5 +101,5 @@ private:
 
 	std::string qPayload;
 
-	struct sockaddr_in self_sockaddr;
+
 };

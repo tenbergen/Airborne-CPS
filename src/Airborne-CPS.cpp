@@ -110,6 +110,7 @@ int gXBeeMenuItem;  // flag to tell us if the xbee widget is being displayed
 void XBeeMenuHandler(void*, void*);  // XBeeMenuHandler
 void CreateXBeeWidget(int x1, int y1, int w, int h);  //CreateXBeeWidget
 int XBeeHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2);  //XBeeHandler
+int	XBeePortNumHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2);
 void GenerateComPortList();
  
 char XBeeCOMPortList[MAX_COMPORT][MAX_DEVICE_PATH] = { {'\0'} };
@@ -207,7 +208,6 @@ PLUGIN_API int XPluginStart(char* outName, char* outSig, char* outDesc) {
 	XPLMAppendMenuItem(menuID, "Toggle CPS", (void*)"exampleGaugeHotkey", 1);
 	XPLMAppendMenuItem(menuID, "Toggle Hostile", (void*)"hostileToggle", 1);
 	XPLMAppendMenuItem(menuID, "Toggle Debug", (void*)"debugToggle", 1);
-	//EnableXBeeRoutingMenuIndex = XPLMAppendMenuItem(menuID, "Enable XBee Routing", (void*)"routingToggle", 1);
 	XPLMAppendMenuItem(menuID, "XBee Config", (void*)XBEE_CONFIG_MENU, 1);
 
 	gXBeeMenuItem = 0;
@@ -607,15 +607,41 @@ void CreateXBeeWidget(int x, int y, int w, int h)  // void CreateXbeeWidget
 		if (strcmp(XBeeCOMPortList[Index], "end") == 0) { break; }
 
 		// Create a text widget
-		XBeeTextWidget[Index] = XPCreateWidget(x + 10, y - (30 + (Index * 20)), x2 - 10, y - (42 + (Index * 20)),
+		XBeeTextWidget[Index] = XPCreateWidget(x + 10, y - (30 + (Index * 20)), x + 40, y - (42 + (Index * 20)),
 			1,	// Visible
 			XBeeCOMPortList[Index],// desc
 			0,		// root
 			XBeeWidget,
-			xpWidgetClass_Caption);
+			xpWidgetClass_Button);
+		XPSetWidgetProperty(XBeeTextWidget[Index], xpProperty_ButtonType, xpRadioButton);
+		XPSetWidgetProperty(XBeeTextWidget[Index], xpProperty_ButtonBehavior, xpButtonBehaviorRadioButton);
+		XPAddWidgetCallback(XBeeTextWidget[Index], (XPWidgetFunc_t)XBeePortNumHandler);
 	}
 	// Register our widget handler
 	XPAddWidgetCallback(XBeeWidget, (XPWidgetFunc_t)XBeeHandler);
+}
+
+int	XBeePortNumHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2) {
+
+	if (inMessage == xpMsg_ButtonStateChanged) {
+		for (int i = 0; i < 50; i++) {
+			if ((long)XBeeTextWidget[i] != inParam1 && inParam2 == 1) {
+				XPSetWidgetProperty(XBeeTextWidget[i], xpProperty_ButtonState, 0);
+			}
+			else if ((long)XBeeTextWidget[i] == inParam1) {
+				char buf[100];
+				XPGetWidgetDescriptor(XBeeTextWidget[i], buf, 100);
+				std::string debugbuf = "Button Descriptor:";
+				debugbuf += buf;
+				debugbuf += "\n";
+				XPLMDebugString(debugbuf.c_str());
+			}
+
+		}
+		return 1;
+	}
+
+	return 0;
 }
 
 // This is our widget handler.  In this example we are only interested when the close box is pressed.
@@ -639,8 +665,8 @@ void GenerateComPortList() {
 	TCHAR path[5000];
 	int comPortListLineNum = 0;
 
-	sprintf(XBeeCOMPortList[comPortListLineNum], "COM     Path");
-	comPortListLineNum++;
+	//sprintf(XBeeCOMPortList[comPortListLineNum], "COM     Path");
+	//comPortListLineNum++;
 
 	//printf("Checking COM1 through COM%d:\n", MAX_COMPORT);
 	for (unsigned i = 1; i <= MAX_COMPORT; ++i) {
@@ -654,7 +680,7 @@ void GenerateComPortList() {
 
 		if (result != 0) {
 			//_tprintf("%s:\t%s\n", buffer, path);
-			sprintf(XBeeCOMPortList[comPortListLineNum], "  %u          %s", i, path);
+			sprintf(XBeeCOMPortList[comPortListLineNum], "   COM%u          %s", i, path);
 			XPLMDebugString(XBeeCOMPortList[comPortListLineNum]);
 			comPortListLineNum++;
 		}

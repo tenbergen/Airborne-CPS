@@ -36,7 +36,7 @@
     <ClCompile Include="src\util\BMPLoader.cpp" />
     <ClCompile Include="src\util\MathUtil.cpp" />
     <ClCompile Include="src\util\StringUtil.cpp" />
-    <ClCompile Include="XBee.cpp" />
+    <ClCompile Include="src\component\XBee.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\component\ArtHorizGaugeRenderer.h" />
@@ -62,7 +62,7 @@
     <ClInclude Include="src\util\BMPLoader.h" />
     <ClInclude Include="src\util\MathUtil.h" />
     <ClInclude Include="src\util\StringUtil.h" />
-    <ClInclude Include="XBee.h" />
+    <ClInclude Include="src\component\XBee.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\rendering\Renderer.inc" />
@@ -160,7 +160,7 @@
       <Optimization>Disabled</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>$(SolutionDir)\SDK\Delphi\Widgets;$(SolutionDir)\SDK\Delphi\XPLM;$(SolutionDir)\SDK\CHeaders\XPLM;$(SolutionDir)\SDK\CHeaders\Widgets;$(SolutionDir)\src;$(SolutionDir)\SDK\CHeaders</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)SDK\Delphi\Widgets;$(SolutionDir)SDK\Delphi\XPLM;$(SolutionDir)SDK\CHeaders\XPLM;$(SolutionDir)SDK\CHeaders\Widgets;$(SolutionDir)src;$(SolutionDir)SDK\CHeaders</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;SIMDATA_EXPORTS;IBM=1;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Release\32\</AssemblerListingLocation>
       <PrecompiledHeaderOutputFile>.\Release\32\ExampleGauge.pch</PrecompiledHeaderOutputFile>
@@ -169,7 +169,7 @@
       <ObjectFileName>.\Release\32\</ObjectFileName>
       <ProgramDataBaseFileName>.\Release\32\</ProgramDataBaseFileName>
       <StructMemberAlignment>Default</StructMemberAlignment>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Midl>
@@ -193,7 +193,7 @@
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Release\32\ExampleGauge.lib</ImportLibrary>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\SDK\CHeaders\google\protobuf;$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)out\x86" "E:\X-Plane 10\Resources\plugins\"  /Y </Command>
@@ -282,7 +282,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Debug\32\ExampleGauge.lib</ImportLibrary>
-      <AdditionalLibraryDirectories>$(SolutionDir)\SDK\CHeaders\google\protobuf;$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Link>

@@ -196,7 +196,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)out\x86" "E:\X-Plane 10\Resources\plugins\"  /Y </Command>
+      <Command>xcopy "$(SolutionDir)out\x86" "c:\X-Plane 10\Resources\plugins\"  /Y </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -240,6 +240,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)\SDK\Libraries\Win;$(SolutionDir)\Release\64</AdditionalLibraryDirectories>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM_64.lib;XPWidgets_64.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(SolutionDir)out\x64" "c:\X-Plane 10\Resources\plugins\"  /Y </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

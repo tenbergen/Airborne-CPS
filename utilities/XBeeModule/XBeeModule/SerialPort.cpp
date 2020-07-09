@@ -279,6 +279,11 @@ DWORD XBeeRXThread(HANDLE hComm) {
 					// now that we have that, we can calculate the payload length
 					uint16_t payloadLength = checksumOffset - XBEE_RXOFFSET_PAYLOAD_START;
 
+					char outbuff[XBEE_MAX_API_FRAME_SIZE];
+					memset(outbuff, '\0', XBEE_MAX_API_FRAME_SIZE);
+					memcpy(outbuff, XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, payloadLength);
+					printf("Rx'd XBee Payload: %s\n", outbuff);
+
 
 					fwrite(XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, sizeof(unsigned char), payloadLength, pPayloadFile);
 					fwrite("\n", 1, 1, pPayloadFile);

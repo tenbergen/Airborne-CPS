@@ -30,12 +30,21 @@
 
  */
 
+ // use debug versions of malloc and free
+#define _CRTDBG_MAP_ALLOC
+#define _CRT_SECURE_NO_WARNINGS
+
+
 #include <stdio.h>
 #include <windows.h>
 #include <winbase.h>
 #include <string>
 #include <tchar.h>
 #include <iostream>
+
+// included for memory leak checking
+#include <stdlib.h>
+#include <crtdbg.h>
 
 
 
@@ -145,7 +154,7 @@ DWORD XBeeTXThread(HANDLE hComm) {
 	while (exit == false) {
 
 		// simulating what we will get from Location::getPLANE()
-		std::string myLocationGetPlane = "n4C:ED:FB:59:53:00n192.168.0.3n47.519961n10.698863n3050.078383";
+		std::string myLocationGetPlane = "nFF:00:00:60:53:2En192.168.0.1n47.581802n10.665801n3047.689339";
 
 
 		// Determine frame size and allocate memory on the heap for it
@@ -220,7 +229,8 @@ int ReadSerial(unsigned char* lpBuf, DWORD dwToWrite, HANDLE hComm) {
 	bool fWaitingOnRead = FALSE;
 
 	int retVal = ReadFile(hComm, lpBuf, XBEE_MAX_API_FRAME_SIZE, &dwRead, NULL);
-	return dwRead;
+	if (retVal) { return dwRead; }
+	else { return 0; }
 }
 
 
@@ -232,6 +242,8 @@ DWORD XBeeRXThread(HANDLE hComm) {
 
 	FILE* pRawDataFile;
 	pRawDataFile = fopen("rawdata.hex", "wb");
+
+
 
 	unsigned char fileDelimiter[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
 
@@ -261,11 +273,16 @@ DWORD XBeeRXThread(HANDLE hComm) {
 				for (unsigned int i = XBEE_RXOFFSET_FRAME_TYPE; i < checksumOffset; i++) {
 					sum += XBeeRXFrame[i];
 				}
-				char checksum = (char)(0xFF - (sum & 0xff));
-				printf("Received Checksum: %x\nCalculated Checksum: %x\n", checksum, XBeeRXFrame[checksumOffset]);
+				unsigned char checksum = (unsigned char)(0xFF - (sum & 0xff));
+				printf("Received Checksum: %x\nCalculated Checksum: %x\n", XBeeRXFrame[checksumOffset], checksum);
 				if (checksum == XBeeRXFrame[checksumOffset]) {
 					// now that we have that, we can calculate the payload length
 					uint16_t payloadLength = checksumOffset - XBEE_RXOFFSET_PAYLOAD_START;
+
+					char outbuff[XBEE_MAX_API_FRAME_SIZE];
+					memset(outbuff, '\0', XBEE_MAX_API_FRAME_SIZE);
+					memcpy(outbuff, XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, payloadLength);
+					printf("Rx'd XBee Payload: %s\n", outbuff);
 
 
 					fwrite(XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, sizeof(unsigned char), payloadLength, pPayloadFile);
@@ -288,6 +305,9 @@ DWORD XBeeRXThread(HANDLE hComm) {
 		}
 
 	}
+
+	fclose(pPayloadFile);
+	fclose(pRawDataFile);
 	std::cout << "RX Thread Exiting" << std::endl;
 	return 0;
 }
@@ -387,7 +407,7 @@ int main(int argc, char* argv[])
 	//  End User Input Section
 	// *********************************************************************
 
-	TCHAR path[10000];
+	TCHAR path[5000];
 
 	printf("Checking COM1 through COM%d:\n", MAX_COMPORT);
 	for (unsigned i = 1; i <= MAX_COMPORT; ++i) {
@@ -429,6 +449,7 @@ int main(int argc, char* argv[])
 
 	if (RXcomPortNum == 0) {
 		std::cout << "No RX Port Selected" << std::endl;
+		isRXenabled = false;
 		if (!isTXenabled) {
 			std::cout << "No COM Ports Selected. Nothing to do but exit." << std::endl;
 			exit(0);
@@ -455,45 +476,37 @@ int main(int argc, char* argv[])
 	//
 	// Single XBee Duplex Mode Configuration
 	//
-	unsigned int comPortNum = TXcomPortNum;
-	HANDLE hComm = InitializeComPort(comPortNum);
-	if (hComm == INVALID_HANDLE_VALUE) {
-		std::cout << "Invalid COM Port Number. COM: " << comPortNum << " Cannot Continue." << std::endl;
+
+	if (isSingleXBDuplex) {
+		unsigned int comPortNum = TXcomPortNum;
+		HANDLE hComm = InitializeComPort(comPortNum);
+		if (hComm == INVALID_HANDLE_VALUE) {
+			std::cout << "Invalid COM Port Number. COM: " << comPortNum << " Cannot Continue." << std::endl;
+		}
+		else {
+			std::cout << "Starting TX Thread on COM Port " << comPortNum << std::endl;
+			DWORD TXThreadID;
+			hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hComm, 0, &TXThreadID);
+
+			std::cout << "Starting RX Thread on COM Port " << comPortNum << std::endl;
+			DWORD RXThreadID;
+			hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hComm, 0, &RXThreadID);
+		}
 	}
-	else {
-		std::cout << "Starting TX Thread on COM Port " << comPortNum << std::endl;
-		DWORD TXThreadID;
-		hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hComm, 0, &TXThreadID);
-
-		std::cout << "Starting RX Thread on COM Port " << comPortNum << std::endl;
-		DWORD RXThreadID;
-		hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hComm, 0, &RXThreadID);
-	}
-
-
-	//
-	//	TX Com Port Configuration
-	//
-	if (isTXenabled) {
+	else if (isTXenabled) {
 
 		HANDLE hTXComm = InitializeComPort(TXcomPortNum);
 		if (hTXComm == INVALID_HANDLE_VALUE) {
 			std::cout << "Invalid TX COM Port Number. COM: " << TXcomPortNum << " Cannot Continue." << std::endl;
+
 		}
 		else {
-
 			std::cout << "Starting TX Thread on COM Port " << TXcomPortNum << std::endl;
 			DWORD TXThreadID;
 			hTXThread = CreateThread(NULL, 0, startXBeeBroadcasting, (void*)hTXComm, 0, &TXThreadID);
 		}
 	}
-
-
-
-	//
-	//	RX Com Port Configuration
-	//
-	if (isRXenabled) {
+	else if (isRXenabled) {
 
 		HANDLE hRXComm = InitializeComPort(RXcomPortNum);
 		if (hRXComm == INVALID_HANDLE_VALUE) {
@@ -504,7 +517,7 @@ int main(int argc, char* argv[])
 			DWORD RXThreadID;
 			hRXThread = CreateThread(NULL, 0, startXBeeListening, (void*)hRXComm, 0, &RXThreadID);
 		}
-	} 
+	}
 
 	std::cout << "Hit Esc a few times to exit." << std::endl;
 
@@ -519,7 +532,7 @@ int main(int argc, char* argv[])
 		//CloseHandle(hRXComm);
 	}
 
-
+	_CrtDumpMemoryLeaks();
 	return 0;
 }
 

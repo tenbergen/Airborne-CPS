@@ -36,6 +36,7 @@
     <ClCompile Include="src\util\BMPLoader.cpp" />
     <ClCompile Include="src\util\MathUtil.cpp" />
     <ClCompile Include="src\util\StringUtil.cpp" />
+    <ClCompile Include="src\component\XBee.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\component\ArtHorizGaugeRenderer.h" />
@@ -61,6 +62,7 @@
     <ClInclude Include="src\util\BMPLoader.h" />
     <ClInclude Include="src\util\MathUtil.h" />
     <ClInclude Include="src\util\StringUtil.h" />
+    <ClInclude Include="src\component\XBee.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\rendering\Renderer.inc" />
@@ -134,7 +136,7 @@
     <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>..\..\..\..\..\X-Plane 10\Resources\plugins</OutDir>
+    <OutDir>.\out\x86\</OutDir>
     <IntDir>.\Release\32\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -155,10 +157,10 @@
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <Optimization>MinSpace</Optimization>
+      <Optimization>Disabled</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>$(SolutionDir)\SDK\Delphi\Widgets;$(SolutionDir)\SDK\Delphi\XPLM;$(SolutionDir)\SDK\CHeaders\XPLM;$(SolutionDir)\SDK\CHeaders\Widgets;$(SolutionDir)\src;$(SolutionDir)\SDK\CHeaders</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)SDK\Delphi\Widgets;$(SolutionDir)SDK\Delphi\XPLM;$(SolutionDir)SDK\CHeaders\XPLM;$(SolutionDir)SDK\CHeaders\Widgets;$(SolutionDir)src;$(SolutionDir)SDK\CHeaders</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;SIMDATA_EXPORTS;IBM=1;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Release\32\</AssemblerListingLocation>
       <PrecompiledHeaderOutputFile>.\Release\32\ExampleGauge.pch</PrecompiledHeaderOutputFile>
@@ -167,7 +169,8 @@
       <ObjectFileName>.\Release\32\</ObjectFileName>
       <ProgramDataBaseFileName>.\Release\32\</ProgramDataBaseFileName>
       <StructMemberAlignment>Default</StructMemberAlignment>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Midl>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -190,7 +193,7 @@
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Release\32\ExampleGauge.lib</ImportLibrary>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\SDK\CHeaders\google\protobuf;$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)out\x86" "E:\X-Plane 10\Resources\plugins\"  /Y </Command>
@@ -243,10 +246,10 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <FunctionLevelLinking>false</FunctionLevelLinking>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>MinSpace</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\src;C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\SDK\CHeaders;C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\SDK\CHeaders\XPLM;C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\SDK\CHeaders\Widgets;C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\SDK\Delphi\XPLM;C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\SDK\Delphi\Widgets</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\SDK\Delphi\Widgets;$(SolutionDir)\SDK\Delphi\XPLM;$(SolutionDir)\SDK\CHeaders\XPLM;$(SolutionDir)\SDK\CHeaders\Widgets;$(SolutionDir)\src;$(SolutionDir)\SDK\CHeaders</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;SIMDATA_EXPORTS;IBM=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Debug\32\</AssemblerListingLocation>
       <PrecompiledHeaderOutputFile>.\Debug\32\ExampleGauge.pch</PrecompiledHeaderOutputFile>
@@ -254,7 +257,7 @@
       </PrecompiledHeader>
       <ObjectFileName>.\Debug\32\</ObjectFileName>
       <ProgramDataBaseFileName>.\Debug\32\</ProgramDataBaseFileName>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <StructMemberAlignment>Default</StructMemberAlignment>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
@@ -279,8 +282,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Debug\32\ExampleGauge.lib</ImportLibrary>
-      <AdditionalLibraryDirectories>C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\SDK\Libraries\Win;C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\SDK\CHeaders\google\protobuf;C:\Users\Oswego\Documents\Master 9-10-19\Airborne-CPS-master\Release\32</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;libprotobuf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\Release\32;$(SolutionDir)\SDK\Libraries\Win</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM.lib;XPWidgets.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Link>
   </ItemDefinitionGroup>

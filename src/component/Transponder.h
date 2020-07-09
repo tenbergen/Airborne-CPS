@@ -48,7 +48,8 @@ public:
 	void initXBee(unsigned int portnum);
 
 	concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* openConnections;
-
+	bool Transponder::isXBeeRoutingEnabled();
+	bool enableXBeeRouting;
 
 protected:
 	std::string ip;
@@ -66,9 +67,7 @@ protected:
 
 	concurrency::concurrent_unordered_map<std::string, Aircraft*>* intrudersMap;
 
-	bool Transponder::isXBeeRoutingEnabled();
-	void Transponder::disableXbeeRouting();
-	void Transponder::enableXbeeRouting();
+
 
 
 private:
@@ -81,7 +80,7 @@ private:
 	// added for XBee support
 	XBee* xb;
 	HANDLE xbComm;
-	bool enableXBeeRouting;
+	
 
 	std::vector<Aircraft*> allocatedAircraft_;
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap_;

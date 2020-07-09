@@ -56,6 +56,8 @@
 
 #define XBEE_CONFIG_MENU	1
 #define MAX_DEVICE_PATH		200
+#define XB_INTRUCTIONS_NUMLINES    9
+#define XB_INSTRUCTIONS_LINELENGTH 50
 
 /*
 * These variables are used in the toggling of gauges during the simulation.
@@ -105,16 +107,31 @@ void MenuHandler(void*, void*);
 XPWidgetID	XBeeWidget = NULL;  // XBeeWidget
 XPWidgetID	XBeeWindow = NULL;  // XBeeWindow
 XPWidgetID	XBeeTextWidget[50] = { NULL }; // XBeeTextWidget[50];
+XPWidgetID	XBeeInsctructionsWidget[XB_INTRUCTIONS_NUMLINES] = { NULL };
+XPWidgetID	XBeeEnableRoutingCheckbox = NULL;
 int gXBeeMenuItem;  // flag to tell us if the xbee widget is being displayed
 
 void XBeeMenuHandler(void*, void*);  // XBeeMenuHandler
 void CreateXBeeWidget(int x1, int y1, int w, int h);  //CreateXBeeWidget
 int XBeeHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2);  //XBeeHandler
 int	XBeePortNumHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2);
+int XBeeRoutingCheckboxHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2);
 void GenerateComPortList();
  
 char XBeeCOMPortList[MAX_COMPORT][MAX_DEVICE_PATH] = { {'\0'} };
 
+char XBeeInstructionText[XB_INTRUCTIONS_NUMLINES][XB_INSTRUCTIONS_LINELENGTH] = {   
+"   XBee must be COM3.",
+"   The selector to left is NOT implemented yet.",
+"   Use XCTU to configure XBees as follows:",
+"   Baud Rate BD = 115200 [7]",
+"   AP = 1    API Mode Without Escapes",
+"   AO = 1    API Explicit RX Indicator 0x91",
+"   D6 = 1    RTS Flow Control",
+"   D7 = 1    CTS Flow Control",
+"end"
+
+};
 
 
 // This Global is used to activate hostile mode. This is TEMPORARY
@@ -556,15 +573,11 @@ int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseS
 
 void MenuHandler(void* in_menu_ref, void* in_item_ref) {
 
-	std::string debugstring = "MenuHandler received in_item_ref: " + std::to_string((int)in_item_ref) + "\n";
 
-	//XPLMDebugString(debugstring.c_str());
 	if ((int)in_item_ref == XBEE_CONFIG_MENU) {
-		//XPLMDebugString("in_item_ref == XBeeConfigMenuIndex\n");
 		if (gXBeeMenuItem == 0)
 		{
-			//CreateXBeeWidget(50, 712, 974, 662);	//left, top, right, bottom.
-			CreateXBeeWidget(50, 712, 500, 300);
+			CreateXBeeWidget(50, 712, 700, 300);  //left, top, right, bottom
 			gXBeeMenuItem = 1;
 		}
 		else
@@ -573,14 +586,11 @@ void MenuHandler(void* in_menu_ref, void* in_item_ref) {
 				XPShowWidget(XBeeWidget);
 		}
 	}
-
-
-	//if (!strcmp((const char*)in_item_ref, "Toggle CPS")) {
-	//	XPLMCommandKeyStroke(XPLM_VK_F8);
-	//}
 }
+
+
 // This will create our widget dialog.
-void CreateXBeeWidget(int x, int y, int w, int h)  // void CreateXbeeWidget
+void CreateXBeeWidget(int x, int y, int w, int h)  
 {
 	int Index;
 
@@ -591,9 +601,9 @@ void CreateXBeeWidget(int x, int y, int w, int h)  // void CreateXbeeWidget
 	// Create the Main Widget window.
 	XBeeWidget = XPCreateWidget(x, y, x2, y2,
 		1,										// Visible
-		"XBee Configuration - SUNY Oswego",	// desc
-		1,										// root
-		NULL,									// no container
+		"XBee Configuration - SUNY Oswego",		// desc
+		1,										// is root
+		NULL,									// not in a container
 		xpWidgetClass_MainWindow);
 
 
@@ -608,17 +618,56 @@ void CreateXBeeWidget(int x, int y, int w, int h)  // void CreateXbeeWidget
 
 		// Create a text widget
 		XBeeTextWidget[Index] = XPCreateWidget(x + 10, y - (30 + (Index * 20)), x + 40, y - (42 + (Index * 20)),
-			1,	// Visible
+			1,	// is Visible
 			XBeeCOMPortList[Index],// desc
-			0,		// root
+			0,		// not root
 			XBeeWidget,
 			xpWidgetClass_Button);
 		XPSetWidgetProperty(XBeeTextWidget[Index], xpProperty_ButtonType, xpRadioButton);
 		XPSetWidgetProperty(XBeeTextWidget[Index], xpProperty_ButtonBehavior, xpButtonBehaviorRadioButton);
 		XPAddWidgetCallback(XBeeTextWidget[Index], (XPWidgetFunc_t)XBeePortNumHandler);
 	}
+
+	// Instructions section
+	// Print each line of instructions.
+	for (Index = 0; Index < 50; Index++)
+	{
+		if (strcmp(XBeeInstructionText[Index], "end") == 0) { break; }
+
+		// Create a text widget
+		XBeeInsctructionsWidget[Index] = XPCreateWidget(x + 350, y - (30 + (Index * 20)), x2 - 50, y - (42 + (Index * 20)),
+			1,	// is Visible
+			XBeeInstructionText[Index],// desc
+			0,		// not root
+			XBeeWidget,
+			xpWidgetClass_Caption);
+
+	}
+
+	// enable/disable routing checkbox
+	XBeeEnableRoutingCheckbox = XPCreateWidget(x + 25, y2 + 100, x + 65, y2 + 50,
+		1,	// Visible
+		"          Route XBee <-> UDP",// desc
+		0,		// root
+		XBeeWidget,
+		xpWidgetClass_Button);
+	XPSetWidgetProperty(XBeeEnableRoutingCheckbox, xpProperty_ButtonType, xpRadioButton);
+	XPSetWidgetProperty(XBeeEnableRoutingCheckbox, xpProperty_ButtonBehavior, xpButtonBehaviorCheckBox);
+	XPSetWidgetProperty (XBeeEnableRoutingCheckbox, xpProperty_ButtonState, transponder->enableXBeeRouting);
+	XPAddWidgetCallback(XBeeEnableRoutingCheckbox, (XPWidgetFunc_t)XBeeRoutingCheckboxHandler);
+
+
 	// Register our widget handler
 	XPAddWidgetCallback(XBeeWidget, (XPWidgetFunc_t)XBeeHandler);
+}
+
+int XBeeRoutingCheckboxHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2) {
+	
+	if (inMessage == xpMsg_ButtonStateChanged) {
+		transponder->enableXBeeRouting = inParam2;
+		return 1;
+	}
+	return 0;
 }
 
 int	XBeePortNumHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  inParam1, long  inParam2) {
@@ -631,10 +680,7 @@ int	XBeePortNumHandler(XPWidgetMessage  inMessage, XPWidgetID  inWidget, long  i
 			else if ((long)XBeeTextWidget[i] == inParam1) {
 				char buf[100];
 				XPGetWidgetDescriptor(XBeeTextWidget[i], buf, 100);
-				std::string debugbuf = "Button Descriptor:";
-				debugbuf += buf;
-				debugbuf += "\n";
-				XPLMDebugString(debugbuf.c_str());
+
 			}
 
 		}
@@ -665,10 +711,7 @@ void GenerateComPortList() {
 	TCHAR path[5000];
 	int comPortListLineNum = 0;
 
-	//sprintf(XBeeCOMPortList[comPortListLineNum], "COM     Path");
-	//comPortListLineNum++;
 
-	//printf("Checking COM1 through COM%d:\n", MAX_COMPORT);
 	for (unsigned i = 1; i <= MAX_COMPORT; ++i) {
 
 		// iterate through possible com ports by name
@@ -679,27 +722,15 @@ void GenerateComPortList() {
 
 
 		if (result != 0) {
-			//_tprintf("%s:\t%s\n", buffer, path);
 			sprintf(XBeeCOMPortList[comPortListLineNum], "   COM%u          %s", i, path);
 			XPLMDebugString(XBeeCOMPortList[comPortListLineNum]);
 			comPortListLineNum++;
 		}
 		else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-			//_tprintf("%s:\t%s\n", buffer, L"(error, path buffer too small)");
+			XPLMDebugString("Airborne-CPS Error: COM Portpath buffer too small");
 
 		}
 		sprintf(XBeeCOMPortList[comPortListLineNum], "end");
 	}
-	//char XBeeText[50][200] = {   //XBeeText[][]
-//"   1. Text line one.",
-//"   2. Text.",
-//"   3. Text.",
-//"   4. Text.",
-//"   5. Text.",
-//"   6. Text.",
-//"end"
-//
-//};
-
 
 }

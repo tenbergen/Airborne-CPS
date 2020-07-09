@@ -91,15 +91,17 @@ bool XBee::XBeeReceive(HANDLE hComm, char* buf, int len) {
 
 	bool retVal = false;
 
-	FILE* pPayloadFile;
-	pPayloadFile = fopen("payload.txt", "a+b");
+	// debugging file outputs
+	//FILE* pPayloadFile;
+	//pPayloadFile = fopen("payload.txt", "a+b");
 
-	FILE* pRawDataFile;
-	pRawDataFile = fopen("rawdata.hex", "a+b");
+	//FILE* pRawDataFile;
+	//pRawDataFile = fopen("rawdata.hex", "a+b");
 
-	unsigned char fileDelimiter[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
+	//unsigned char fileDelimiter[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
 
-	//while (exit == false) {
+	// end debugging file outputs
+
 
 		// allocate memory on the heap to hold the received API Frame
 		unsigned char* XBeeRXFrame = (unsigned char*)malloc(XBEE_MAX_API_FRAME_SIZE);
@@ -108,8 +110,10 @@ bool XBee::XBeeReceive(HANDLE hComm, char* buf, int len) {
 		int charsRead = ReadSerial(XBeeRXFrame, XBEE_MAX_API_FRAME_SIZE, hComm);
 		if (charsRead) {
 
-			fwrite(XBeeRXFrame, sizeof(unsigned char), charsRead, pRawDataFile);
-			fwrite(fileDelimiter, sizeof(unsigned char), sizeof(fileDelimiter), pRawDataFile);
+			// debugging file outputs
+			//fwrite(XBeeRXFrame, sizeof(unsigned char), charsRead, pRawDataFile);
+			//fwrite(fileDelimiter, sizeof(unsigned char), sizeof(fileDelimiter), pRawDataFile);
+
 
 			// Check for the start delimiter and that frame type is 0x91
 			if ((XBeeRXFrame[XBEE_RXOFFSET_START_DELIM] == XBEE_FRAME_START_DELIMITER) &&
@@ -139,12 +143,12 @@ bool XBee::XBeeReceive(HANDLE hComm, char* buf, int len) {
 						memcpy(buf, XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, payloadLength);
 					}
 
-					//fwrite(XBeeRXFrame + XBEE_RXOFFSET_PAYLOAD_START, sizeof(unsigned char), payloadLength, pPayloadFile);
-					fwrite(buf, sizeof(unsigned char), payloadLength, pPayloadFile);
 
-					fwrite("\n", 1, 1, pPayloadFile);
-					fflush(pPayloadFile);
-					fflush(pRawDataFile);
+					// debugging file outputs
+					//fwrite(buf, sizeof(unsigned char), payloadLength, pPayloadFile);
+					//fwrite("\n", 1, 1, pPayloadFile);
+					//fflush(pPayloadFile);
+					//fflush(pRawDataFile);
 				}
 			}
 		}
@@ -154,9 +158,10 @@ bool XBee::XBeeReceive(HANDLE hComm, char* buf, int len) {
 		// free up memory and null the pointer
 		free(XBeeRXFrame);
 		XBeeRXFrame = nullptr;
-
-	fclose(pPayloadFile);
-	fclose(pRawDataFile);
+	
+	// debugging file outputs
+	//fclose(pPayloadFile);
+	//fclose(pRawDataFile);
 	return retVal;
 }
 

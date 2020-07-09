@@ -134,7 +134,6 @@ DWORD Transponder::receiveLocation()
 					condXB.wait(lockXB, [this]() { return queueXB.size() < MAX_BRIDGE_QUEUE_SIZE; });
 					qPayload.assign(buffer);
 					queueXB.push(qPayload);
-					XPLMDebugString("pushed onto XBee queue\n");
 					lockXB.unlock();
 					condXB.notify_one();
 				}
@@ -147,9 +146,9 @@ DWORD Transponder::receiveLocation()
 
 			if (xb->XBeeReceive(xbComm, buffer, MAX_RECEIVE_BUFFER_SIZE)) {
 				// Debugging
-				XPLMDebugString("XB Payload: ");
-				XPLMDebugString(buffer);
-				XPLMDebugString("\n");
+				//XPLMDebugString("XB Payload: ");
+				//XPLMDebugString(buffer);
+				//XPLMDebugString("\n");
 				//
 
 
@@ -166,7 +165,6 @@ DWORD Transponder::receiveLocation()
 						condUDP.wait(lockUDP, [this]() { return queueUDP.size() < MAX_BRIDGE_QUEUE_SIZE; });
 						qPayload.assign(buffer);
 						queueUDP.push(qPayload);
-						XPLMDebugString("pushed onto UDP queue\n");
 						lockUDP.unlock();
 						condUDP.notify_one();
 					}
@@ -277,7 +275,7 @@ DWORD Transponder::sendLocation()
 				condXB.notify_one();
 			}
 			lockXB.unlock();
-			XPLMDebugString("Emptied XBee queue\n");
+
 
 			std::unique_lock<std::mutex> lockUDP(mQueueUDP);
 			std::string outpayload;
@@ -291,7 +289,7 @@ DWORD Transponder::sendLocation()
 				condUDP.notify_one();
 			}
 			lockUDP.unlock();
-			XPLMDebugString("Emptied UDP Queue\n");
+
 		}
 
 		free(buffer);
@@ -439,11 +437,4 @@ bool Transponder::isXBeeRoutingEnabled() {
 	return enableXBeeRouting;
 }
 
-void Transponder::disableXbeeRouting() {
-	enableXBeeRouting = false;
-}
-
-void Transponder::enableXbeeRouting() {
-	enableXBeeRouting = true;
-}
 

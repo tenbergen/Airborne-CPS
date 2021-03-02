@@ -44,12 +44,14 @@
 #include "XPLMNavigation.h"
 #include "XPLMDataAccess.h"
 #include "XPLMMenus.h"
+#include "XPLMProcessing.h"
 
 #include "component/VSpeedIndicatorGaugeRenderer.h"
 #include "component/ArtHorizGaugeRenderer.h"
 #include "component/ArtHorizGaugeRenderer.h"
 #include "component/Transponder.h"
 #include "component/NASADecider.h"
+#include "component/Autopilot.h"
 
 #include "XPWidgets.h"
 #include "XPStandardWidgets.h"
@@ -90,12 +92,14 @@ XPLMDataRef	cockpitLightingRed, cockpitLightingGreen, cockpitLightingBlue;
 static XPLMWindowID	gExampleGaugePanelDisplayWindow = NULL;
 static int gaugeOnDisplay = 1;
 static bool debug = true;
+static bool apbool = false;
 
 // Declares Hotkey Toggles
 static XPLMHotKeyID gExampleGaugeHotKey = NULL;
 static XPLMHotKeyID debugToggle = NULL;
 static XPLMHotKeyID hostileToggle = NULL;
 static XPLMHotKeyID tcasToggle = NULL;
+static XPLMHotKeyID autopilotToggle = NULL;
 
 
 //Menu Declarations
@@ -143,6 +147,9 @@ static bool hostile = false;
 static char gVSIPluginDataFile[255];
 static char gAHPluginDataFile[255];
 
+// Declare Autopilot Callback Timer (seconds)
+static float interval = 1;
+
 Aircraft* userAircraft;
 
 VSIGaugeRenderer* vsiGaugeRenderer;
@@ -154,6 +161,8 @@ Transponder* transponder;
 
 Decider* decider;
 
+Autopilot autopilot;
+
 /// Used for dragging plugin panel window.
 static	int	coordInRect(int x, int y, int l, int t, int r, int b);
 static int	coordInRect(int x, int y, int l, int t, int r, int b) {
@@ -163,11 +172,13 @@ static int	coordInRect(int x, int y, int l, int t, int r, int b) {
 /// Prototypes for callbacks etc.
 static void drawGLSceneForVSI();
 static void drawGLSceneForAH();
+float autopilotCallback(float elapsedMe, float elapsedSim, int counter, void* refcon);
 
 static int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void* inRefcon);
 static void exampleGaugeHotKey(void* refCon);
 static void debugWindow(void* refCon);
 static void hostileGauge(void* refCon);
+static void autopToggle(void* refCon);
 static void exampleGaugePanelWindowCallback(XPLMWindowID inWindowID, void* inRefcon);
 static void exampleGaugePanelKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon, int losingFocus);
 static int exampleGaugePanelMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void* inRefcon);
@@ -193,6 +204,9 @@ static void myDrawWindowCallback(XPLMWindowID inWindowID, void* inRefcon);
 static void myHandleKeyCallback(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon, int losingFocus);
 
 static int myHandleMouseClickCallback(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void* inRefcon);
+
+float autopilotCallback(float elapsedMe, float elapsedSim, int counter, void* refcon);
+//
 
 PLUGIN_API int XPluginStart(char* outName, char* outSig, char* outDesc) {
 	/// Handle cross platform differences
@@ -231,6 +245,9 @@ PLUGIN_API int XPluginStart(char* outName, char* outSig, char* outDesc) {
 
 	/*End of Plugin Menu Creation*/
 
+	//Register a Flight Loop Call Back which constantly runs the autopilot
+	XPLMRegisterFlightLoopCallback(autopilotCallback, interval, NULL);
+
 	/* Now we create a window.  We pass in a rectangle in left, top, right, bottom screen coordinates.  We pass in three callbacks. */
 	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, myDrawWindowCallback, myHandleKeyCallback, myHandleMouseClickCallback, NULL);
 
@@ -263,6 +280,7 @@ PLUGIN_API int XPluginStart(char* outName, char* outSig, char* outDesc) {
 	debugToggle = XPLMRegisterHotKey(XPLM_VK_F8, xplm_DownFlag, "F8", debugWindow, NULL);
 	gExampleGaugeHotKey = XPLMRegisterHotKey(XPLM_VK_F9, xplm_DownFlag, "F9", exampleGaugeHotKey, NULL);
 	hostileToggle = XPLMRegisterHotKey(XPLM_VK_F10, xplm_DownFlag, "F10", hostileGauge, NULL);
+	autopilotToggle = XPLMRegisterHotKey(XPLM_VK_F11, xplm_DownFlag, "F11", autopToggle, NULL);
 
 	Transponder::initNetworking();
 	std::string myMac = Transponder::getHardwareAddress();
@@ -303,7 +321,10 @@ PLUGIN_API void	XPluginStop(void) {
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
 	XPLMUnregisterHotKey(debugToggle);
 	XPLMUnregisterHotKey(hostileToggle);
+	XPLMUnregisterHotKey(autopilotToggle);
 	XPLMDestroyWindow(gExampleGaugePanelDisplayWindow);
+	XPLMUnregisterFlightLoopCallback(autopilotCallback, NULL);
+	
 
 	delete vsiGaugeRenderer;
 	delete ahGaugeRenderer;
@@ -380,6 +401,15 @@ int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void* inRefco
 	return 1;
 }
 
+float autopilotCallback(float elapsedMe, float elapsedSim, int counter, void* refcon) {
+	autopilot.getPosition();
+	if (apbool) {
+
+		autopilot.setCurrentPosition();
+	}
+
+	return interval;
+}
 
 /* This callback does not do any drawing as such.
 * We use the mouse callback below to handle dragging of the window
@@ -448,6 +478,12 @@ void hostileGauge(void* refCon) {
 	//TODO: Toggle Hostile Mode.
 	vsiGaugeRenderer->markHostile();
 	ahGaugeRenderer->markHostile();
+}
+void autopToggle(void* refCon) {
+	apbool = !apbool;
+	std::string msg;
+	(apbool==true) ? (msg = "AutoPilot On \n") : (msg = "AutoPilot Off \n");
+	XPLMDebugString(msg.c_str());
 }
 
 /// Draws the textures that make up the gauge for the Vertical Speed Indicator

@@ -18,6 +18,7 @@ Velocity const Decider::kVerticalVelocityClimbDescendDelta_ = { 1500.0, Velocity
 
 Decider::Decider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* map) : thisAircraft_(thisAircraft), activeConnections_(map) {}
 
+double vBuff;
 void Decider::analyze(Aircraft* intruder) {
 	Decider::determineActionRequired(intruder);
 }
@@ -379,6 +380,9 @@ double Decider::getVvelForAlim(Sense sense, double altFt, double vsepAtCpaFt, do
 			toReturn = kMinGaugeVerticalVelocity_.toFeetPerMin() + 500;
 	} else
 		toReturn = 0;
-
+	vBuff = toReturn;
 	return toReturn;
+}
+double Decider::getVBuff() {
+	return vBuff;
 }

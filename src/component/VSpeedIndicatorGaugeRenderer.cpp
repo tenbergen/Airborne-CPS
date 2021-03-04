@@ -323,13 +323,13 @@ void VSIGaugeRenderer::drawVerticalVelocityNeedle(Velocity const userAircraftVer
 	// Translate the needle back so it's in the gauge center
 	glTranslatef(-kNeedleTranslationX_, -kNeedleTranslationY_, 0.0f);
 
-	glBlendFunc(GL_DST_COLOR, GL_ZERO);
+	//glBlendFunc(GL_DST_COLOR, GL_ZERO);
 
 	// Draw Needle Mask
 	XPLMBindTexture2d(glTextures_[vsitextureconstants::NEEDLE_MASK_ID], 0);
 	drawTextureRegion(&vsitextureconstants::K_NEEDLE_MASK, kNeedlePosLeft_, kNeedlePosRight_, kNeedlePosTop_, kNeedlePosBot_);
 
-	glBlendFunc(GL_ONE, GL_ONE);
+	//glBlendFunc(GL_ONE, GL_ONE);
 
 	// Draw Needle
 	XPLMBindTexture2d(glTextures_[vsitextureconstants::NEEDLE_ID], 0);

@@ -148,7 +148,7 @@ static char gVSIPluginDataFile[255];
 static char gAHPluginDataFile[255];
 
 // Declare Autopilot Callback Timer (seconds)
-static float interval = 1;
+static float interval = 0.5f;
 
 Aircraft* userAircraft;
 
@@ -161,7 +161,7 @@ Transponder* transponder;
 
 Decider* decider;
 
-Autopilot autopilot;
+Autopilot autopilot(decider);
 
 /// Used for dragging plugin panel window.
 static	int	coordInRect(int x, int y, int l, int t, int r, int b);
@@ -252,7 +252,7 @@ PLUGIN_API int XPluginStart(char* outName, char* outSig, char* outDesc) {
 	gWindow = XPLMCreateWindow(50, 600, 300, 200, 1, myDrawWindowCallback, myHandleKeyCallback, myHandleMouseClickCallback, NULL);
 
 	/// Register so that our gauge is drawing during the Xplane gauge phase
-	XPLMRegisterDrawCallback(gaugeDrawingCallback, XPLM_PHASE_GAUGES, 0, NULL);
+	XPLMRegisterDrawCallback(gaugeDrawingCallback, xplm_Phase_Window, 0, NULL);
 
 	/// Create our window, setup datarefs and register our hotkey.
 	gExampleGaugePanelDisplayWindow = XPLMCreateWindow(1024, 256, 1280, 0, 1, exampleGaugePanelWindowCallback, exampleGaugePanelKeyCallback, exampleGaugePanelMouseClickCallback, NULL);
@@ -316,7 +316,7 @@ PLUGIN_API void	XPluginStop(void) {
 		gXBeeMenuItem = 0;
 	}
 
-	XPLMUnregisterDrawCallback(gaugeDrawingCallback, XPLM_PHASE_GAUGES, 0, NULL);
+	XPLMUnregisterDrawCallback(gaugeDrawingCallback, xplm_Phase_Window, 0, NULL);
 	XPLMDestroyWindow(gWindow);
 	XPLMUnregisterHotKey(gExampleGaugeHotKey);
 	XPLMUnregisterHotKey(debugToggle);
@@ -403,9 +403,10 @@ int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void* inRefco
 
 float autopilotCallback(float elapsedMe, float elapsedSim, int counter, void* refcon) {
 	autopilot.getPosition();
+	autopilot.apDecider();
 	if (apbool) {
-
-		autopilot.setCurrentPosition();
+		autopilot.neutralizeRoll();
+		//autopilot.setCurrentPosition();
 	}
 
 	return interval;
@@ -481,8 +482,9 @@ void hostileGauge(void* refCon) {
 }
 void autopToggle(void* refCon) {
 	apbool = !apbool;
+	//autopilot.jsRollOverideSwitch();
 	std::string msg;
-	(apbool==true) ? (msg = "AutoPilot On \n") : (msg = "AutoPilot Off \n");
+	(apbool) ? (msg = "AutoPilot On \n") : (msg = "AutoPilot Off \n");
 	XPLMDebugString(msg.c_str());
 }
 

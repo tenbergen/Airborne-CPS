@@ -9,79 +9,125 @@
 #include <cstring>
 #include <math.h>
 
+// @author Bobby Sgroi
 class Autopilot {
 public:
     std::string usersMac;
     std::string intruderMac;
-    XPLMDataRef position, override_planepath, iairspeed;
     XPLMDataRef theta, psi, phi;
-    float q[4];
-    float elv1[56], elv2[56];
-    float elvPitch;
+
+    XPLMDataRef jsRoll, jsPitch, engineThrottle, overrideRoll;
+
+
     float pitch;
-    double data;
-    Autopilot() {
-        position = XPLMFindDataRef("sim/flightmodel/position/q");
+    double deciderV;
+    Sense vSense;
+    Autopilot(Decider *d) {
         theta = XPLMFindDataRef("sim/flightmodel/position/theta");
         phi = XPLMFindDataRef("sim/flightmodel/position/phi");
         psi = XPLMFindDataRef("sim/flightmodel/position/psi");
+        jsRoll = XPLMFindDataRef("sim/joystick/yoke_roll_ratio");
+        jsPitch = XPLMFindDataRef("sim/joystick/yoke_pitch_ratio");
+        overrideRoll = XPLMFindDataRef("sim/operation/override/override_joystick_roll");
+        engineThrottle = XPLMFindDataRef(" sim/flightmodel/engine/ENGN_thro");
+        deciderV = d->getVBuff();
     }
 
     void getPosition() {
-        std::string s = "Theta: ["+ std::to_string(XPLMGetDataf(theta)) + "] - Phi: [" + std::to_string(XPLMGetDataf(phi)) + "] Psi: [" + std::to_string(XPLMGetDataf(psi)) + "] \n";
+        std::string s = "Theta(Pitch): ["+ std::to_string(XPLMGetDataf(theta)) + "] - Phi (Roll): [" + std::to_string(XPLMGetDataf(phi)) + "] Psi(Heading): [" + std::to_string(XPLMGetDataf(psi)) + "] \n";
         XPLMDebugString(s.c_str());
     }
 
-    void getCurrentTheta() {
-        std::string s = std::to_string(XPLMGetDatad(theta));
-        s = s + "\n";
-        XPLMDebugString(s.c_str());  
+
+
+    void neutralizeRoll() {
+        float p = XPLMGetDataf(phi);
+        float newRatio;
+        if (p > 5.0f && p < 15.0f) {
+            newRatio = -0.3;
+        }
+        if (p > 15.0f && p < 30.0f) {
+            newRatio = -0.45;
+        }
+        else if (p > 30.0f && p < 45.0f) {
+            newRatio = -0.6;
+        }
+        else if (p > 45 && p < 60) {
+            newRatio = -0.9;
+        }
+        else if (p > 60.0f) {
+            newRatio = -0.6;
+        }
+        else if (p <-5.0f && p>-15.0f) {
+            newRatio = .3;
+        }
+        else if (p<-15.0f && p >-30.0) {
+            newRatio = 0.45;
+        }
+        else if (p<-30.0f && p> -45.0f) {
+            newRatio = 0.6;
+        }
+        else if (p<-45.0f && p> -60.0f) {
+            newRatio = 0.75f;
+        }
+        else if (p < -60.0f) {
+            newRatio = 0.9f;
+        }
+        else if (p < 5.0f && p>2.5f) {
+            newRatio = -.1f;
+        }
+        else if (p > -5.0f && p < -2.5f) {
+            newRatio = .1f;
+        }
+        else if (p <2.5f && p>-2.5f) {
+            newRatio = 0.0f;
+        }
+
+        XPLMSetDataf(jsRoll, newRatio);
+        float r = XPLMGetDataf(jsRoll);
+        std::string jsRollStringPostChange = std::to_string(r)+"\n";
+        XPLMDebugString(jsRollStringPostChange.c_str());
+   }
+
+    void adjustPitch() {
+        float t = XPLMGetDataf(theta);
+
     }
 
-    //Returns current position of plane in the form of a quaternion {x,y,z}
-    //These are local coordinates, not latitude/longitude/altitude
-    void getCurrentPosition() {
-        int count = XPLMGetDatavf(position,q,0,4);
-        std::string values = "Quaternion Coordinates: "+ std::to_string(q[0]) + " " + std::to_string(q[1]) + " " + std::to_string(q[2]) + " " + std::to_string(q[3]) +"\n";
-        XPLMDebugString(values.c_str());
+    void adjustThrottle() {
+        float max[8];
+        max[0] = 1.0f;
         
+        XPLMSetDatavf(engineThrottle, max, 0, 7);
     }
 
-    void setCurrentPosition() {
-        int airspeedInterval = 40;
-        float thetaInterval = .1;
-        float phiInterval;
-        int count = XPLMGetDatavf(position, q, 0, 4);
-        if (XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/phi")) > 0) {
-            phiInterval = -.1;
-        }
-        if (XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/phi")) < 0) {
-            phiInterval = .1;
-        }
+    //What does decider vBuff return?
+    //what does decider vBuff return if there is no RA?
+    void apDecider() {
+        std::string vBuffString ="vBuff from decider: "+ std::to_string(deciderV) + "\n";
+        XPLMDebugString(vBuffString.c_str());
+        //if (vbuff != null) {
+        //    if (vsense == sense::upward) {
 
-        float roll = M_PI / 360 * (XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/phi")) + phiInterval);  
-        float pitch = M_PI / 360 * (XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/theta")) + thetaInterval);
-        float yaw = M_PI / 360 * XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/psi"));
-        float o[4];
-        o[0] = cos(yaw) * cos(pitch) * cos(roll) + sin(yaw) * sin(pitch) * sin(roll);
-        o[1] = cos(yaw) * cos(pitch) * sin(roll) - sin(yaw) * sin(pitch) * cos(roll);
-        o[2] = cos(yaw) * sin(pitch) * cos(roll) + sin(yaw) * cos(pitch) * sin(roll);
-        o[3] = -cos(yaw) * sin(pitch) * sin(roll) + sin(yaw) * cos(pitch) * cos(roll);
+        //    }
+        //    if (vsense == sense::downward){
 
+        //    }
 
-        //flight path must be disabled for this to work
-        //set flight model
-        XPLMSetDataf(phi, XPLMGetDataf(phi) + phiInterval);
-        XPLMSetDataf(theta, XPLMGetDataf(theta) + thetaInterval);
-        XPLMSetDataf(iairspeed, XPLMGetDataf(iairspeed) + airspeedInterval);
-        //set quaternion position
-        XPLMSetDatavf(position, o, 0, 4);
+        // }
     }
     
     //sim/joystick/has_joystick boolean might be useful for checking joystck use
     //sim/joystick/
     //Might have to use override pitch for joystick /yoke_pitch_ratio and /yoke_roll_ratio
 
+    //used for completely overriding roll joystick axis. Locks user's joystick. Not needed in implementation, helpful for testing.
+    bool jsRollOverideSwitch() {
+        int i = XPLMGetDatai(overrideRoll);
+        (i == 0) ? (i = 1) : (i = 0);
+        XPLMSetDatai(overrideRoll, i);
+        return i;
 
+    }
    
 };

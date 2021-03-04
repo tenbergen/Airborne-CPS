@@ -38,6 +38,8 @@ public:
 	/* Calculates modified tau */
 	static double getModTauS(double rangeNmi, double closureRateKnots, double dmodNmi);
 
+	double getVBuff();
+
 protected:
 	/* Returns the vertical velocity necessary to achieve ALIM */
 	double getVvelForAlim(Sense sense, double altFt, double vsepAtCpaFt, double intrProjAltFt, double rangeTauS);
@@ -87,4 +89,6 @@ private:
 	/* Returns a pair of recommendation ranges as for a Resolution Advisory */
 	virtual RecommendationRangePair getRecRangePair(Sense sense, double userVvelFtM, double IntrVvelFtM, double userAltFt,
 		double intrAltFt, double rangeTauS);
+
+	
 };

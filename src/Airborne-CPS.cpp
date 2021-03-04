@@ -406,6 +406,7 @@ float autopilotCallback(float elapsedMe, float elapsedSim, int counter, void* re
 	autopilot.apDecider();
 	if (apbool) {
 		autopilot.neutralizeRoll();
+		autopilot.adjustThrottle();
 		//autopilot.setCurrentPosition();
 	}
 
@@ -482,7 +483,7 @@ void hostileGauge(void* refCon) {
 }
 void autopToggle(void* refCon) {
 	apbool = !apbool;
-	//autopilot.jsRollOverideSwitch();
+	//autopilot.engineOverrideSwitch();
 	std::string msg;
 	(apbool) ? (msg = "AutoPilot On \n") : (msg = "AutoPilot Off \n");
 	XPLMDebugString(msg.c_str());

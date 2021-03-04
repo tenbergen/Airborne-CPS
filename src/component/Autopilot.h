@@ -15,7 +15,7 @@ public:
     std::string usersMac;
     std::string intruderMac;
     XPLMDataRef theta, psi, phi;
-
+    XPLMDataRef overrideEngine;
     XPLMDataRef jsRoll, jsPitch, engineThrottle, overrideRoll;
 
 
@@ -29,7 +29,8 @@ public:
         jsRoll = XPLMFindDataRef("sim/joystick/yoke_roll_ratio");
         jsPitch = XPLMFindDataRef("sim/joystick/yoke_pitch_ratio");
         overrideRoll = XPLMFindDataRef("sim/operation/override/override_joystick_roll");
-        engineThrottle = XPLMFindDataRef(" sim/flightmodel/engine/ENGN_thro");
+        engineThrottle = XPLMFindDataRef("sim/flightmodel/engine/ENGN_thro");
+        overrideEngine = XPLMFindDataRef("sim/operation/override/override_throttles");
         deciderV = d->getVBuff();
     }
 
@@ -95,10 +96,9 @@ public:
     }
 
     void adjustThrottle() {
-        float max[8];
-        max[0] = 1.0f;
-        
-        XPLMSetDatavf(engineThrottle, max, 0, 7);
+        float EngineVals[8];
+        EngineVals[0] = 1;
+        XPLMSetDatavf(engineThrottle, EngineVals, 0, 8);
     }
 
     //What does decider vBuff return?
@@ -126,6 +126,14 @@ public:
         int i = XPLMGetDatai(overrideRoll);
         (i == 0) ? (i = 1) : (i = 0);
         XPLMSetDatai(overrideRoll, i);
+        return i;
+
+    }
+
+    bool engineOverrideSwitch() {
+        int i = XPLMGetDatai(overrideEngine);
+        (i == 0) ? (i = 1) : (i = 0);
+        XPLMSetDatai(overrideEngine, i);
         return i;
 
     }

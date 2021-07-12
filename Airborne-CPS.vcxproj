@@ -40,6 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\component\ArtHorizGaugeRenderer.h" />
+    <ClInclude Include="src\component\Autopilot.h" />
     <ClInclude Include="src\component\Decider.h" />
     <ClInclude Include="src\component\NASADecider.h" />
     <ClInclude Include="src\component\ResolutionConnection.h" />
@@ -120,7 +121,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>.\out\x32\</OutDir>
+    <OutDir>C:\X-Plane 10\Resources\plugins</OutDir>
     <IntDir>.\Release\32\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -128,7 +129,7 @@
     <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>D:\Ayy lmao\X-Plane 11\Resources\plugins</OutDir>
+    <OutDir>..\..\..\..\..\X-Plane 11\Resources\plugins</OutDir>
     <IntDir>.\Release\64\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -144,7 +145,7 @@
     <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>..\X-Plane 10\Resources\plugins</OutDir>
+    <OutDir>..\..\..\..\..\X-Plane 11\Resources\plugins</OutDir>
     <IntDir>.\Debug\64\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -241,7 +242,8 @@
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM_64.lib;XPWidgets_64.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)out\x64" "c:\X-Plane 10\Resources\plugins\"  /Y </Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -329,7 +331,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Debug\64\ExampleGauge.lib</ImportLibrary>
-      <AdditionalLibraryDirectories>$(SolutionDir)\SDK\Libraries\Win;$(SolutionDir)\SDK\CHeaders\google\protobuf;$(SolutionDir)\Release\32</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\SDK\Libraries\Win;$(SolutionDir)\Release\32</AdditionalLibraryDirectories>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM_64.lib;XPWidgets_64.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

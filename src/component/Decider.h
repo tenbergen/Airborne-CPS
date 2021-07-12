@@ -37,8 +37,10 @@ public:
 
 	/* Calculates modified tau */
 	static double getModTauS(double rangeNmi, double closureRateKnots, double dmodNmi);
-
+	
 	double getVBuff();
+
+	Sense getSense();
 
 protected:
 	/* Returns the vertical velocity necessary to achieve ALIM */

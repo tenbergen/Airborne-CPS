@@ -19,6 +19,7 @@ Velocity const Decider::kVerticalVelocityClimbDescendDelta_ = { 1500.0, Velocity
 Decider::Decider(Aircraft* thisAircraft, concurrency::concurrent_unordered_map<std::string, ResolutionConnection*>* map) : thisAircraft_(thisAircraft), activeConnections_(map) {}
 
 double vBuff;
+Sense sBuff;
 void Decider::analyze(Aircraft* intruder) {
 	Decider::determineActionRequired(intruder);
 }
@@ -370,19 +371,29 @@ double Decider::getVvelForAlim(Sense sense, double altFt, double vsepAtCpaFt, do
 	XPLMDebugString(toPrint);*/
 
 	double toReturn;
+	Sense sBuff;
 	if (sense == Sense::UPWARD) {
+		sBuff = Sense::UPWARD;
 		toReturn = (getAlimFt(altFt) - vsepAtCpaFt) / (rangeTauS / 60);
 		if (toReturn > kMaxGaugeVerticalVelocity_.toFeetPerMin()- 500)
 			toReturn = kMaxGaugeVerticalVelocity_.toFeetPerMin() - 500;
 	} else if (sense == Sense::DOWNWARD) {
+		sBuff = Sense::DOWNWARD;
 		toReturn = -(getAlimFt(altFt) - vsepAtCpaFt) / (rangeTauS / 60);
 		if (toReturn < kMinGaugeVerticalVelocity_.toFeetPerMin() + 500)
 			toReturn = kMinGaugeVerticalVelocity_.toFeetPerMin() + 500;
 	} else
 		toReturn = 0;
+
+	std::string s = "toReturn: "+std::to_string(toReturn) + "\n";
+	XPLMDebugString(s.c_str());
 	vBuff = toReturn;
 	return toReturn;
 }
 double Decider::getVBuff() {
 	return vBuff;
+}
+
+Sense Decider::getSense() {
+	return sBuff;
 }

@@ -17,10 +17,12 @@ public:
     XPLMDataRef theta, psi, phi;
     XPLMDataRef overrideEngine;
     XPLMDataRef jsRoll, jsPitch, engineThrottle, overrideRoll;
+    XPLMDataRef vv;
 
 
     float pitch;
     double deciderV;
+    Decider * dec;
     Sense vSense;
     Autopilot(Decider *d) {
         theta = XPLMFindDataRef("sim/flightmodel/position/theta");
@@ -31,7 +33,9 @@ public:
         overrideRoll = XPLMFindDataRef("sim/operation/override/override_joystick_roll");
         engineThrottle = XPLMFindDataRef("sim/flightmodel/engine/ENGN_thro");
         overrideEngine = XPLMFindDataRef("sim/operation/override/override_throttles");
-        deciderV = d->getVBuff();
+        vv = XPLMFindDataRef("sim/flightmodel/position/vh_ind_fpm");
+        dec = new Decider();
+        dec = d;
     }
 
     void getPosition() {
@@ -86,35 +90,84 @@ public:
 
         XPLMSetDataf(jsRoll, newRatio);
         float r = XPLMGetDataf(jsRoll);
-        std::string jsRollStringPostChange = std::to_string(r)+"\n";
-        XPLMDebugString(jsRollStringPostChange.c_str());
+        
+        std::string testString = "Current Phi: " + std::to_string(p) + ". Current Roll Ratio: " + std::to_string(r) + ".\n";
+        XPLMDebugString(testString.c_str());
    }
 
-    void adjustPitch() {
+    void adjustPitchUp(float desired) {
         float t = XPLMGetDataf(theta);
+        float vertvel = XPLMGetDataf(vv);
+        float newRatio;
+        if (desired > 1000.0f) {
+            newRatio = 0.5f;
+            adjustThrottle(0.8f);
+        }
+        else if (desired > 500.0f && desired < 1000.0f) {
+            newRatio = 0.4f;
+            adjustThrottle(0.6f);
+        }
+        else if (desired > 0.0f && desired < 500.0f) {
+            newRatio = 0.3f;
+            adjustThrottle(0.5f);
+        }
 
+        XPLMSetDataf(jsPitch, newRatio);
     }
-
-    void adjustThrottle() {
+    
+    void adjustThrottle(float power) {
         float EngineVals[8];
-        EngineVals[0] = 1;
+        EngineVals[0] = power;
         XPLMSetDatavf(engineThrottle, EngineVals, 0, 8);
     }
 
     //What does decider vBuff return?
     //what does decider vBuff return if there is no RA?
     void apDecider() {
-        std::string vBuffString ="vBuff from decider: "+ std::to_string(deciderV) + "\n";
-        XPLMDebugString(vBuffString.c_str());
-        //if (vbuff != null) {
-        //    if (vsense == sense::upward) {
+        if (dec->getVBuff() != NULL && dec->getVBuff()!= 0.000000) {
+            //Get the Desired Vertical Max Ceiling from Decider 
+            double deciderV = dec->getVBuff();
+            std::string vBuffString = "vBuff from decider: " + std::to_string(deciderV) + "\n";
+            XPLMDebugString(vBuffString.c_str());
 
-        //    }
-        //    if (vsense == sense::downward){
+            float vertvel = XPLMGetDataf(vv);
+            std::string vertChangeString = "Vertical Change: " + std::to_string(deciderV-vertvel) + "\n";
+            double vertChange = deciderV - vertvel;
+            XPLMDebugString(vertChangeString.c_str());
+            if (vertChange > 0) {
+                adjustPitchUp(vertChange);
+            }
+            
+            
 
-        //    }
 
-        // }
+
+            //double deciderV = dec->getVBuff();
+            //std::string vBuffString = "vBuff from decider: " + std::to_string(deciderV) + "\n";
+            //XPLMDebugString(vBuffString.c_str());
+            //vSense = dec->getSense();
+            //if (vSense == Sense::UPWARD) {
+            //    std::string senseString = "Sense = Upward\n";
+            //    XPLMDebugString(senseString.c_str());
+            //}
+            //if (vSense == Sense::DOWNWARD) {
+            //    std::string senseString = "Sense = Downward\n";
+            //    XPLMDebugString(senseString.c_str());
+            //}
+            //float vertchange;
+            //float vertvel = XPLMGetDataf(vv);
+            ////if (vSense == Sense::UPWARD) {
+            ////    vertchange = deciderV - vertvel;
+            ////}
+            ////else if (vSense == Sense::DOWNWARD) {
+            ////    vertchange = vertvel - deciderV;
+            ////}
+            //(vSense == Sense::UPWARD) ? (vertchange = deciderV - vertvel) : (vertchange = vertvel - deciderV);
+            ////(vSense == Sense::DOWNWARD) ? (vertchange = deciderV + vertvel) :
+            //adjustPitch(vSense, vertchange);
+
+        }
+
     }
     
     //sim/joystick/has_joystick boolean might be useful for checking joystck use

@@ -402,12 +402,11 @@ int	gaugeDrawingCallback(XPLMDrawingPhase inPhase, int inIsBefore, void* inRefco
 }
 
 float autopilotCallback(float elapsedMe, float elapsedSim, int counter, void* refcon) {
-	autopilot.getPosition();
-	autopilot.apDecider();
+
 	if (apbool) {
 		autopilot.neutralizeRoll();
-		autopilot.adjustThrottle();
-		//autopilot.setCurrentPosition();
+		//autopilot.jsRollOverideSwitch();
+		autopilot.apDecider();
 	}
 
 	return interval;

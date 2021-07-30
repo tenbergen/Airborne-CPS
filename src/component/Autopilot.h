@@ -17,7 +17,7 @@ public:
     XPLMDataRef theta, psi, phi;
     XPLMDataRef overrideEngine;
     XPLMDataRef jsRoll, jsPitch, engineThrottle, overrideRoll;
-    XPLMDataRef vv;
+    XPLMDataRef vv, plugin_fnrml, plugin_faxil, fnrml_aero, faxil_aero, elv_trim;
 
 
     float pitch;
@@ -34,6 +34,12 @@ public:
         engineThrottle = XPLMFindDataRef("sim/flightmodel/engine/ENGN_thro");
         overrideEngine = XPLMFindDataRef("sim/operation/override/override_throttles");
         vv = XPLMFindDataRef("sim/flightmodel/position/vh_ind_fpm");
+        plugin_fnrml = XPLMFindDataRef("sim/flightmodel/forces/fnrml_plug_acf");
+        plugin_faxil = XPLMFindDataRef("sim/flightmodel/forces/faxil_plug_acf");
+        fnrml_aero = XPLMFindDataRef("sim/flightmodel/forces/fnrml_aero");
+        faxil_aero = XPLMFindDataRef("sim/flightmodel/forces/faxil_aero");
+        elv_trim = XPLMFindDataRef("sim/flightmodel/controls/elv_trim");
+
         dec = new Decider();
         dec = d;
     }
@@ -48,45 +54,47 @@ public:
     void neutralizeRoll() {
         float p = XPLMGetDataf(phi);
         float newRatio;
-        if (p > 5.0f && p < 15.0f) {
-            newRatio = -0.3;
-        }
-        if (p > 15.0f && p < 30.0f) {
-            newRatio = -0.45;
-        }
-        else if (p > 30.0f && p < 45.0f) {
-            newRatio = -0.6;
-        }
-        else if (p > 45 && p < 60) {
-            newRatio = -0.9;
-        }
-        else if (p > 60.0f) {
-            newRatio = -0.6;
-        }
-        else if (p <-5.0f && p>-15.0f) {
-            newRatio = .3;
-        }
-        else if (p<-15.0f && p >-30.0) {
-            newRatio = 0.45;
-        }
-        else if (p<-30.0f && p> -45.0f) {
-            newRatio = 0.6;
-        }
-        else if (p<-45.0f && p> -60.0f) {
-            newRatio = 0.75f;
-        }
-        else if (p < -60.0f) {
-            newRatio = 0.9f;
-        }
-        else if (p < 5.0f && p>2.5f) {
-            newRatio = -.1f;
-        }
-        else if (p > -5.0f && p < -2.5f) {
-            newRatio = .1f;
-        }
-        else if (p <2.5f && p>-2.5f) {
-            newRatio = 0.0f;
-        }
+
+        newRatio = (p / 90 * -3);
+        //if (p > 5.0f && p < 15.0f) {
+        //    newRatio = -0.4f;
+        //}
+        //if (p > 15.0f && p < 30.0f) {
+        //    newRatio = -0.55f;
+        //}
+        //else if (p > 30.0f && p < 45.0f) {
+        //    newRatio = -0.7f;
+        //}
+        //else if (p > 45 && p < 60) {
+        //    newRatio = -0.75f;
+        //}
+        //else if (p > 60.0f) {
+        //    newRatio = -0.9f;
+        //}
+        //else if (p <-5.0f && p>-15.0f) {
+        //    newRatio = .4f;
+        //}
+        //else if (p<-15.0f && p >-30.0) {
+        //    newRatio = 0.55f;
+        //}
+        //else if (p<-30.0f && p> -45.0f) {
+        //    newRatio = 0.7f;
+        //}
+        //else if (p<-45.0f && p> -60.0f) {
+        //    newRatio = 0.75f;
+        //}
+        //else if (p < -60.0f) {
+        //    newRatio = 0.9f;
+        //}
+        //else if (p < 5.0f && p>2.0f) {
+        //    newRatio = -.1f;
+        //}
+        //else if (p > -5.0f && p < -2.0f) {
+        //    newRatio = .1f;
+        //}
+        //else if (p <2.0f && p>-2.0f) {
+        //    newRatio = 0.0f;
+        //}
 
         XPLMSetDataf(jsRoll, newRatio);
         float r = XPLMGetDataf(jsRoll);
@@ -98,21 +106,24 @@ public:
     void adjustPitchUp(float desired) {
         float t = XPLMGetDataf(theta);
         float vertvel = XPLMGetDataf(vv);
-        float newRatio;
+        float newRatio1;
         if (desired > 1000.0f) {
-            newRatio = 0.5f;
-            adjustThrottle(0.8f);
+            newRatio1 = 0.9f;
         }
         else if (desired > 500.0f && desired < 1000.0f) {
-            newRatio = 0.4f;
-            adjustThrottle(0.6f);
+            newRatio1 = 0.60f;
+
         }
-        else if (desired > 0.0f && desired < 500.0f) {
-            newRatio = 0.3f;
-            adjustThrottle(0.5f);
+        else if (desired > 250.0f && desired < 500.0f) {
+            newRatio1 = 0.30f;
+        }
+        else if (desired < 250.0f) {
+            newRatio1 = 0.0f;
         }
 
-        XPLMSetDataf(jsPitch, newRatio);
+        adjustThrottle(1.0f);
+        XPLMSetDataf(elv_trim, 0);
+        XPLMSetDataf(jsPitch, newRatio1);
     }
     
     void adjustThrottle(float power) {
@@ -121,12 +132,13 @@ public:
         XPLMSetDatavf(engineThrottle, EngineVals, 0, 8);
     }
 
-    //What does decider vBuff return?
     //what does decider vBuff return if there is no RA?
+    double testVBuff = 1500.0f;
+    //replaced dec->getVBuff() with testVBuff
     void apDecider() {
-        if (dec->getVBuff() != NULL && dec->getVBuff()!= 0.000000) {
+        if (testVBuff != NULL && testVBuff!= 0.000000) {
             //Get the Desired Vertical Max Ceiling from Decider 
-            double deciderV = dec->getVBuff();
+            double deciderV = testVBuff;
             std::string vBuffString = "vBuff from decider: " + std::to_string(deciderV) + "\n";
             XPLMDebugString(vBuffString.c_str());
 
@@ -134,10 +146,10 @@ public:
             std::string vertChangeString = "Vertical Change: " + std::to_string(deciderV-vertvel) + "\n";
             double vertChange = deciderV - vertvel;
             XPLMDebugString(vertChangeString.c_str());
-            if (vertChange > 0) {
-                adjustPitchUp(vertChange);
-            }
-            
+            adjustPitchUp(vertChange);
+
+            //addForce(vertvel, deciderV, vertChange);
+
             
 
 
@@ -190,5 +202,8 @@ public:
         return i;
 
     }
+
+    //When activated it will add arbitrary force to the plane's y and z coordinates.
+    //Forces are added in m/s
    
 };

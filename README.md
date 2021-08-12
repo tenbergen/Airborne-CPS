@@ -1,5 +1,5 @@
 # Airborne-CPS
-A Traffic Collusion Avoidance System Mark II (TCAS-II) implementation for Laminar Research X-Plane
+A Traffic Collision Avoidance System Mark II (TCAS-II) implementation for Laminar Research X-Plane
 
 ### Current Functionality
 

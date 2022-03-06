@@ -13,7 +13,7 @@ Transponder::Transponder(Aircraft* ac,
 	Decider* decider)
 {
 	decider_ = decider;
-	aircraft_ = ac;
+	aircraft_ = ac; //userAc
 	intrudersMap = intruders;
 	openConnections = connections;
 
@@ -21,28 +21,32 @@ Transponder::Transponder(Aircraft* ac,
 	enableXBeeRouting = true;
 
 	myLocation.setID(macAddress_);
-	ip = getIpAddr();
+
+	ip = getIpAddr(); // ip of hardware xbee
 	myLocation.setIP(ip);
 
 	sinlen = sizeof(struct sockaddr_in);
-	inSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	inSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP); // inSocket is the listening socket
 	if (inSocket < 0) {
 		XPLMDebugString("failed to open socket to listen for locations\n");
 	}
-	else {
-		createSocket(&inSocket, &incoming, INADDR_ANY, BROADCAST_PORT);
+	else {													
+		createSocket(&inSocket, &incoming, INADDR_ANY, BROADCAST_PORT); // creat socket to bind with incoming socket
 	}
-	outSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	outSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP); // outSocket to broadcast udp connection
 	if (outSocket < 0) {
 		XPLMDebugString("failed to open socket to broadcast location\n");
 	}
 	else {
 		BOOL bOptVal = TRUE;
-		setsockopt(outSocket, SOL_SOCKET, SO_BROADCAST, (char*)&bOptVal, sizeof(int));
-		outgoing.sin_addr.s_addr = htonl(-1);
+		setsockopt(outSocket, SOL_SOCKET, SO_BROADCAST, (char*)&bOptVal, sizeof(int)); // set options on outSocket
+		outgoing.sin_addr.s_addr = htonl(-1);	//htonl converts unsigned long into network byte order
 		outgoing.sin_port = htons(BROADCAST_PORT);
 		outgoing.sin_family = PF_INET;
-		bind(outSocket, (struct sockaddr*) & outgoing, sinlen);
+		if (bind(outSocket, (struct sockaddr*)&outgoing, sinlen) < 0) 
+		{
+			XPLMDebugString("Can't bind");
+		};
 	}
 }
 
@@ -73,6 +77,9 @@ Transponder::~Transponder()
 	}
 }
 
+
+// receiveLocation get the userID and intruderID then apply Transponder::processIntruder if there is any intruder in the udp subnet
+// receiveLocation listens to udp connections
 DWORD Transponder::receiveLocation()
 {
 
@@ -91,12 +98,14 @@ DWORD Transponder::receiveLocation()
 
 
 
-
+		// receive information from a intruder udp socket and store it into the buffer
 		recvfrom(inSocket, buffer, MAX_RECEIVE_BUFFER_SIZE, 0, (struct sockaddr*) & incoming, (int*)&sinlen);
 
 
 		char receivedIP[INET_ADDRSTRLEN];
 		struct sockaddr_in* pincoming = &incoming;
+
+		// inet_ntop converts an address from network format to presentation format
 		inet_ntop(AF_INET, &(pincoming->sin_addr), receivedIP, INET_ADDRSTRLEN);
 
 
@@ -121,6 +130,7 @@ DWORD Transponder::receiveLocation()
 				XPLMDebugString("Deserialize is not working: ");
 			}
 
+			// get the ID from xplane::Location 
 			intruderID = intruderLocation.getID().c_str();
 
 			// process any possible intruder we received via UDP
@@ -178,6 +188,8 @@ DWORD Transponder::receiveLocation()
 	return 0;
 }
 
+
+// processIntruder analyze intruder and user
 DWORD Transponder::processIntruder(std::string intruderID)
 {
 
@@ -198,7 +210,8 @@ DWORD Transponder::processIntruder(std::string intruderID)
 
 
 		intruder = new Aircraft(intruderLocation.getID(), intruderLocation.getIP());
-		allocatedAircraft_.push_back(intruder);
+		
+		allocatedAircraft_.push_back(intruder); // add the intruder at the end
 
 		// Fill in the current values so that the aircraft will not have two wildly different position values
 		// If the position current is not set, position old will get set to LLA::ZERO while position current will
@@ -208,52 +221,71 @@ DWORD Transponder::processIntruder(std::string intruderID)
 
 		(*intrudersMap)[intruder->id] = intruder;
 		aircraft_->lock.lock();
+
+		// tcp/ip connection
 		ResolutionConnection* connection = new ResolutionConnection(macAddress_, intruder->id, intruder->ip, ResolutionConnection::K_TCP_PORT, aircraft_);
 		(*openConnections)[intruder->id] = connection;
 	}
 
 	keepAliveMap_[intruder->id] = 10;  // what does 10 mean here? Why 10? 10 what? Why not 9 or 11000000? Magic number alert!
 
+	// tcp/ip connection
 	ResolutionConnection* conn = (*openConnections)[intruder->id];
 
+	// lock the aircrafts before manipulate the values
 	intruder->lock.lock();
 	aircraft_->lock.lock();
 	conn->lock.lock();
+
+	// old time
 	intruder->positionOld = intruder->positionCurrent;
 	conn->userPositionOld = conn->userPosition;
 	intruder->positionOldTime = intruder->positionCurrentTime;
 	conn->userPositionOldTime = conn->userPositionTime;
 
+	//current time
 	intruder->positionCurrent = updatedPosition;
 	conn->userPosition = aircraft_->positionCurrent;
 	intruder->positionCurrentTime = msSinceEpoch;
 	conn->userPositionTime = msSinceEpoch;
+
+	// unlock
 	intruder->lock.unlock();
 	aircraft_->lock.unlock();
 	conn->lock.unlock();
 
+	// analyze intruder to determine which threat class intruder in
 	decider_->analyze(intruder);
-
+	return 0;
 }
 
+// sendLocation is used in Transponder::startBroadcasting
+// sendLocation sends out udp conection
 DWORD Transponder::sendLocation()
 {
 	while (communication)
 	{
+		// lock ACs before manipulate data
 		aircraft_->lock.lock();
-		LLA position = aircraft_->positionCurrent;
+		LLA position = aircraft_->positionCurrent; //get user location
 		aircraft_->lock.unlock();
 
+		// setup xplane:Location mylocation to get the values from userAC
 		myLocation.setLAT(position.latitude.toDegrees());
 		myLocation.setLON(position.longitude.toDegrees());
 		myLocation.setALT(position.altitude.toMeters());
 
-		myLocation.BuildPlane();
+
+		// build the ac
+		myLocation.BuildPlane(); 
 
 		int size = myLocation.getPLANE().length() + 1;  // length of the C++ string, plus 1 for the null terminator
 
 		char* buffer = (char*)malloc(size);  // to be consistent with how its done in receiveLocation()
+		// clean the buffer
 		memset(buffer, '\0', size);
+
+		// copy mylocation plane to buffer
 		std::strcpy(buffer, myLocation.getPLANE().c_str());
 
 
@@ -355,14 +387,20 @@ std::string Transponder::getHardwareAddress()
 	return macAddress_;
 }
 
+// IP adress from UDP
 std::string Transponder::getIpAddr()
 {
-	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
 	std::string googleDnsIp = "8.8.8.8";
 	uint16_t dnsPort = 53;
+
+	// udp server
 	struct sockaddr_in server = { 0 };
+	// clean server
 	memset(&server, 0, sizeof(server));
+	// add sin_fam to server, sin_fam is always AF_INET
 	server.sin_family = AF_INET;
+	// convert ipaddr to binary
 	InetPton(AF_INET, googleDnsIp.c_str(), &server.sin_addr.s_addr);
 	server.sin_port = htons(dnsPort);
 

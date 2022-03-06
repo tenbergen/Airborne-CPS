@@ -52,6 +52,8 @@ private:
 	std::atomic<bool> threadStopped_;
 	std::atomic<bool> connected_;
 
+	// sock_ to use in each method, got reset everytime 
+	// openSocket is persistent
 	SOCKET sock_, openSocket_;
 	struct sockaddr_in myAddr_;
 	struct sockaddr_in intruderAddr_;

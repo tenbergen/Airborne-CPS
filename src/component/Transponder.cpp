@@ -19,7 +19,6 @@ Transponder::Transponder(Aircraft* ac,
 
 	xb = new XBee();
 	enableXBeeRouting = true;
-
 	myLocation.setID(macAddress_);
 
 	ip = getIpAddr(); // ip of hardware xbee
@@ -384,6 +383,9 @@ std::string Transponder::getHardwareAddress()
 		free(pAdapterInfo);
 		macAddress_ = hardwareAddress;
 	}
+	// print MAC address to log.txt
+	std::string debugString = "My MAC: " + macAddress_ + "\n";
+	XPLMDebugString(debugString.c_str());
 	return macAddress_;
 }
 
@@ -424,7 +426,11 @@ std::string Transponder::getIpAddr()
 	InetNtop(AF_INET, &name.sin_addr.s_addr, addr, 16);
 	closesocket(sock);
 	std::string ip(addr);
-	XPLMDebugString(ip.c_str());
+	//XPLMDebugString(ip.c_str());
+
+	// print IP address to log.txt
+	std::string debugString = "My IP: " + ip + "\n";
+	XPLMDebugString(debugString.c_str());
 	return ip;
 }
 
@@ -446,15 +452,6 @@ static DWORD WINAPI startKeepAliveTimer(void* param)
 	return t->keepalive();
 }
 
-void Transponder::start()
-{
-	communication = 1;
-	DWORD ThreadID;
-	CreateThread(NULL, 0, startListening, (void*)this, 0, &ThreadID);
-	CreateThread(NULL, 0, startBroadcasting, (void*)this, 0, &ThreadID);
-	CreateThread(NULL, 0, startKeepAliveTimer, (void*)this, 0, &ThreadID);
-}
-
 void Transponder::initNetworking()
 {
 	if (!initialized_) {
@@ -465,6 +462,18 @@ void Transponder::initNetworking()
 		}
 	}
 }
+
+
+void Transponder::start()
+{
+	XPLMDebugString(" \nStarting Transponder... \n");
+	communication = 1;
+	DWORD ThreadID;
+	CreateThread(NULL, 0, startListening, (void*)this, 0, &ThreadID);
+	CreateThread(NULL, 0, startBroadcasting, (void*)this, 0, &ThreadID);
+	CreateThread(NULL, 0, startKeepAliveTimer, (void*)this, 0, &ThreadID);
+}
+
 
 void Transponder::initXBee(unsigned int portnum) {
 	xb->SetPortnum(portnum);

@@ -275,3 +275,6 @@ __pycache__/
 ### VisualStudio Patch ###
 build/
 Airborne-CPS.vcxproj
+.DS_Store
+out/.DS_Store
+utilities/.DS_Store

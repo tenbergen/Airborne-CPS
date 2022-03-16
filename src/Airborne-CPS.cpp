@@ -226,6 +226,7 @@ PLUGIN_API int XPluginStart(char* outName, char* outSig, char* outDesc) {
 	XPLMAppendMenuItem(menuID, "Toggle Hostile", (void*)"hostileToggle", 1);
 	XPLMAppendMenuItem(menuID, "Toggle Debug", (void*)"debugToggle", 1);
 	XPLMAppendMenuItem(menuID, "XBee Config", (void*)XBEE_CONFIG_MENU, 1);
+	XPLMAppendMenuItem(menuID, "TCP/IP Config", (void*)XBEE_CONFIG_MENU, 1);
 
 	gXBeeMenuItem = 0;
 
@@ -524,6 +525,8 @@ void myDrawWindowCallback(XPLMWindowID inWindowID, void* inRefcon) {
 		snprintf(positionBuf, 128, "Phi (degrees): %.3f", XPLMGetDataf(phiRef));
 		XPLMDrawString(color, left + 5, top - offsetYPxls, (char*)positionBuf, NULL, XPLM_FONT_BASIC);
 		offsetYPxls += 20;
+
+		
 
 		decider->recommendationRangeLock.lock();
 		RecommendationRange positive = decider->positiveRecommendationRange;

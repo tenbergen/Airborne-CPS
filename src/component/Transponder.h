@@ -75,14 +75,14 @@ private:
 	static std::string macAddress_;
 
 	Decider* decider_;
-	Aircraft* aircraft_;
+	Aircraft* aircraft_; // user aircraft
 
 	// added for XBee support
 	XBee* xb;
 	HANDLE xbComm;
 	
 
-	std::vector<Aircraft*> allocatedAircraft_;
+	std::vector<Aircraft*> allocatedAircraft_; // a vector of aircrafts, pretty much store intruders 
 	concurrency::concurrent_unordered_map<std::string, int> keepAliveMap_;
 
 	std::string getIpAddr();

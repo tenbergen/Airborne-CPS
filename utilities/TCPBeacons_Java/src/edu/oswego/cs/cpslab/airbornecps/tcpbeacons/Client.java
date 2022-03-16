@@ -16,12 +16,13 @@ public class Client {
 
     private String ip; //the IP to connect to
     private int port;  //the port the server is running on
+    private int delay; //the value by which to delay message relay
 
     /**
      * Creates a new client instance for connecting to localhost on default port 1901.
      */
     public Client() {
-        this("127.0.0.1", 1901);
+        this("127.0.0.1", 1901, Main.Mode.normal);
     }
 
     /**
@@ -29,9 +30,14 @@ public class Client {
      * @param ip the server address
      * @param port the port to connect to
      */
-    public Client(String ip, int port) {
+    public Client(String ip, int port, Main.Mode mode) {
         this.ip = ip;
         this.port = port;
+        switch (mode) {
+            case normal: this.delay = 0; break;
+            case slower: this.delay = 100; break;
+            case slowest: this.delay = 500; break;
+        }
     }
 
     /**
@@ -52,8 +58,9 @@ public class Client {
                         scanner = new Scanner(new File(file));
                         while (scanner.hasNextLine()) {
                             writer.println(scanner.nextLine());
-                            Thread.sleep(150);
+                            Thread.sleep(this.delay);
                         }
+                        Thread.sleep(10);
                     }
                 } catch (IOException | InterruptedException e) {
                     System.out.println("Exception while writing to server: " + e.getMessage());

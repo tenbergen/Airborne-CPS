@@ -15,22 +15,27 @@ import java.net.ServerSocket;
  */
 public class Server {
 
-    //the port to serve on.
-    private int port;
+    private int port;    //the port to serve on
+    private int delay;   //the value by which to delay message relay
 
     /**
      * Creates a new server instance on default port 1901.
      */
     public Server() {
-        this(1901);
+        this(1901, Main.Mode.normal);
     }
 
     /**
      * Creates a new server instance on a specified port.
      * @param port the port to serve on
      */
-    public Server(int port) {
+    public Server(int port, Main.Mode mode) {
         this.port = port;
+        switch (mode) {
+            case normal: this.delay = 0; break;
+            case slower: this.delay = 100; break;
+            case slowest: this.delay = 500; break;
+        }
     }
 
     /**
@@ -67,8 +72,9 @@ public class Server {
                             scanner = new Scanner(new File(file));
                             while (scanner.hasNextLine()) {
                                 writer.println(scanner.nextLine());
-                                Thread.sleep(150);
+                                Thread.sleep(this.delay);
                             }
+                            Thread.sleep(10);
                         }
                     } catch (IOException | InterruptedException e) {
                         System.out.println("Exception while writing to client: " + e.getMessage());

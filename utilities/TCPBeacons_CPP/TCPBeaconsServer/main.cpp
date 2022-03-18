@@ -4,7 +4,7 @@
 
 #pragma comment (lib, "ws2_32.lib")
 
-
+#define LISTENING_PORT 1901
 
 void main()
 {
@@ -31,7 +31,7 @@ void main()
 	// Bind the ip address and port to a socket 
 	sockaddr_in hint;
 	hint.sin_family = AF_INET;
-	hint.sin_port = htons(1901); // network is big-endian and the computer is little-endian
+	hint.sin_port = htons(LISTENING_PORT); // network is big-endian and the computer is little-endian
 	hint.sin_addr.S_un.S_addr = INADDR_ANY; // bind to any address, Could also use inet_pton
 
 	bind(listening, (sockaddr*)&hint, sizeof(hint)); // bind the socket to the ip and port to send and recieve connection
@@ -41,7 +41,7 @@ void main()
 	listen(listening, SOMAXCONN);
 
 	// Wait for connection
-	std::cout << "Waiting for TCP signals..." << std::endl;
+	std::cout << "Server is listening on port " << LISTENING_PORT << "..." << std::endl;
 	sockaddr_in client;
 	int clientSize = sizeof(client);
 

@@ -30,7 +30,7 @@ int __cdecl main(int argc, char* argv[])
     std::string thirdArg;
 
     if (argc < 2) {
-        std::cout << "Enter the path/filename to the beacon file:" << std::endl;
+        std::cout << "Enter the path/filename to the beacon file: ";
         std::cin >> fileName;
         std::cout << "Parsing File: " + fileName << std::endl;
     }
@@ -67,7 +67,6 @@ int __cdecl main(int argc, char* argv[])
     std::vector<std::string> beacons;
     while (std::getline(infile, line))
     {
-
         beacons.push_back(line);
     }
 

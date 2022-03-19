@@ -30,8 +30,6 @@ int __cdecl main(int argc, char* argv[])
     std::string fileName;
     int innerDelay = 10;
     int outerDelay = 1000;
-    std::string secondArg;
-    std::string thirdArg;
 
     if (argc < 2) // if user doesn't specify filename => prompt them
     {
@@ -43,23 +41,21 @@ int __cdecl main(int argc, char* argv[])
         fileName = argv[1];
         std::cout << "Parsing File: " + fileName << std::endl;
         if (argc == 3 || argc == 4) {
-            secondArg = argv[2];
-            if (secondArg == "slow") {
+            if (argv[2] == "slow") {
                 innerDelay = 100;
                 outerDelay = 10;
             }
             else {
-                std::cout << "Unknown argument. Please use the syntax:\nUDPBeacons.exe <filename> slow\n if you wish to invoke slow mode" << std::endl;
+                std::cout << "Unknown argument!! Please use the syntax : \nTCPBeacons.exe <filename> slow\nif you wish to invoke slow mode" << std::endl;
                 return 0;
             }
             if (argc == 4) {
-                thirdArg = argv[3];
-                if (thirdArg == "slow") {
+                if (argv[3] == "slow") {
                     innerDelay = 500;
                     outerDelay = 10;
                 }
                 else {
-                    std::cout << "Unknown argument. Please use the syntax:\nUDPBeacons.exe <filename> slow slow\n if you wish to invoke slow slow mode" << std::endl;
+                    std::cout << "Unknown argument!! Please use the syntax:\nTCPBeacons.exe <filename> slow slow\nif you wish to invoke slow slow mode" << std::endl;
                     return 0;
                 }
             }

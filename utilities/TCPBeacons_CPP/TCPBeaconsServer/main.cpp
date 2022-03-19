@@ -10,7 +10,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <thread>         // std::this_thread::sleep_for
+#include <thread>         
 #include <chrono>       
 
 
@@ -18,53 +18,77 @@
 
 #define LISTENING_PORT 1901
 
+void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay) 
+{
+    bool exit = false;
+    while (exit == false)
+    {
+        for (std::size_t i = 0; i < beacons.size(); i++)
+        {
+            if (sock_ != SOCKET_ERROR)
+            {
+                // send beacons to client
+                send(sock_, beacons[i].c_str(), beacons[i].size() + 1, 0);
+
+                // exit when user hit esc
+                if (GetAsyncKeyState(VK_ESCAPE)) {
+                    exit = true;
+                    break;
+                }
+                Sleep(innerDelay);
+
+            }
+        }
+        Sleep(outerDelay);
+    }
+    
+}
+
 int __cdecl main(int argc, char* argv[])
 {
-	// >>> FILE HANDLER <<<
+     // >>> ATTRIBUTES <<<
+    std::string fileName, mode;
+    int innerDelay = 10, outerDelay = 1000, wsOk;
+    std::vector<std::string> beacons;
+    sockaddr_in hint;
+    fd_set master; // select()::fd_set master is a set of 1 listening value and multiple client values 
 
-     // init attributes
-    std::string fileName;
-    int innerDelay = 10;
-    int outerDelay = 1000;
 
+
+    // >>> FILE HANDLER <<<
     if (argc < 2) // if user doesn't specify filename => prompt them
     {
         std::cout << "Enter the path/filename to the beacon file: ";
         std::cin >> fileName;
         std::cout << "Parsing File: " + fileName << std::endl;
     }
-    else if (argc == 2 || argc == 3 || argc == 4) {
+    else if (argc == 2 || argc == 3 ) {
         fileName = argv[1];
         std::cout << "Parsing File: " + fileName << std::endl;
-        if (argc == 3 || argc == 4) {
-            if (argv[2] == "slow") {
+        if (argc == 3 ) {
+            mode = argv[2];
+            if (mode == "slow") {
                 innerDelay = 100;
                 outerDelay = 10;
             }
-            else {
-                std::cout << "Unknown argument!! Please use the syntax : \nTCPBeaconsServer.exe <filename> slow\nif you wish to invoke slow mode" << std::endl;
-                return 0;
+            else if (mode == "slowest") 
+            {
+                innerDelay = 500;
+                outerDelay = 10;
             }
-            if (argc == 4) {
-                if (argv[3] == "slow") {
-                    innerDelay = 500;
-                    outerDelay = 10;
-                }
-                else {
-                    std::cout << "Unknown argument!! Please use the syntax:\nTCPBeaconsServer.exe <filename> slow slow\nif you wish to invoke slow slow mode" << std::endl;
-                    return 0;
-                }
+            else {
+                std::cout << "Unknown argument!! Please use the syntax : \nTCPBeaconsServer <filename> slow\nif you wish to invoke slow mode" << std::endl;
+                return 0;
             }
 
         }
     }
 
+
     // After the file is inputed, parse the file => push it to a vector
     std::ifstream infile(fileName);
     std::string line;
-    std::vector<std::string> beacons;
     std::getline(infile, line);
-
 
     while (std::getline(infile, line))
     {
@@ -77,7 +101,7 @@ int __cdecl main(int argc, char* argv[])
 	WSADATA wsData;
 	WORD ver = MAKEWORD(2, 2);
 
-	int wsOk = WSAStartup(ver, &wsData);
+	wsOk = WSAStartup(ver, &wsData);
 
 	if (wsOk != 0) {
 		std::cerr << "Can't Init winsock! Quitting" << std::endl;
@@ -94,7 +118,6 @@ int __cdecl main(int argc, char* argv[])
 
 
 	// Bind the ip address and port to a socket 
-	sockaddr_in hint;
 	hint.sin_family = AF_INET;
 	hint.sin_port = htons(LISTENING_PORT); // network is big-endian and the computer is little-endian
 	hint.sin_addr.S_un.S_addr = INADDR_ANY; // bind to any address, Could also use inet_pton
@@ -105,12 +128,11 @@ int __cdecl main(int argc, char* argv[])
 	// Tell winsock the socket is for listening
 	listen(listening, SOMAXCONN);
 
-    // >>> MULTI-CLIENT <<<
-    fd_set master; // select()::fd_set master is a set of 1 listening value and multiple client values 
-    FD_ZERO(&master); // clear the master set
 
-    // add listening to the master set, position 0 in the array
-    FD_SET(listening, &master);
+    // >>> MULTI-CLIENT <<<
+    FD_ZERO(&master); // clear the master set
+    FD_SET(listening, &master); // add listening to the master set, position 0 in the array
+
     std::cout << "The server is listening on port " << LISTENING_PORT << "..." << std::endl;
 
     // Create a running server to accept multiple clients
@@ -161,15 +183,29 @@ int __cdecl main(int argc, char* argv[])
                 // Send a message to client to inform connected
                 std::string welcomeMsg = "Connected to the listening server on port " + std::to_string(LISTENING_PORT);
                 send(clientSocket, welcomeMsg.c_str(), welcomeMsg.size() + 1, 0);
+                
+
+
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+
+
+                // Send beacons to clients
+                std::cout << std::endl;
+                std::cout << "Sending TCP/IP messages to the clients starts now! " << std::endl;
+
+                bool exit = false;
+                char buf[4096];
+
+                // Server sends beacons to clients through different threads
+                std::thread th(sendBeacons, clientSocket, beacons, innerDelay, outerDelay);
+                th.detach();
 
             }
 
         }
     }
 
-
-	// Close the socket
-	//closesocket(clientSocket);
+	
 	// Cleanup winsock
 	WSACleanup();
     system("pause");

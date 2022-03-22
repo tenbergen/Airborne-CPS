@@ -46,8 +46,8 @@ void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay,
 
 int __cdecl main(int argc, char* argv[])
 {
-     // >>> ATTRIBUTES <<<
-    std::string fileName, mode;
+    // >>> ATTRIBUTES <<<
+    std::string fileName, mode1, mode2;
     int innerDelay = 10, outerDelay = 1000, wsOk;
     std::vector<std::string> beacons;
     sockaddr_in hint;
@@ -62,26 +62,38 @@ int __cdecl main(int argc, char* argv[])
         std::cin >> fileName;
         std::cout << "Parsing File: " + fileName << std::endl;
     }
-    else if (argc == 2 || argc == 3 ) {
+    else if (argc == 2 || argc == 3 || argc == 4) {
         fileName = argv[1];
         std::cout << "Parsing File: " + fileName << std::endl;
-        if (argc == 3 ) {
-            mode = argv[2];
-            if (mode == "slow") {
+        if (argc == 3) {
+            mode1 = argv[2];
+            if (mode1 == "slow") 
+            {
                 innerDelay = 100;
                 outerDelay = 10;
             }
-            else if (mode == "slowest") 
+            else 
             {
-                innerDelay = 500;
-                outerDelay = 10;
-            }
-            else {
                 std::cout << "Unknown argument!! Please use the syntax : \nTCPBeaconsServer <filename> slow\nif you wish to invoke slow mode" << std::endl;
                 return 0;
             }
 
         }
+        else if (argc == 4) {
+            mode2 = argv[3];
+
+            if (mode2 == "slow")
+            {
+                innerDelay = 500;
+                outerDelay = 10;
+            }
+            else 
+            {
+                std::cout << "Unknown argument!! Please use the syntax : \nTCPBeaconsServer <filename> slow\nif you wish to invoke slow mode" << std::endl;
+                return 0;
+            }
+        }
+
     }
 
 
@@ -196,7 +208,7 @@ int __cdecl main(int argc, char* argv[])
                 bool exit = false;
                 char buf[4096];
 
-                // Server sends beacons to clients through different threads
+                // Server sends beacons to clients through multi threads
                 std::thread th(sendBeacons, clientSocket, beacons, innerDelay, outerDelay);
                 th.detach();
 

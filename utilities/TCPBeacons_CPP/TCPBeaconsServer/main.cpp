@@ -18,9 +18,11 @@
 
 #define LISTENING_PORT 1901
 
-void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay) 
+void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay)
 {
     bool exit = false;
+    char buf[4096];
+
     while (exit == false)
     {
         for (std::size_t i = 0; i < beacons.size(); i++)
@@ -29,6 +31,23 @@ void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay,
             {
                 // send beacons to client
                 send(sock_, beacons[i].c_str(), beacons[i].size() + 1, 0);
+
+                // echo beacons sent from client
+                ZeroMemory(buf, 4096);
+                int byteRecv = recv(sock_, buf, 4096, 0);
+                if (byteRecv == SOCKET_ERROR)
+                {
+                    std::cerr << "Error in recv(). Quitting" << std::endl;
+                    break;
+                }
+                if (byteRecv == 0)
+                {
+                    std::cout << "Client disconnected" << std::endl;
+                    break;
+                }
+
+                // echo the message
+                std::cout << std::string(buf, 0, byteRecv) << std::endl;
 
                 // exit when user hit esc
                 if (GetAsyncKeyState(VK_ESCAPE)) {
@@ -169,7 +188,7 @@ int __cdecl main(int argc, char* argv[])
                 sockaddr_in client;
                 int clientSize = sizeof(client);
                 //SOCKET clientSocket = accept(listening, (sockaddr*)&client, &clientSize);
-                SOCKET clientSocket = accept(listening, nullptr, nullptr);
+                SOCKET clientSocket = accept(listening, (sockaddr*)&client, &clientSize);
 
                 // Add the new connection to the list of connected clients (master set)
                 FD_SET(clientSocket, &master);
@@ -203,7 +222,7 @@ int __cdecl main(int argc, char* argv[])
 
                 // Send beacons to clients
                 std::cout << std::endl;
-                std::cout << "Sending TCP/IP messages to the clients starts now! " << std::endl;
+                std::cout << "Sending TCP/IP beacons to " << host << "starts now!" << std::endl;
 
                 bool exit = false;
                 char buf[4096];

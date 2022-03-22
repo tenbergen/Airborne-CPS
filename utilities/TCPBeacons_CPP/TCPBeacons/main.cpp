@@ -84,9 +84,6 @@ int __cdecl main(int argc, char* argv[])
     }
 
 
-
-
-
     // >>>>>>> TCP/IP HANDLER <<<<<<<
 
     std::string ipAddress = "127.0.0.1"; // ip of the server
@@ -131,8 +128,7 @@ int __cdecl main(int argc, char* argv[])
 
     }
 
-
-    // Send Beacons to TCP server then receive the beacons from server and echo out
+    // Send Beacons to TCP server then echo the beacons from server 
 
     bool exit = false;
     char buf[4096];
@@ -167,12 +163,7 @@ int __cdecl main(int argc, char* argv[])
 
     }
 
-
-
     std::cout << "Stopping TCP/IP Connection to the Server." << std::endl;
     closesocket(sock_);
     WSACleanup();
-
-
-    std::this_thread::sleep_for(std::chrono::seconds(5));
 }

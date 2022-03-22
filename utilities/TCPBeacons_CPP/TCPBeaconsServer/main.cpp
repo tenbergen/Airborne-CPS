@@ -18,7 +18,35 @@
 
 #define LISTENING_PORT 1901
 
+
 void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay)
+{
+    bool exit = false;
+    while (exit == false)
+    {
+        for (std::size_t i = 0; i < beacons.size(); i++)
+        {
+            if (sock_ != SOCKET_ERROR)
+            {
+                // send beacons to client
+                send(sock_, beacons[i].c_str(), beacons[i].size() + 1, 0);
+
+                // exit when user hit esc
+                if (GetAsyncKeyState(VK_ESCAPE)) {
+                    exit = true;
+                    break;
+                }
+                Sleep(innerDelay);
+
+            }
+        }
+
+        Sleep(outerDelay);
+    }
+
+}
+
+void receiveBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay)
 {
     bool exit = false;
     char buf[4096];
@@ -29,23 +57,22 @@ void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay,
         {
             if (sock_ != SOCKET_ERROR)
             {
-                // send beacons to client
-                send(sock_, beacons[i].c_str(), beacons[i].size() + 1, 0);
 
                 // echo beacons sent from client
                 ZeroMemory(buf, 4096);
                 int byteRecv = recv(sock_, buf, 4096, 0);
-                if (byteRecv == SOCKET_ERROR)
-                {
-                    std::cerr << "Error in recv(). Quitting" << std::endl;
-                    break;
-                }
                 if (byteRecv == 0)
                 {
                     std::cout << "Client disconnected" << std::endl;
+                    if (byteRecv == SOCKET_ERROR)
+                    {
+                        std::cerr << "Error in recv(). Quitting" << std::endl;
+                        break;
+                    }
+
                     break;
                 }
-
+               
                 // echo the message
                 std::cout << std::string(buf, 0, byteRecv) << std::endl;
 
@@ -58,9 +85,10 @@ void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay,
 
             }
         }
+
         Sleep(outerDelay);
     }
-    
+
 }
 
 int __cdecl main(int argc, char* argv[])
@@ -222,21 +250,23 @@ int __cdecl main(int argc, char* argv[])
 
                 // Send beacons to clients
                 std::cout << std::endl;
-                std::cout << "Sending TCP/IP beacons to " << host << "starts now!" << std::endl;
+                std::cout << "Sending TCP/IP beacons to " << host << "! Start now!" << std::endl;
 
                 bool exit = false;
                 char buf[4096];
 
                 // Server sends beacons to clients through multi threads
-                std::thread th(sendBeacons, clientSocket, beacons, innerDelay, outerDelay);
-                th.detach();
+                std::thread sendThread(sendBeacons, clientSocket, beacons, innerDelay, outerDelay);
+                sendThread.detach();
+                std::thread recvThread(receiveBeacons, clientSocket, beacons, innerDelay, outerDelay);
+                recvThread.detach();
 
             }
 
         }
+        
     }
 
-	
 	// Cleanup winsock
 	WSACleanup();
     system("pause");

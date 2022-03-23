@@ -13,12 +13,11 @@
 #include <thread>         
 #include <chrono>       
 
-
 #pragma comment (lib, "ws2_32.lib")
-
 #define LISTENING_PORT 1901
 
-void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay) 
+
+void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay)
 {
     bool exit = false;
     while (exit == false)
@@ -39,19 +38,55 @@ void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay,
 
             }
         }
-        Sleep(outerDelay);
+        std::cout << "Stop sending beacons..." << std::endl;
+        Sleep(300); 
     }
-    
+}
+
+void receiveBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay)
+{
+    bool exit = false;
+    char buf[4096];
+
+    while (exit == false)
+    {
+        for (std::size_t i = 0; i < beacons.size(); i++)
+        {
+            
+
+                // echo beacons sent from client
+                ZeroMemory(buf, 4096);
+                int byteRecv = recv(sock_, buf, 4096, 0);
+                if (byteRecv == 0)
+                {
+                    std::cout << "Client disconnected" << std::endl;
+                    break;
+                }
+                // echo the message
+                std::cout << std::string(buf, 0, byteRecv) << std::endl;
+                // exit when user hit esc
+                if (GetAsyncKeyState(VK_ESCAPE)) {
+                    exit = true;
+                    break;
+                }
+                Sleep(innerDelay);
+
+        }
+        std::cout << "" << std::endl;
+        std::cout << "Client disconnected..." << std::endl;
+        Sleep(300);
+    }
 }
 
 int __cdecl main(int argc, char* argv[])
 {
-     // >>> ATTRIBUTES <<<
-    std::string fileName, mode;
+    // >>> ATTRIBUTES <<<
+    std::string fileName, mode1, mode2;
     int innerDelay = 10, outerDelay = 1000, wsOk;
     std::vector<std::string> beacons;
     sockaddr_in hint;
     fd_set master; // select()::fd_set master is a set of 1 listening value and multiple client values 
+    std::vector<std::thread> threads;
 
 
 
@@ -62,26 +97,38 @@ int __cdecl main(int argc, char* argv[])
         std::cin >> fileName;
         std::cout << "Parsing File: " + fileName << std::endl;
     }
-    else if (argc == 2 || argc == 3 ) {
+    else if (argc == 2 || argc == 3 || argc == 4) {
         fileName = argv[1];
         std::cout << "Parsing File: " + fileName << std::endl;
-        if (argc == 3 ) {
-            mode = argv[2];
-            if (mode == "slow") {
+        if (argc == 3) {
+            mode1 = argv[2];
+            if (mode1 == "slow") 
+            {
                 innerDelay = 100;
                 outerDelay = 10;
             }
-            else if (mode == "slowest") 
+            else 
             {
-                innerDelay = 500;
-                outerDelay = 10;
-            }
-            else {
                 std::cout << "Unknown argument!! Please use the syntax : \nTCPBeaconsServer <filename> slow\nif you wish to invoke slow mode" << std::endl;
                 return 0;
             }
 
         }
+        else if (argc == 4) {
+            mode2 = argv[3];
+
+            if (mode2 == "slow")
+            {
+                innerDelay = 500;
+                outerDelay = 10;
+            }
+            else 
+            {
+                std::cout << "Unknown argument!! Please use the syntax : \nTCPBeaconsServer <filename> slow\nif you wish to invoke slow mode" << std::endl;
+                return 0;
+            }
+        }
+
     }
 
 
@@ -157,7 +204,7 @@ int __cdecl main(int argc, char* argv[])
                 sockaddr_in client;
                 int clientSize = sizeof(client);
                 //SOCKET clientSocket = accept(listening, (sockaddr*)&client, &clientSize);
-                SOCKET clientSocket = accept(listening, nullptr, nullptr);
+                SOCKET clientSocket = accept(listening, (sockaddr*)&client, &clientSize);
 
                 // Add the new connection to the list of connected clients (master set)
                 FD_SET(clientSocket, &master);
@@ -179,7 +226,6 @@ int __cdecl main(int argc, char* argv[])
                     std::cout << host << " connected on port " << ntohs(client.sin_port) << std::endl;
                 }
 
-
                 // Send a message to client to inform connected
                 std::string welcomeMsg = "Connected to the listening server on port " + std::to_string(LISTENING_PORT);
                 send(clientSocket, welcomeMsg.c_str(), welcomeMsg.size() + 1, 0);
@@ -191,21 +237,22 @@ int __cdecl main(int argc, char* argv[])
 
                 // Send beacons to clients
                 std::cout << std::endl;
-                std::cout << "Sending TCP/IP messages to the clients starts now! " << std::endl;
-
-                bool exit = false;
+                std::cout << "Sending TCP/IP beacons to " << host << "! Start now!" << std::endl;
+                
                 char buf[4096];
 
-                // Server sends beacons to clients through different threads
-                std::thread th(sendBeacons, clientSocket, beacons, innerDelay, outerDelay);
-                th.detach();
-
+                // Server sends beacons to clients through multi threads
+                std::thread sendThread(sendBeacons, clientSocket, beacons, innerDelay, outerDelay);
+                sendThread.detach();
+                std::thread recvThread(receiveBeacons, clientSocket, beacons, innerDelay, outerDelay);
+                recvThread.detach();
             }
-
         }
-    }
 
-	
+        
+        
+    }
+    
 	// Cleanup winsock
 	WSACleanup();
     system("pause");

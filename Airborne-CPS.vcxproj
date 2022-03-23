@@ -144,7 +144,7 @@
     <TargetName>AirborneCPS</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>..\X-Plane 10\Resources\plugins</OutDir>
+    <OutDir>..\..\..\..\X-Plane 10\Resources\plugins</OutDir>
     <IntDir>.\Debug\64\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xpl</TargetExt>
@@ -298,7 +298,7 @@
       <Optimization>Disabled</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
-      <AdditionalIncludeDirectories>C:\Users\Oswego\Source\Repos\Logan31\Airborne-CPS\SDK\Delphi\Widgets;C:\Users\Oswego\Source\Repos\Logan31\Airborne-CPS\SDK\Delphi\XPLM;C:\Users\Oswego\Source\Repos\Logan31\Airborne-CPS\SDK\CHeaders\Widgets;C:\Users\Oswego\Source\Repos\Logan31\Airborne-CPS\SDK\CHeaders\XPLM;C:\Users\Oswego\Source\Repos\Logan31\Airborne-CPS\SDK\CHeaders;C:\Users\Oswego\Source\Repos\Logan31\Airborne-CPS\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Oswego\Desktop\Airborne-CPS\SDK\Delphi\XPLM;C:\Users\Oswego\Desktop\Airborne-CPS\SDK\Delphi\Widgets;C:\Users\Oswego\Desktop\Airborne-CPS\SDK\CHeaders\XPLM;C:\Users\Oswego\Desktop\Airborne-CPS\SDK\CHeaders\Widgets;C:\Users\Oswego\Desktop\Airborne-CPS\SDK\CHeaders;C:\Users\Oswego\Desktop\Airborne-CPS\src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;SIMDATA_EXPORTS;IBM=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Debug\64\</AssemblerListingLocation>
       <PrecompiledHeaderOutputFile>.\Debug\64\AirborneCPS.pch</PrecompiledHeaderOutputFile>
@@ -329,7 +329,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>.\Debug\64\ExampleGauge.lib</ImportLibrary>
-      <AdditionalLibraryDirectories>$(SolutionDir)\SDK\CHeaders\google\protobuf;C:\Users\Oswego\Source\Repos\Logan31\Airborne-CPS\Release\32;C:\Users\Oswego\Source\Repos\Logan31\Airborne-CPS\SDK\Libraries\Win</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\Oswego\Desktop\Airborne-CPS\SDK\Libraries\Win</AdditionalLibraryDirectories>
       <AdditionalDependencies>Opengl32.lib;odbc32.lib;odbccp32.lib;XPLM_64.lib;XPWidgets_64.lib;glaux.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

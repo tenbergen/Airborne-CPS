@@ -26,11 +26,12 @@ int __cdecl main(int argc, char* argv[])
 {
     // >>>>>>> FILE HANDLER <<<<<<<
 
-    // init attributes
-    std::string fileName;
+     // init attributes
+    std::string fileName, mode1, mode2;
     int innerDelay = 10;
     int outerDelay = 1000;
 
+    // >>> FILE HANDLER <<<
     if (argc < 2) // if user doesn't specify filename => prompt them
     {
         std::cout << "Enter the path/filename to the beacon file: ";
@@ -40,30 +41,37 @@ int __cdecl main(int argc, char* argv[])
     else if (argc == 2 || argc == 3 || argc == 4) {
         fileName = argv[1];
         std::cout << "Parsing File: " + fileName << std::endl;
-        if (argc == 3 || argc == 4) {
-            if (argv[2] == "slow") {
+        if (argc == 3) {
+            mode1 = argv[2];
+            if (mode1 == "slow")
+            {
                 innerDelay = 100;
                 outerDelay = 10;
             }
-            else {
-                std::cout << "Unknown argument!! Please use the syntax : \nTCPBeacons.exe <filename> slow\nif you wish to invoke slow mode" << std::endl;
+            else
+            {
+                std::cout << "Unknown argument!! Please use the syntax : \nTCPBeaconsServer <filename> slow\nif you wish to invoke slow mode" << std::endl;
                 return 0;
-            }
-            if (argc == 4) {
-                if (argv[3] == "slow") {
-                    innerDelay = 500;
-                    outerDelay = 10;
-                }
-                else {
-                    std::cout << "Unknown argument!! Please use the syntax:\nTCPBeacons.exe <filename> slow slow\nif you wish to invoke slow slow mode" << std::endl;
-                    return 0;
-                }
             }
 
         }
+        else if (argc == 4) {
+            mode2 = argv[3];
+            if (mode2 == "slow")
+            {
+                innerDelay = 500;
+                outerDelay = 10;
+            }
+            else
+            {
+                std::cout << "Unknown argument!! Please use the syntax : \nTCPBeaconsServer <filename> slow\nif you wish to invoke slow slow mode" << std::endl;
+                return 0;
+            }
+        }
+
     }
 
-    // After the file is inputed, parse the file => push it to a vector
+    //// After the file is inputed, parse the file => push it to a vector
     std::ifstream infile(fileName);
     std::string line;
     std::vector<std::string> beacons;
@@ -74,9 +82,6 @@ int __cdecl main(int argc, char* argv[])
     {
         beacons.push_back(line); // push to beacons vector
     }
-
-
-
 
 
     // >>>>>>> TCP/IP HANDLER <<<<<<<
@@ -109,7 +114,7 @@ int __cdecl main(int argc, char* argv[])
     sockaddr_in outgoing;
     outgoing.sin_family = AF_INET;
     outgoing.sin_port = htons(LISTENING_PORT);
-    inet_pton(AF_INET, ipAddress.c_str(), &outgoing.sin_addr);
+    inet_pton(AF_INET, ipAddress.c_str(), &outgoing.sin_addr); // change this to any
 
 
     // Connect to server
@@ -123,11 +128,9 @@ int __cdecl main(int argc, char* argv[])
 
     }
 
-
-    // SEND BEACONS TO SERVER
+    // Send Beacons to TCP server then echo the beacons from server 
 
     bool exit = false;
-    std::cout << "Sending TCP/IP messages to the server. Press esc to exit! " << std::endl;
     char buf[4096];
 
     while (exit == false)
@@ -144,7 +147,7 @@ int __cdecl main(int argc, char* argv[])
                 if (byteRecv > 0)
                 {
                     // Echo response to console
-                    std::cout << "SERVER replied: " << std::string(buf, 0, byteRecv) << std::endl;
+                    std::cout << std::string(buf, 0, byteRecv) << std::endl;
                 }
 
                 // exit when user hit esc
@@ -159,10 +162,8 @@ int __cdecl main(int argc, char* argv[])
         Sleep(outerDelay);
 
     }
-    std::cout << "Stopped TCP/IP Connection." << std::endl;
+
+    std::cout << "Stopping TCP/IP Connection to the Server." << std::endl;
     closesocket(sock_);
     WSACleanup();
-
-
-    std::this_thread::sleep_for(std::chrono::seconds(5));
 }

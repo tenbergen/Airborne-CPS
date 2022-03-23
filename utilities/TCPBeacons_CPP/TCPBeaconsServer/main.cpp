@@ -13,9 +13,7 @@
 #include <thread>         
 #include <chrono>       
 
-
 #pragma comment (lib, "ws2_32.lib")
-
 #define LISTENING_PORT 1901
 
 
@@ -40,10 +38,9 @@ void sendBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay,
 
             }
         }
-
-        Sleep(outerDelay);
+        std::cout << "Stop sending beacons..." << std::endl;
+        Sleep(300); 
     }
-
 }
 
 void receiveBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDelay, int outerDelay)
@@ -55,8 +52,7 @@ void receiveBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDel
     {
         for (std::size_t i = 0; i < beacons.size(); i++)
         {
-            if (sock_ != SOCKET_ERROR)
-            {
+            
 
                 // echo beacons sent from client
                 ZeroMemory(buf, 4096);
@@ -64,18 +60,10 @@ void receiveBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDel
                 if (byteRecv == 0)
                 {
                     std::cout << "Client disconnected" << std::endl;
-                    if (byteRecv == SOCKET_ERROR)
-                    {
-                        std::cerr << "Error in recv(). Quitting" << std::endl;
-                        break;
-                    }
-
                     break;
                 }
-               
                 // echo the message
                 std::cout << std::string(buf, 0, byteRecv) << std::endl;
-
                 // exit when user hit esc
                 if (GetAsyncKeyState(VK_ESCAPE)) {
                     exit = true;
@@ -83,12 +71,11 @@ void receiveBeacons(SOCKET sock_, std::vector<std::string> beacons, int innerDel
                 }
                 Sleep(innerDelay);
 
-            }
         }
-
-        Sleep(outerDelay);
+        std::cout << "" << std::endl;
+        std::cout << "Client disconnected..." << std::endl;
+        Sleep(300);
     }
-
 }
 
 int __cdecl main(int argc, char* argv[])
@@ -99,6 +86,7 @@ int __cdecl main(int argc, char* argv[])
     std::vector<std::string> beacons;
     sockaddr_in hint;
     fd_set master; // select()::fd_set master is a set of 1 listening value and multiple client values 
+    std::vector<std::thread> threads;
 
 
 
@@ -238,7 +226,6 @@ int __cdecl main(int argc, char* argv[])
                     std::cout << host << " connected on port " << ntohs(client.sin_port) << std::endl;
                 }
 
-
                 // Send a message to client to inform connected
                 std::string welcomeMsg = "Connected to the listening server on port " + std::to_string(LISTENING_PORT);
                 send(clientSocket, welcomeMsg.c_str(), welcomeMsg.size() + 1, 0);
@@ -251,8 +238,7 @@ int __cdecl main(int argc, char* argv[])
                 // Send beacons to clients
                 std::cout << std::endl;
                 std::cout << "Sending TCP/IP beacons to " << host << "! Start now!" << std::endl;
-
-                bool exit = false;
+                
                 char buf[4096];
 
                 // Server sends beacons to clients through multi threads
@@ -260,13 +246,13 @@ int __cdecl main(int argc, char* argv[])
                 sendThread.detach();
                 std::thread recvThread(receiveBeacons, clientSocket, beacons, innerDelay, outerDelay);
                 recvThread.detach();
-
             }
-
         }
+
+        
         
     }
-
+    
 	// Cleanup winsock
 	WSACleanup();
     system("pause");

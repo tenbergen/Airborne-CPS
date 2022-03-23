@@ -26,7 +26,7 @@ int __cdecl main(int argc, char* argv[])
 {
     // >>>>>>> FILE HANDLER <<<<<<<
 
-    // init attributes
+     // init attributes
     std::string fileName, mode1, mode2;
     int innerDelay = 10;
     int outerDelay = 1000;

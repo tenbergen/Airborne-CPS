@@ -167,6 +167,7 @@ Navigate to the Airborne-CPS folder cloned earlier, then move to the Specificati
 ###Building the plugin 
 
 Now, make sure that X-plane 10 is NOT running, then in Visual Studio, click the **Build** tab on the top of the screen, and press **“Clean Airborne-CPS”**. Then you can click the **Build** tab again and press **“Build Airborne-CPS”** (or Ctrl+b), this will build the project and place it in the X-Plane 10 Plugin folder as we directed it to. You might see something like this below,
+
 ![alt text][image9]
 Fig. 10: Visual Studio 2022 Airborne-CPS Successful Built Process
 

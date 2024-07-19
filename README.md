@@ -42,7 +42,7 @@ This Guide explains how to get TCAS plugin deployed and running on any (and only
 
 Quick note: If you work on the computers in the lab room in the Shinemen building (professor Tenbergen will give you a tour on it), then there are high chances that the Airborne-CPS in those computers are not up to date. Simply follow this guide to update them. 
 
-## Whaat you will you need
+## What you will you need
 
 * X-Plane Flight Simulator (X-plane 10)
 * Visual Studio Community (2015,2019,2022)

@@ -178,13 +178,13 @@ If you have any questions regarding deployment of Airborne-CPS contact the princ
 1. Some users have reported problems with loading X-plane after successfully compiling the plugin, if X-plane is crashing when trying to load AirbornCPS.xml or AirborneCPS.pdb then you can resolve this issue by deleting these files as the plugin will still work without these files.
 
 
-[image1]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/X-plane%20Map.png
-[image2]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/Visual%20Studio%20setup%201.png
-[image3]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/Visual%20Studio%20setup%202.png
-[image4]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/project%205.png
-[image5]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/project%201.png
-[image6]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/project%202.png
-[image7]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/project%202%20b.png
-[image8]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/project%203.png
-[image9]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/fina.png
-[image10]: https://github.com/Tomicgun/Airborne-CPS-Thomas/blob/master/images%20for%20read%20me/image10.jpg
+[image1]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/X-plane%20Map.png
+[image2]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/Visual%20Studio%20setup%201.png
+[image3]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/Visual%20Studio%20setup%202.png
+[image4]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/project%205.png
+[image5]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/project%201.png
+[image6]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/project%202.png
+[image7]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/project%202%20b.png
+[image8]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/project%203.png
+[image9]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/fina.png
+[image10]: https://github.com/tenbergen/Airborne-CPS/blob/master/images%20for%20read%20me/image10.jpg
